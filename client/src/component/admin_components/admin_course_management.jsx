@@ -47,7 +47,7 @@ const AdminCourseManagement = () => {
 
   return (
     <div className="admin-course-management">
-      <h1>Hello admin!</h1>
+      <h1>Управление курсами</h1>
       <form onSubmit={handleSubmit}>
         <input
           type="text"
@@ -63,7 +63,7 @@ const AdminCourseManagement = () => {
         />
         <input
           type="number"
-          placeholder="Стоимость"
+          placeholder="Стомимость"
           value={courseDuration}
           onChange={(e) => setCourseDuration(e.target.value)}
         />
@@ -77,10 +77,10 @@ const AdminCourseManagement = () => {
         <button type="submit">Добавить курс</button>
       </form>
       <h2>Добавленные курсы</h2>
-      <ul>
+      <ul className="course-list">
         {courses.map((course, index) => (
-          <li key={index}>
-            {course.title} - {course.type}
+          <li key={index} className="course-item">
+            <strong>{course.title}</strong> - {course.type}
           </li>
         ))}
       </ul>
