@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -18,6 +19,7 @@ type Course struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Duration    int    `json:"duration"` // Продолжительность в часах
+	Type        string `json:"type"`     // Тип курса
 }
 
 // corsMiddleware sets the necessary headers to allow CORS requests
@@ -55,6 +57,7 @@ func main() {
 	r := mux.NewRouter()
 	r.Use(corsMiddleware)
 	r.HandleFunc("/add-course", addCourse).Methods("POST", "OPTIONS")
+	r.HandleFunc("/courses", getCourses).Methods("GET")
 
 	// Запуск сервера
 	fmt.Println("Server is running on port 5000")
@@ -87,4 +90,31 @@ func addCourse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "Курс '%s' успешно добавлен!", course.Title)
+}
+
+// getCourses обрабатывает запросы на получение списка курсов
+func getCourses(w http.ResponseWriter, r *http.Request) {
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("your_database_name").Collection("courses")
+
+	cursor, err := collection.Find(context.Background(), bson.M{})
+	if err != nil {
+		http.Error(w, "Ошибка при получении курсов из базы данных", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var courses []Course
+	if err = cursor.All(context.Background(), &courses); err != nil {
+		http.Error(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(courses)
 }

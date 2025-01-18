@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './admin_course_management.css';
 
 const AdminCourseManagement = () => {
   const [courseTitle, setCourseTitle] = useState('');
   const [courseDescription, setCourseDescription] = useState('');
   const [courseDuration, setCourseDuration] = useState('');
+  const [courseType, setCourseType] = useState('Повышение квалификации');
+  const [courses, setCourses] = useState([]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,17 +19,33 @@ const AdminCourseManagement = () => {
         title: courseTitle,
         description: courseDescription,
         duration: parseInt(courseDuration, 10),
+        type: courseType,
       }),
     });
     if (response.ok) {
       alert('Course added successfully');
+      // Clear form fields
+      setCourseTitle('');
+      setCourseDescription('');
+      setCourseDuration('');
+      setCourseType('Повышение квалификации');
+      fetchCourses();
     } else {
       alert('Failed to add course');
     }
   };
 
-  return (
+  const fetchCourses = async () => {
+    const response = await fetch('http://localhost:5000/courses');
+    const data = await response.json();
+    setCourses(data);
+  };
 
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  return (
     <div className="admin-course-management">
       <h1>Hello admin!</h1>
       <form onSubmit={handleSubmit}>
@@ -49,8 +67,23 @@ const AdminCourseManagement = () => {
           value={courseDuration}
           onChange={(e) => setCourseDuration(e.target.value)}
         />
+        <select
+          value={courseType}
+          onChange={(e) => setCourseType(e.target.value)}
+        >
+          <option value="Повышение квалификации">Повышение квалификации</option>
+          <option value="Профессиональная переподготовка">Профессиональная переподготовка</option>
+        </select>
         <button type="submit">Добавить курс</button>
       </form>
+      <h2>Добавленные курсы</h2>
+      <ul>
+        {courses.map((course, index) => (
+          <li key={index}>
+            {course.title} - {course.type}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
