@@ -13,12 +13,26 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// Course представляет структуру данных курса
 type Course struct {
-	Name  string `json:"name"`
-	Price string `json:"price"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Duration    int    `json:"duration"` // Продолжительность в часах
 }
 
-var client *mongo.Client
+// corsMiddleware sets the necessary headers to allow CORS requests
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func main() {
 	// Подключение к MongoDB
@@ -40,43 +54,37 @@ func main() {
 	// Создание маршрутов
 	r := mux.NewRouter()
 	r.Use(corsMiddleware)
-	r.HandleFunc("/add-course", addCourse).Methods("POST")
+	r.HandleFunc("/add-course", addCourse).Methods("POST", "OPTIONS")
 
 	// Запуск сервера
 	fmt.Println("Server is running on port 5000")
 	log.Fatal(http.ListenAndServe(":5000", r))
 }
 
+// addCourse обрабатывает запросы на добавление нового курса
 func addCourse(w http.ResponseWriter, r *http.Request) {
 	var course Course
 	err := json.NewDecoder(r.Body).Decode(&course)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
 		return
 	}
 
-	collection := client.Database("diplome").Collection("courses")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err = collection.InsertOne(ctx, course)
+	// Подключение к коллекции courses
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("your_database_name").Collection("courses")
+
+	// Вставка данных курса в коллекцию
+	_, err = collection.InsertOne(context.Background(), course)
+	if err != nil {
+		http.Error(w, "Ошибка при добавлении курса в базу данных", http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-}
-
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+	fmt.Fprintf(w, "Курс '%s' успешно добавлен!", course.Title)
 }
