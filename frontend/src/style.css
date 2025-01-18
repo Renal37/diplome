@@ -1,0 +1,37 @@
+@import url('https://fonts.cdnfonts.com/css/montserrat');
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.container {
+    max-width: 1720px;
+    padding: 20px;
+    margin: 0 auto;
+}
+
+.apt_color {
+    color: #76F;
+}
+
+.bold {
+    font-weight: 700;
+}
+
+#revers {
+    flex-direction: column-reverse;
+}
+
+#bg {
+    background: #4286f4cb;
+    padding: 10px;
+    color: white;
+    border-radius: 20px;
+}
+
+#ul_list_none {
+    list-style: none;
+
+}

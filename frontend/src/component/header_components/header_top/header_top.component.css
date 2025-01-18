@@ -1,0 +1,9 @@
+.header_top nav ul {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: start;
+    gap: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid black;
+}
