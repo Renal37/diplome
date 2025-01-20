@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import './admin_course_management.css';
+import './admin_add_component.css';
 
-const AdminCourseManagement = () => {
+const AdminAddComponent = () => {
   const [courseTitle, setCourseTitle] = useState('');
   const [courseDescription, setCourseDescription] = useState('');
   const [courseDuration, setCourseDuration] = useState('');
@@ -85,16 +85,8 @@ const AdminCourseManagement = () => {
         </select>
         <button type="submit">Добавить курс</button>
       </form>
-      <h2>Добавленные курсы</h2>
-      <ul className="course-list">
-        {courses.map((course, index) => (
-          <li key={index} className="course-item">
-            <strong>{course.title}</strong> - {course.type} - {course.price} руб.
-          </li>
-        ))}
-      </ul>
     </div>
   );
 };
 
-export default AdminCourseManagement;
+export default AdminAddComponent;
