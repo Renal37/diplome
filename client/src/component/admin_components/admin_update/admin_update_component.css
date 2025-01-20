@@ -1,6 +1,6 @@
 .admin-update-component {
     margin-top: 100px;
-    max-width: 600px;
+    max-width: 800px;
     margin: 0 auto;
     padding: 20px;
     border: 1px solid #ccc;
@@ -15,19 +15,24 @@
     color: #76F;
   }
   
-  .admin-update-component .course-list {
-    list-style-type: none;
-    padding: 0;
+  .admin-update-component .course-table {
+    width: 100%;
+    border-collapse: collapse;
     margin-bottom: 20px;
   }
   
-  .admin-update-component .course-list li {
+  .admin-update-component .course-table th,
+  .admin-update-component .course-table td {
+    border: 1px solid #ccc;
     padding: 10px;
-    border-bottom: 1px solid #ccc;
-    cursor: pointer;
+    text-align: left;
   }
   
-  .admin-update-component .course-list li:hover {
+  .admin-update-component .course-table th {
+    background-color: #f0f0f0;
+  }
+  
+  .admin-update-component .course-table tr:hover {
     background-color: #f0f0f0;
   }
   

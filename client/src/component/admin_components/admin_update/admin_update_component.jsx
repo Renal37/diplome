@@ -61,13 +61,26 @@ const AdminUpdateComponent = () => {
   return (
     <div className="admin-update-component">
       <h1>Обновление курсов</h1>
-      <ul className="course-list">
-        {courses.map((course) => (
-          <li key={course._id} onClick={() => handleCourseSelect(course)}>
-            {course.title} - {course.type} - {course.price} руб.
-          </li>
-        ))}
-      </ul>
+      <table className="course-table">
+        <thead>
+          <tr>
+            <th>Заголовок</th>
+            <th>Тип</th>
+            <th>Стоимость</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          {courses.map((course) => (
+            <tr key={course._id} onClick={() => handleCourseSelect(course)}>
+              <td>{course.title}</td>
+              <td>{course.type}</td>
+              <td>{course.price} руб.</td>
+              <td><button onClick={() => handleCourseSelect(course)}>Редактировать</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       {selectedCourse && (
         <form onSubmit={handleUpdate}>
           <input
