@@ -112,10 +112,15 @@ func getCourses(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cursor.Close(context.Background())
 
-	var courses []Course
+	var courses []bson.M
 	if err = cursor.All(context.Background(), &courses); err != nil {
 		http.Error(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
 		return
+	}
+
+	// Преобразуем ObjectId в строку для передачи в JSON
+	for i := range courses {
+		courses[i]["_id"] = courses[i]["_id"].(primitive.ObjectID).Hex()
 	}
 
 	w.Header().Set("Content-Type", "application/json")
