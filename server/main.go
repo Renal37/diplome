@@ -19,6 +19,7 @@ type Course struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Duration    int    `json:"duration"` // Продолжительность в часах
+	Price       int    `json:"price"`    // Продолжительность в часах
 	Type        string `json:"type"`     // Тип курса
 }
 
@@ -80,7 +81,7 @@ func addCourse(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
 		return
 	}
-	collection := client.Database("your_database_name").Collection("courses")
+	collection := client.Database("diplome").Collection("courses")
 
 	// Вставка данных курса в коллекцию
 	_, err = collection.InsertOne(context.Background(), course)
@@ -100,7 +101,7 @@ func getCourses(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
 		return
 	}
-	collection := client.Database("your_database_name").Collection("courses")
+	collection := client.Database("diplome").Collection("courses")
 
 	cursor, err := collection.Find(context.Background(), bson.M{})
 	if err != nil {
