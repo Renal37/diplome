@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import './admin_update_component.css';
 
 const AdminUpdateComponent = () => {
   const [courses, setCourses] = useState([]);
@@ -31,6 +30,10 @@ const AdminUpdateComponent = () => {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+    if (!selectedCourse) {
+      alert('Пожалуйста, выберите курс для обновления');
+      return;
+    }
     const response = await fetch(`http://localhost:5000/update-course/${selectedCourse._id}`, {
       method: 'PUT',
       headers: {
@@ -59,28 +62,15 @@ const AdminUpdateComponent = () => {
   };
 
   return (
-    <div className="admin-update-component">
+    <div>
       <h1>Обновление курсов</h1>
-      <table className="course-table">
-        <thead>
-          <tr>
-            <th>Заголовок</th>
-            <th>Тип</th>
-            <th>Стоимость</th>
-            <th>Действия</th>
-          </tr>
-        </thead>
-        <tbody>
-          {courses.map((course) => (
-            <tr key={course._id} onClick={() => handleCourseSelect(course)}>
-              <td>{course.title}</td>
-              <td>{course.type}</td>
-              <td>{course.price} руб.</td>
-              <td><button onClick={() => handleCourseSelect(course)}>Редактировать</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ul>
+        {courses.map((course) => (
+          <li key={course._id} onClick={() => handleCourseSelect(course)}>
+            {course.title} - {course.type} - {course.price} руб.
+          </li>
+        ))}
+      </ul>
       {selectedCourse && (
         <form onSubmit={handleUpdate}>
           <input
