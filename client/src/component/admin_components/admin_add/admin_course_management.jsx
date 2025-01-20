@@ -4,8 +4,8 @@ import './admin_course_management.css';
 const AdminCourseManagement = () => {
   const [courseTitle, setCourseTitle] = useState('');
   const [courseDescription, setCourseDescription] = useState('');
-  const [courseDuration, setCourseDuration] = useState();
-  const [coursePrice, setCoursePrice] = useState();
+  const [courseDuration, setCourseDuration] = useState('');
+  const [coursePrice, setCoursePrice] = useState('');
   const [courseType, setCourseType] = useState('Повышение квалификации');
   const [courses, setCourses] = useState([]);
 
@@ -19,7 +19,6 @@ const AdminCourseManagement = () => {
       body: JSON.stringify({
         title: courseTitle,
         description: courseDescription,
-        description: courseDescription,
         duration: parseInt(courseDuration, 10),
         price: parseInt(coursePrice, 10),
         type: courseType,
@@ -27,10 +26,11 @@ const AdminCourseManagement = () => {
     });
     if (response.ok) {
       alert('Course added successfully');
+      // Clear form fields
       setCourseTitle('');
       setCourseDescription('');
-      setCourseDuration();
-      setCoursePrice();
+      setCourseDuration('');
+      setCoursePrice('');
       setCourseType('Повышение квалификации');
       fetchCourses();
     } else {
@@ -66,13 +66,13 @@ const AdminCourseManagement = () => {
         />
         <input
           type="number"
-          placeholder="Продолжительность курса"
+          placeholder="Продолжительность (часы)"
           value={courseDuration}
           onChange={(e) => setCourseDuration(e.target.value)}
         />
         <input
           type="number"
-          placeholder="Стомимость"
+          placeholder="Стоимость"
           value={coursePrice}
           onChange={(e) => setCoursePrice(e.target.value)}
         />
@@ -87,11 +87,11 @@ const AdminCourseManagement = () => {
       </form>
       <h2>Добавленные курсы</h2>
       <ul className="course-list">
-        {/* {courses.map((course, index) => (
+        {courses.map((course, index) => (
           <li key={index} className="course-item">
-            <strong>{course.title}</strong> - {course.type}
+            <strong>{course.title}</strong> - {course.type} - {course.price} руб.
           </li>
-        ))} */}
+        ))}
       </ul>
     </div>
   );

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -19,7 +20,7 @@ type Course struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Duration    int    `json:"duration"` // Продолжительность в часах
-	Price       int    `json:"price"`    // Продолжительность в часах
+	Price       int    `json:"price"`    // Стоимость курса
 	Type        string `json:"type"`     // Тип курса
 }
 
@@ -59,6 +60,7 @@ func main() {
 	r.Use(corsMiddleware)
 	r.HandleFunc("/add-course", addCourse).Methods("POST", "OPTIONS")
 	r.HandleFunc("/courses", getCourses).Methods("GET")
+	r.HandleFunc("/update-course/{id}", updateCourse).Methods("PUT", "OPTIONS")
 
 	// Запуск сервера
 	fmt.Println("Server is running on port 5000")
@@ -118,4 +120,48 @@ func getCourses(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(courses)
+}
+
+// updateCourse обрабатывает запросы на обновление курса по его идентификатору
+func updateCourse(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		return
+	}
+
+	var course Course
+	err = json.NewDecoder(r.Body).Decode(&course)
+	if err != nil {
+		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("diplome").Collection("courses")
+
+	filter := bson.M{"_id": id}
+	update := bson.M{
+		"$set": bson.M{
+			"title":       course.Title,
+			"description": course.Description,
+			"duration":    course.Duration,
+			"price":       course.Price,
+			"type":        course.Type,
+		},
+	}
+
+	_, err = collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		http.Error(w, "Ошибка при обновлении курса в базе данных", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "Курс '%s' успешно обновлен!", course.Title)
 }

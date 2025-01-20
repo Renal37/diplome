@@ -1,0 +1,63 @@
+.admin-update-component {
+    margin-top: 100px;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    background-color: #f9f9f9;
+  }
+  
+  .admin-update-component h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #76F;
+  }
+  
+  .admin-update-component .course-list {
+    list-style-type: none;
+    padding: 0;
+    margin-bottom: 20px;
+  }
+  
+  .admin-update-component .course-list li {
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+    cursor: pointer;
+  }
+  
+  .admin-update-component .course-list li:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .admin-update-component form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .admin-update-component input,
+  .admin-update-component select {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    color: #333;
+  }
+  
+  .admin-update-component input::placeholder {
+    color: #76F;
+  }
+  
+  .admin-update-component button {
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    background-color: #76F;
+    color: white;
+    cursor: pointer;
+  }
+  
+  .admin-update-component button:hover {
+    background-color: #5a5aff;
+  }
