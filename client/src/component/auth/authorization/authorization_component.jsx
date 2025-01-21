@@ -14,6 +14,7 @@ const Authorization = () => {
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include', // Добавьте это для отправки куки
             body: JSON.stringify({
                 username,
                 password,

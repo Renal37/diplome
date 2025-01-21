@@ -8,7 +8,6 @@ const Header_bottom = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Проверка состояния аутентификации (например, проверка наличия токена)
         const token = localStorage.getItem('token');
         if (token) {
             checkToken(token);
@@ -22,6 +21,7 @@ const Header_bottom = () => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
             },
+            credentials: 'include', // Добавьте это для отправки куки
         });
 
         if (response.ok) {
@@ -34,17 +34,17 @@ const Header_bottom = () => {
     };
 
     const handleLogout = () => {
-        // Удаление токена и обновление состояния аутентификации
         localStorage.removeItem('token');
         setIsAuthenticated(false);
         navigate('/');
     };
+
     return (
         <div className="header_bottom">
             <nav>
                 <ul>
                     <li><Link to="/professional" className="a">Профессиональная переподготовка</Link></li>
-                    <li><Link to="/promotion" className="a">Повышение квалификации  </Link></li>
+                    <li><Link to="/promotion" className="a">Повышение квалификации</Link></li>
                     {isAuthenticated ? (
                         <>
                             <li><Link to="/profile" className="a">Профиль</Link></li>
@@ -56,9 +56,7 @@ const Header_bottom = () => {
                 </ul>
             </nav>
         </div>
-    )
-
+    );
 };
-
 
 export default Header_bottom;

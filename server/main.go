@@ -51,12 +51,12 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-// corsMiddleware sets the necessary headers to allow CORS requests
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -238,7 +238,6 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
 		return
 	}
-
 	// Хеширование пароля
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -280,13 +279,16 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Отправка токена клиенту
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   tokenString,
+		Expires: expirationTime,
+	})
 
 	fmt.Fprintf(w, "Пользователь '%s' успешно зарегистрирован!", user.FullName)
 }
 
-// loginUser обрабатывает запросы на авторизацию пользователя
+// В функции loginUser добавьте установку куки
 func loginUser(w http.ResponseWriter, r *http.Request) {
 	var credentials struct {
 		Username string `json:"username"`
@@ -298,7 +300,6 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Подключение к коллекции users
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
@@ -307,7 +308,6 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	}
 	collection := client.Database("diplome").Collection("users")
 
-	// Поиск пользователя по логину
 	var user User
 	err = collection.FindOne(context.Background(), bson.M{"username": credentials.Username}).Decode(&user)
 	if err != nil {
@@ -322,7 +322,6 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создание JWT токена
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		UserID: user.ID.Hex(),
@@ -338,11 +337,17 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Отправка токена клиенту
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
+	})
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
-
-	fmt.Fprintf(w, "Пользователь '%s' успешно авторизован!", user.FullName)
 }
 
 // updateProfile обрабатывает запросы на обновление профиля пользователя
