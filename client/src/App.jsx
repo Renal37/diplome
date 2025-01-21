@@ -10,6 +10,7 @@ import './style.css';
 import AdminComponent from './component/admin/admin_component.jsx';
 import Registration from './component/auth/registration/registration_component.jsx';
 import Profile from './component/auth/profile/profile_component.jsx';
+import Authorization from './component/auth/authorization/authorization_component.jsx';
 
 const routes = [
   { path: "/", element: <Main_top_center /> },
@@ -33,6 +34,7 @@ const App = () => {
         <Route path="/admin/*" element={<AdminComponent />} />
         <Route path="/registration" element={<Registration />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/authorization" element={<Authorization />} />
       </Routes>
     </div>
   );

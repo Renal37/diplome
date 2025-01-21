@@ -90,6 +90,7 @@ func main() {
 	r.HandleFunc("/register", registerUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/update-profile/{id}", updateProfile).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/check-token", checkToken).Methods("POST", "OPTIONS")
+	r.HandleFunc("/login", loginUser).Methods("POST", "OPTIONS")
 
 	// Запуск сервера
 	fmt.Println("Server is running on port 5000")
@@ -343,4 +344,56 @@ func checkToken(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Токен действителен для пользователя:", claims.Username)
 	w.WriteHeader(http.StatusOK)
+}
+
+// loginUser обрабатывает запросы на авторизацию пользователя
+func loginUser(w http.ResponseWriter, r *http.Request) {
+	var creds struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&creds)
+	if err != nil {
+		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+
+	// Подключение к коллекции users
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("diplome").Collection("users")
+
+	// Поиск пользователя по логину
+	var user User
+	err = collection.FindOne(context.Background(), bson.M{"username": creds.Username}).Decode(&user)
+	if err != nil || user.Password != creds.Password {
+		http.Error(w, "Неверный логин или пароль", http.StatusUnauthorized)
+		return
+	}
+
+	// Создание JWT токена
+	expirationTime := time.Now().Add(24 * time.Hour)
+	claims := &Claims{
+		Username: user.Username,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expirationTime.Unix(),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(jwtKey)
+	if err != nil {
+		http.Error(w, "Ошибка при создании токена", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка токена клиенту
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+
+	fmt.Println("Пользователь успешно авторизован:", user.Username)
 }
