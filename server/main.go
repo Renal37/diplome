@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Course представляет структуру данных курса
@@ -27,17 +28,18 @@ type Course struct {
 
 // User представляет структуру данных пользователя
 type User struct {
-	FullName     string `json:"fullName"`
-	Username     string `json:"username"`
-	Email        string `json:"email"`
-	Password     string `json:"password"`
-	BirthDate    string `json:"birthDate"`
-	Residence    string `json:"residence,omitempty"`
-	Education    string `json:"education,omitempty"`
-	BirthPlace   string `json:"birthPlace,omitempty"`
-	HomeAddress  string `json:"homeAddress,omitempty"`
-	PassportData string `json:"passportData,omitempty"`
-	SNILS        string `json:"snils,omitempty"`
+	ID           primitive.ObjectID `bson:"_id,omitempty"`
+	FullName     string             `json:"fullName"`
+	Username     string             `json:"username"`
+	Email        string             `json:"email"`
+	Password     string             `json:"password"`
+	BirthDate    string             `json:"birthDate"`
+	Residence    string             `json:"residence,omitempty"`
+	Education    string             `json:"education,omitempty"`
+	BirthPlace   string             `json:"birthPlace,omitempty"`
+	HomeAddress  string             `json:"homeAddress,omitempty"`
+	PassportData string             `json:"passportData,omitempty"`
+	SNILS        string             `json:"snils,omitempty"`
 }
 
 // JWT ключ для подписи токенов
@@ -45,7 +47,7 @@ var jwtKey = []byte("your_secret_key")
 
 // Claims представляет структуру данных для токена
 type Claims struct {
-	Username string `json:"username"`
+	UserID string `json:"userID"`
 	jwt.StandardClaims
 }
 
@@ -237,6 +239,14 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Хеширование пароля
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Ошибка при хешировании пароля", http.StatusInternalServerError)
+		return
+	}
+	user.Password = string(hashedPassword)
+
 	// Подключение к коллекции users
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
@@ -247,7 +257,7 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	collection := client.Database("diplome").Collection("users")
 
 	// Вставка данных пользователя в коллекцию
-	_, err = collection.InsertOne(context.Background(), user)
+	result, err := collection.InsertOne(context.Background(), user)
 	if err != nil {
 		http.Error(w, "Ошибка при добавлении пользователя в базу данных", http.StatusInternalServerError)
 		return
@@ -256,7 +266,7 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	// Создание JWT токена
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
-		Username: user.Username,
+		UserID: result.InsertedID.(primitive.ObjectID).Hex(),
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
@@ -274,6 +284,65 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 
 	fmt.Fprintf(w, "Пользователь '%s' успешно зарегистрирован!", user.FullName)
+}
+
+// loginUser обрабатывает запросы на авторизацию пользователя
+func loginUser(w http.ResponseWriter, r *http.Request) {
+	var credentials struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&credentials)
+	if err != nil {
+		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+
+	// Подключение к коллекции users
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("diplome").Collection("users")
+
+	// Поиск пользователя по логину
+	var user User
+	err = collection.FindOne(context.Background(), bson.M{"username": credentials.Username}).Decode(&user)
+	if err != nil {
+		http.Error(w, "Неверный логин или пароль", http.StatusUnauthorized)
+		return
+	}
+
+	// Проверка пароля
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(credentials.Password))
+	if err != nil {
+		http.Error(w, "Неверный логин или пароль", http.StatusUnauthorized)
+		return
+	}
+
+	// Создание JWT токена
+	expirationTime := time.Now().Add(24 * time.Hour)
+	claims := &Claims{
+		UserID: user.ID.Hex(),
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expirationTime.Unix(),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(jwtKey)
+	if err != nil {
+		http.Error(w, "Ошибка при создании токена", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка токена клиенту
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+
+	fmt.Fprintf(w, "Пользователь '%s' успешно авторизован!", user.FullName)
 }
 
 // updateProfile обрабатывает запросы на обновление профиля пользователя
@@ -342,58 +411,6 @@ func checkToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Токен действителен для пользователя:", claims.Username)
+	fmt.Println("Токен действителен для пользователя:", claims.UserID)
 	w.WriteHeader(http.StatusOK)
-}
-
-// loginUser обрабатывает запросы на авторизацию пользователя
-func loginUser(w http.ResponseWriter, r *http.Request) {
-	var creds struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-	err := json.NewDecoder(r.Body).Decode(&creds)
-	if err != nil {
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
-		return
-	}
-
-	// Подключение к коллекции users
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("users")
-
-	// Поиск пользователя по логину
-	var user User
-	err = collection.FindOne(context.Background(), bson.M{"username": creds.Username}).Decode(&user)
-	if err != nil || user.Password != creds.Password {
-		http.Error(w, "Неверный логин или пароль", http.StatusUnauthorized)
-		return
-	}
-
-	// Создание JWT токена
-	expirationTime := time.Now().Add(24 * time.Hour)
-	claims := &Claims{
-		Username: user.Username,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtKey)
-	if err != nil {
-		http.Error(w, "Ошибка при создании токена", http.StatusInternalServerError)
-		return
-	}
-
-	// Отправка токена клиенту
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
-
-	fmt.Println("Пользователь успешно авторизован:", user.Username)
 }
