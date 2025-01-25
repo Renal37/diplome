@@ -28,3 +28,11 @@
 .header_bottom nav ul li .a:hover {
     text-decoration: underline;
 }
+.header_bottom button {
+    background-color: white;
+    color: black;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 18px;
+}

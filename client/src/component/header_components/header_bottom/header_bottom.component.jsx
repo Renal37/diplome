@@ -1,41 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './header_bottom.component.css';
+import { AuthContext } from '../../../content/authContext';
 
 const Header_bottom = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-
+    const { isAuthenticated, logout } = useContext(AuthContext);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            checkToken(token);
-        }
-    }, []);
-
-    const checkToken = async (token) => {
-        const response = await fetch('http://localhost:5000/check-token', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-            credentials: 'include', // Добавьте это для отправки куки
-        });
-
-        if (response.ok) {
-            console.log('Токен действителен');
-            setIsAuthenticated(true);
-        } else {
-            console.log('Неверный токен');
-            setIsAuthenticated(false);
-        }
-    };
-
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        setIsAuthenticated(false);
+        logout();
         navigate('/');
     };
 

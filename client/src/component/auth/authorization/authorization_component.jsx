@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './authorization_component.css';
 
 const Authorization = () => {
@@ -36,6 +36,7 @@ const Authorization = () => {
     return (
         <div className="authorization-component">
             <h1>Авторизация</h1>
+            <Link to="/registration">Регистрация</Link>
             <form onSubmit={handleSubmit} className="authorization-form">
                 <input
                     type="text"

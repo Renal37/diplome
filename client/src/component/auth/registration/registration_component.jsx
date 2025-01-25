@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './registration_component.css';
 
 const Registration = () => {
@@ -8,10 +8,13 @@ const Registration = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(''); // Сброс ошибки перед новым запросом
+
     const response = await fetch('http://localhost:5000/register', {
       method: 'POST',
       headers: {
@@ -32,17 +35,20 @@ const Registration = () => {
       alert('Регистрация успешна!');
       navigate('/profile');
     } else {
-      alert('Ошибка при регистрации');
+      const errorData = await response.json();
+      setError(errorData.message || 'Ошибка при регистрации');
     }
   };
 
   return (
     <div className="registration-component">
-      <h1>Регистрация</h1>
+      <h1>Регистрация</h1> 
+      <Link to="/authorization">Авторизация</Link>
+      {error && <p className="error">{error}</p>}
       <form onSubmit={handleSubmit} className="registration-form">
         <input
           type="text"
-          placeholder="ФИО"
+          placeholder="Полное имя"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
         />
@@ -54,7 +60,7 @@ const Registration = () => {
         />
         <input
           type="email"
-          placeholder="Почта"
+          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />

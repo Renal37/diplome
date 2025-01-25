@@ -241,14 +241,6 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Хешируем пароль
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		http.Error(w, "Ошибка при хешировании пароля", http.StatusInternalServerError)
-		return
-	}
-	user.Password = string(hashedPassword)
-
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
@@ -256,6 +248,33 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	collection := client.Database("diplome").Collection("users")
+
+	// Проверка на уникальность email
+	var existingUser User
+	err = collection.FindOne(context.Background(), bson.M{"email": user.Email}).Decode(&existingUser)
+	if err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Пользователь с таким email уже существует"})
+		return
+	}
+
+	// Проверка на уникальность username
+	err = collection.FindOne(context.Background(), bson.M{"username": user.Username}).Decode(&existingUser)
+	if err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Пользователь с таким username уже существует"})
+		return
+	}
+
+	// Хешируем пароль
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Ошибка при хешировании пароля", http.StatusInternalServerError)
+		return
+	}
+	user.Password = string(hashedPassword)
 
 	result, err := collection.InsertOne(context.Background(), user)
 	if err != nil {
