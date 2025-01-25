@@ -53,17 +53,20 @@ type Claims struct {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173") // Change to your client URL
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173") // Указывайте конкретный фронт-энд
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true") // Добавляем этот заголовок
+
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }
+
 func main() {
 	// Подключение к MongoDB
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -237,7 +240,8 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
 		return
 	}
-	// Хеширование пароля
+
+	// Хешируем пароль
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		http.Error(w, "Ошибка при хешировании пароля", http.StatusInternalServerError)
@@ -245,7 +249,6 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	}
 	user.Password = string(hashedPassword)
 
-	// Подключение к коллекции users
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
@@ -254,14 +257,13 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	}
 	collection := client.Database("diplome").Collection("users")
 
-	// Вставка данных пользователя в коллекцию
 	result, err := collection.InsertOne(context.Background(), user)
 	if err != nil {
-		http.Error(w, "Ошибка при добавлении пользователя в базу данных", http.StatusInternalServerError)
+		http.Error(w, "Ошибка при добавлении пользователя", http.StatusInternalServerError)
 		return
 	}
 
-	// Создание JWT токена
+	// Создание токена
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		UserID: result.InsertedID.(primitive.ObjectID).Hex(),
@@ -277,14 +279,9 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Отправка токена клиенту
-	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Value:   tokenString,
-		Expires: expirationTime,
-	})
-
-	fmt.Fprintf(w, "Пользователь '%s' успешно зарегистрирован!", user.FullName)
+	// Возвращаем токен в JSON-ответе
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
@@ -313,7 +310,6 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверка пароля
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(credentials.Password))
 	if err != nil {
 		http.Error(w, "Неверный логин или пароль", http.StatusUnauthorized)
@@ -335,15 +331,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    tokenString,
-		Expires:  expirationTime,
-		HttpOnly: true,
-		SameSite: http.SameSiteNoneMode,
-		Secure:   false, // Set to true if using HTTPS
-	})
-
+	// Возвращаем токен в JSON-ответе
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 }
@@ -415,24 +403,4 @@ func checkToken(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Токен действителен для пользователя:", claims.UserID)
 	w.WriteHeader(http.StatusOK)
-}
-func checkCookie(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			// Cookie не найдено
-			fmt.Println("Cookie не найдено")
-			http.Error(w, "Cookie не найдено", http.StatusUnauthorized)
-			return
-		}
-		// Другая ошибка
-		fmt.Println("Ошибка при чтении cookie:", err)
-		http.Error(w, "Ошибка при чтении cookie", http.StatusBadRequest)
-		return
-	}
-
-	// Cookie найдено
-	fmt.Println("Cookie найдено:", cookie.Value)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"token": cookie.Value})
 }

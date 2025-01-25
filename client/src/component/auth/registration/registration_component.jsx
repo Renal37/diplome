@@ -27,6 +27,8 @@ const Registration = () => {
     });
 
     if (response.ok) {
+      const data = await response.json();
+      localStorage.setItem('token', data.token);
       alert('Регистрация успешна!');
       navigate('/profile');
     } else {

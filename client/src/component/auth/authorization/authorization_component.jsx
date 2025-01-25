@@ -20,6 +20,7 @@ const Authorization = () => {
                 password,
             }),
         });
+        
 
         if (response.ok) {
             const data = await response.json();
@@ -27,9 +28,10 @@ const Authorization = () => {
             alert('Авторизация успешна!');
             navigate('/profile');
         } else {
-            console.error('Ошибка авторизации');
+            alert('Ошибка авторизации');
         }
     };
+
 
     return (
         <div className="authorization-component">
