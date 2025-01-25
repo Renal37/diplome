@@ -27,7 +27,7 @@ const Authorization = () => {
             alert('Авторизация успешна!');
             navigate('/profile');
         } else {
-            alert('Ошибка при авторизации');
+            console.error('Ошибка авторизации');
         }
     };
 

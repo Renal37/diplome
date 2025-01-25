@@ -53,7 +53,7 @@ type Claims struct {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173") // Change to your client URL
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -64,7 +64,6 @@ func corsMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
 func main() {
 	// Подключение к MongoDB
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -288,7 +287,6 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Пользователь '%s' успешно зарегистрирован!", user.FullName)
 }
 
-// В функции loginUser добавьте установку куки
 func loginUser(w http.ResponseWriter, r *http.Request) {
 	var credentials struct {
 		Username string `json:"username"`
@@ -343,7 +341,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		Expires:  expirationTime,
 		HttpOnly: true,
 		SameSite: http.SameSiteNoneMode,
-		Secure:   true,
+		Secure:   false, // Set to true if using HTTPS
 	})
 
 	w.Header().Set("Content-Type", "application/json")
@@ -418,4 +416,25 @@ func checkToken(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Токен действителен для пользователя:", claims.UserID)
 	w.WriteHeader(http.StatusOK)
+}
+
+func checkCookie(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			// Cookie не найдено
+			fmt.Println("Cookie не найдено")
+			http.Error(w, "Cookie не найдено", http.StatusUnauthorized)
+			return
+		}
+		// Другая ошибка
+		fmt.Println("Ошибка при чтении cookie:", err)
+		http.Error(w, "Ошибка при чтении cookie", http.StatusBadRequest)
+		return
+	}
+
+	// Cookie найдено
+	fmt.Println("Cookie найдено:", cookie.Value)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"token": cookie.Value})
 }
