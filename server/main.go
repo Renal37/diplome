@@ -393,7 +393,6 @@ func updateProfile(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Профиль пользователя успешно обновлен!")
 }
 
-// checkToken обрабатывает запросы на проверку токена
 func checkToken(w http.ResponseWriter, r *http.Request) {
 	tokenStr := r.Header.Get("Authorization")
 	if tokenStr == "" {
@@ -417,7 +416,6 @@ func checkToken(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Токен действителен для пользователя:", claims.UserID)
 	w.WriteHeader(http.StatusOK)
 }
-
 func checkCookie(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("token")
 	if err != nil {
