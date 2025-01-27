@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './profile_component.css';
 
 const Profile = () => {
@@ -8,6 +9,8 @@ const Profile = () => {
   const [homeAddress, setHomeAddress] = useState('');
   const [passportData, setPassportData] = useState('');
   const [snils, setSnils] = useState('');
+  const navigate = useNavigate();
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {

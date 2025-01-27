@@ -87,7 +87,7 @@ const Registration = () => {
 
   return (
     <div className="registration-component">
-      <h1>Регистрация</h1> 
+      <h1>Регистрация</h1>
       <Link to="authorization">Авторизация</Link>
       {error && <p className="error">{error}</p>}
       <form onSubmit={handleSubmit} className="registration-form">
@@ -116,16 +116,17 @@ const Registration = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button type="button" onClick={() => setShowPassword(!showPassword)}>
-            {showPassword ? "Скрыть" : "Показать"}
-          </button>
-        </div>
-        <input
+            <input
           type={showPassword ? "text" : "password"}
           placeholder="Повторите пароль"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
+          <button type="button" onClick={() => setShowPassword(!showPassword)}>
+            {showPassword ? "Скрыть" : "Показать"}
+          </button>
+        </div>
+      
         <div className="agreement">
           <input
             type="checkbox"

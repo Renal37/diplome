@@ -1,7 +1,7 @@
-import logo from '../../../assets/logo_apt.png';
-import address from '../../../assets/address.svg';
-import phone from '../../../assets/phone.svg';
-import email from '../../../assets/email.svg';
+import logo from '../../../../assets/logo_apt.png';
+import address from '../../../../assets/address.svg';
+import phone from '../../../../assets/phone.svg';
+import email from '../../../../assets/email.svg';
 import { Link } from 'react-router-dom';
 import './header_ center.component.css';
 const Header_center = () => {
