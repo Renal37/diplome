@@ -19,11 +19,11 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
                     <li><Link to="/promotion" className="a">Повышение квалификации</Link></li>
                     {isAuthenticated ? (
                         <>
-                            <li><Link to="/profile" className="a">Профиль</Link></li>
+                            <li><Link to="/auth /profile" className="a">Профиль</Link></li>
                             <li><button onClick={handleLogout} className="a">Выход</button></li>
                         </>
                     ) : (
-                        <li><Link to="/registration" className="a">Вход системы</Link></li>
+                        <li><Link to="/auth" className="a">Вход системы</Link></li>
                     )}
                 </ul>
             </nav>

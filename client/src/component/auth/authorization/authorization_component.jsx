@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './authorization_component.css';
 
@@ -6,7 +6,12 @@ const Authorization = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
-
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            navigate('/auth/profile');
+        }
+    }, [navigate]);
     const handleSubmit = async (e) => {
         e.preventDefault();
         const response = await fetch('http://localhost:5000/login', {
@@ -20,23 +25,21 @@ const Authorization = () => {
                 password,
             }),
         });
-        
 
         if (response.ok) {
             const data = await response.json();
             localStorage.setItem('token', data.token);
             alert('Авторизация успешна!');
-            navigate('/profile');
+            navigate('/auth/profile');
         } else {
             alert('Ошибка авторизации');
         }
     };
 
-
     return (
         <div className="authorization-component">
             <h1>Авторизация</h1>
-            <Link to="/registration">Регистрация</Link>
+            <Link to="/auth">Регистрация</Link>
             <form onSubmit={handleSubmit} className="authorization-form">
                 <input
                     type="text"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './registration_component.css';
 
@@ -12,6 +12,13 @@ const Registration = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [agree, setAgree] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate('/auth/profile');
+    }
+  }, [navigate]);
 
   const validatePassword = (password) => {
     const minLength = 8;
@@ -71,7 +78,7 @@ const Registration = () => {
       const data = await response.json();
       localStorage.setItem('token', data.token);
       alert('Регистрация успешна!');
-      navigate('/profile');
+      navigate('/auth/profile');
     } else {
       const errorData = await response.json();
       setError(errorData.message || 'Ошибка при регистрации');
@@ -81,7 +88,7 @@ const Registration = () => {
   return (
     <div className="registration-component">
       <h1>Регистрация</h1> 
-      <Link to="/authorization">Авторизация</Link>
+      <Link to="authorization">Авторизация</Link>
       {error && <p className="error">{error}</p>}
       <form onSubmit={handleSubmit} className="registration-form">
         <input

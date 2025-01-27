@@ -8,7 +8,12 @@ const Profile = () => {
   const [homeAddress, setHomeAddress] = useState('');
   const [passportData, setPassportData] = useState('');
   const [snils, setSnils] = useState('');
-
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/auth/profile');
+    }
+  }, [navigate]);
   const handleSubmit = async (e) => {
     e.preventDefault();
     const userId = 'user-id'; // Замените на реальный идентификатор пользователя
