@@ -1,12 +1,11 @@
 .registration-component {
-    margin-top: 100px;
-    max-width: 600px;
+    max-width: 650px;
     margin: 0 auto;
     padding: 20px;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    background-color: #f9f9f9;
+    background-color: #fff;
 }
 
 .registration-component h1 {
@@ -15,16 +14,27 @@
     color: #76F;
 }
 
+.registration-component .error {
+    color: red;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
 .registration-form {
     display: flex;
     flex-direction: column;
+    gap: 10px;
 }
 
-.registration-form input {
-    margin-bottom: 10px;
+.registration-form input[type="text"],
+.registration-form input[type="email"],
+.registration-form input[type="password"],
+.registration-form input[type="date"] {
+     
     padding: 10px;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     border-radius: 4px;
+    font-size: 16px;
     color: #333;
     width: 100%;
     box-sizing: border-box;
@@ -34,6 +44,39 @@
     color: #76F;
 }
 
+.registration-form .password-input {
+    display: flex;
+    align-items: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.registration-form .password-input input {
+    flex: 1;
+}
+
+.registration-form .password-input button {
+    border: none;
+    border-radius: 4px;
+    background-color: #76F;
+    color: white;
+    cursor: pointer;
+}
+
+.registration-form .password-input button:hover {
+    background-color: #5a5aff;
+}
+
+.registration-form .agreement {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.registration-form .agreement input {
+    margin-right: 10px;
+}
+
 .registration-form button {
     padding: 10px;
     border: none;
@@ -41,6 +84,7 @@
     background-color: #76F;
     color: white;
     cursor: pointer;
+    font-size: 16px;
 }
 
 .registration-form button:hover {

@@ -7,13 +7,52 @@ const Registration = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [birthDate, setBirthDate] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [agree, setAgree] = useState(false);
   const navigate = useNavigate();
+
+  const validatePassword = (password) => {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+
+    if (password.length < minLength) {
+      return `Пароль должен быть не короче ${minLength} символов`;
+    }
+    if (!hasUpperCase) {
+      return 'Пароль должен содержать хотя бы одну заглавную букву';
+    }
+    if (!hasLowerCase) {
+      return 'Пароль должен содержать хотя бы одну строчную букву';
+    }
+    if (!hasNumber) {
+      return 'Пароль должен содержать хотя бы одну цифру';
+    }
+    return '';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); // Сброс ошибки перед новым запросом
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Пароли не совпадают');
+      return;
+    }
+
+    if (!agree) {
+      setError('Вы должны согласиться с обработкой данных');
+      return;
+    }
 
     const response = await fetch('http://localhost:5000/register', {
       method: 'POST',
@@ -25,7 +64,6 @@ const Registration = () => {
         username,
         email,
         password,
-        birthDate,
       }),
     });
 
@@ -64,18 +102,31 @@ const Registration = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
+        <div className="password-input">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Пароль"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button type="button" onClick={() => setShowPassword(!showPassword)}>
+            {showPassword ? "Скрыть" : "Показать"}
+          </button>
+        </div>
         <input
-          type="password"
-          placeholder="Пароль"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          type={showPassword ? "text" : "password"}
+          placeholder="Повторите пароль"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
         />
-        <input
-          type="date"
-          placeholder="Дата рождения"
-          value={birthDate}
-          onChange={(e) => setBirthDate(e.target.value)}
-        />
+        <div className="agreement">
+          <input
+            type="checkbox"
+            checked={agree}
+            onChange={(e) => setAgree(e.target.checked)}
+          />
+          <label>Согласен с обработкой данных</label>
+        </div>
         <button type="submit">Зарегистрироваться</button>
       </form>
     </div>

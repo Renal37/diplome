@@ -1,14 +1,13 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './header_bottom.component.css';
-import { AuthContext } from '../../../content/authContext';
 
-const Header_bottom = () => {
-    const { isAuthenticated, logout } = useContext(AuthContext);
+const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        logout();
+        localStorage.removeItem('token');
+        setIsAuthenticated(false);
         navigate('/');
     };
 
