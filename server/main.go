@@ -95,6 +95,7 @@ func main() {
 	r.HandleFunc("/update-profile/{id}", updateProfile).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/check-token", checkToken).Methods("POST", "OPTIONS")
 	r.HandleFunc("/login", loginUser).Methods("POST", "OPTIONS")
+	r.HandleFunc("/profile", getProfile).Methods("GET")
 
 	// Запуск сервера
 	fmt.Println("Server is running on port 5000")
@@ -357,17 +358,26 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 
 // updateProfile обрабатывает запросы на обновление профиля пользователя
 func updateProfile(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, err := primitive.ObjectIDFromHex(vars["id"])
+	err := r.ParseMultipartForm(10 << 20) // 10 MB
 	if err != nil {
-		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		http.Error(w, "Ошибка при разборе формы", http.StatusBadRequest)
 		return
 	}
 
-	var user User
-	err = json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+	tokenStr := r.Header.Get("Authorization")
+	if tokenStr == "" {
+		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+		return
+	}
+
+	tokenStr = tokenStr[len("Bearer "):]
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Неверный токен", http.StatusUnauthorized)
 		return
 	}
 
@@ -379,16 +389,50 @@ func updateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	collection := client.Database("diplome").Collection("users")
 
-	filter := bson.M{"_id": id}
+	// Проверка на уникальность email
+	email := r.FormValue("email")
+	var existingUser User
+	err = collection.FindOne(context.Background(), bson.M{"email": email, "_id": bson.M{"$ne": claims.UserID}}).Decode(&existingUser)
+	if err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Пользователь с таким email уже существует"})
+		return
+	}
+
+	// Проверка на уникальность username
+	username := r.FormValue("username")
+	err = collection.FindOne(context.Background(), bson.M{"username": username, "_id": bson.M{"$ne": claims.UserID}}).Decode(&existingUser)
+	if err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Пользователь с таким username уже существует"})
+		return
+	}
+
+	filter := bson.M{"_id": claims.UserID}
 	update := bson.M{
 		"$set": bson.M{
-			"residence":    user.Residence,
-			"education":    user.Education,
-			"birthPlace":   user.BirthPlace,
-			"homeAddress":  user.HomeAddress,
-			"passportData": user.PassportData,
-			"snils":        user.SNILS,
+			"fullName":    r.FormValue("fullName"),
+			"username":    username,
+			"email":       email,
+			"residence":   r.FormValue("residence"),
+			"education":   r.FormValue("education"),
+			"birthPlace":  r.FormValue("birthPlace"),
+			"homeAddress": r.FormValue("homeAddress"),
 		},
+	}
+
+	// Обработка загрузки фотографий
+	if passportPhoto, _, err := r.FormFile("passportPhoto"); err == nil {
+		defer passportPhoto.Close()
+		// Сохранение файла или обработка
+		// update["$set"].(bson.M)["passportPhoto"] = ""
+	}
+	if snilsPhoto, _, err := r.FormFile("snilsPhoto"); err == nil {
+		defer snilsPhoto.Close()
+		// Сохранение файла или обработка
+		// update["$set"].(bson.M)["snilsPhoto"] = путь_к_файлу
 	}
 
 	_, err = collection.UpdateOne(context.Background(), filter, update)
@@ -399,6 +443,47 @@ func updateProfile(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "Профиль пользователя успешно обновлен!")
 }
+
+// getProfile обрабатывает запросы на получение данных профиля пользователя
+func getProfile(w http.ResponseWriter, r *http.Request) {
+	tokenStr := r.Header.Get("Authorization")
+	if tokenStr == "" {
+		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+		return
+	}
+
+	tokenStr = tokenStr[len("Bearer "):]
+
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Неверный токен", http.StatusUnauthorized)
+		return
+	}
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("diplome").Collection("users")
+
+	var user User
+	err = collection.FindOne(context.Background(), bson.M{"_id": claims.UserID}).Decode(&user)
+	if err != nil {
+		http.Error(w, "Пользователь не найден", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
+// В main() добавьте маршрут для получения профиля
 
 func checkToken(w http.ResponseWriter, r *http.Request) {
 	tokenStr := r.Header.Get("Authorization")

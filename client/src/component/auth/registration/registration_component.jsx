@@ -21,7 +21,7 @@ const Registration = () => {
   }, [navigate]);
 
   const validatePassword = (password) => {
-    const minLength = 8;
+    const minLength = 6;
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
