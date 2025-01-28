@@ -1,63 +1,46 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useState, useEffect } from "react";
 
-const ProfileComponent = () => {
+const Profile = () => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [password, setPassword] = useState("");
+  const [education, setEducation] = useState("");
+  const [passportFile, setPassportFile] = useState(null);
+  const [snilsFile, setSnilsFile] = useState(null);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Токен отсутствует');
-        }
-
-        const response = await axios.get('http://localhost:5000/profile', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        setUser(response.data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
+    fetch("http://localhost:5000/check-token", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    }).then(res => res.json()).then(data => setUser(data));
   }, []);
 
-  if (loading) {
-    return <div>Загрузка...</div>;
-  }
+  const updateProfile = () => {
+    const formData = new FormData();
+    formData.append("password", password);
+    formData.append("education", education);
+    if (passportFile) formData.append("passportPhoto", passportFile);
+    if (snilsFile) formData.append("snilsPhoto", snilsFile);
 
-  if (error) {
-    return <div>Ошибка: {error}</div>;
-  }
+    fetch(`http://localhost:5000/update-profile/${user._id}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      body: formData,
+    }).then(() => alert("Профиль обновлен"));
+  };
 
-  return (
+  return user ? (
     <div>
-      <h1>Профиль пользователя</h1>
-      {user && (
-        <div>
-          <p>Полное имя: {user.fullName}</p>
-          <p>Имя пользователя: {user.username}</p>
-          <p>Email: {user.email}</p>
-          <p>Дата рождения: {user.birthDate}</p>
-          <p>Место жительства: {user.residence}</p>
-          <p>Образование: {user.education}</p>
-          <p>Место рождения: {user.birthPlace}</p>
-          <p>Домашний адрес: {user.homeAddress}</p>
-          <p>Паспортные данные: {user.passportData}</p>
-          <p>СНИЛС: {user.snils}</p>
-        </div>
-      )}
+      <h1>Профиль {user.username}</h1>
+      <input type="password" placeholder="Новый пароль" onChange={e => setPassword(e.target.value)} />
+      <select onChange={e => setEducation(e.target.value)}>
+        <option value="Среднее">Среднее</option>
+        <option value="Высшее">Высшее</option>
+      </select>
+      <input type="file" onChange={e => setPassportFile(e.target.files[0])} />
+      <input type="file" onChange={e => setSnilsFile(e.target.files[0])} />
+      <button onClick={updateProfile}>Обновить профиль</button>
     </div>
-  );
+  ) : (<p>Загрузка...</p>);
 };
 
-export default ProfileComponent;
+export default Profile; 

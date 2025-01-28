@@ -351,6 +351,14 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Устанавливаем куки с токеном
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		HttpOnly: true,
+	})
+
 	// Возвращаем токен в JSON-ответе
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
