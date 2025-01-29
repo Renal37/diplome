@@ -1,17 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './authorization_component.css';
 
-const Authorization = () => {
+const AuthorizationComponent = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            navigate('/auth/profile');
-        }
-    }, [navigate]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const response = await fetch('http://localhost:5000/login', {
@@ -19,11 +15,7 @@ const Authorization = () => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            credentials: 'include', // Добавьте это для отправки куки
-            body: JSON.stringify({
-                username,
-                password,
-            }),
+            body: JSON.stringify({ username, password }),
         });
 
         if (response.ok) {
@@ -47,16 +39,24 @@ const Authorization = () => {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                 />
-                <input
-                    type="password"
-                    placeholder="Пароль"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="password-input">
+                    <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Пароль"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                    >
+                        {showPassword ? "Скрыть" : "Показать"}
+                    </button>
+                </div>
                 <button type="submit">Войти</button>
             </form>
         </div>
     );
 };
 
-export default Authorization;
+export default AuthorizationComponent;

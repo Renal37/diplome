@@ -45,3 +45,23 @@
 .authorization-form button:hover {
   background-color: #5a5aff;
 }
+
+.password-input {
+  position: relative;
+}
+
+.password-input input {
+  padding-right: 80px;
+  /* Adjust padding to make space for the button */
+}
+
+.password-input button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #007bff;
+}

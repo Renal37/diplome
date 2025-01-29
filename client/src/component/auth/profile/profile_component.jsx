@@ -8,10 +8,18 @@ const Profile = () => {
   const [snilsFile, setSnilsFile] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5000/check-token", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    }).then(res => res.json()).then(data => setUser(data));
+    fetch("http://localhost:5000/profile", {
+      method: "GET",
+      credentials: "include", // Включаем куки в запрос
+    })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error("Ошибка при получении профиля");
+        }
+        return res.json();
+      })
+      .then(data => setUser(data))
+      .catch(err => console.error(err));
   }, []);
 
   const updateProfile = () => {
@@ -23,14 +31,29 @@ const Profile = () => {
 
     fetch(`http://localhost:5000/update-profile/${user._id}`, {
       method: "PUT",
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      credentials: "include", // Включаем куки в запрос
       body: formData,
-    }).then(() => alert("Профиль обновлен"));
+    })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error("Ошибка при обновлении профиля");
+        }
+        return res.json();
+      })
+      .then(() => alert("Профиль обновлен"))
+      .catch(err => console.error(err));
   };
 
   return user ? (
     <div>
       <h1>Профиль {user.username}</h1>
+      <p>Полное имя: {user.fullName}</p>
+      <p>Email: {user.email}</p>
+      <p>Дата рождения: {user.birthDate}</p>
+      <p>Место жительства: {user.residence}</p>
+      <p>Образование: {user.education}</p>
+      <p>Место рождения: {user.birthPlace}</p>
+      <p>Домашний адрес: {user.homeAddress}</p>
       <input type="password" placeholder="Новый пароль" onChange={e => setPassword(e.target.value)} />
       <select onChange={e => setEducation(e.target.value)}>
         <option value="Среднее">Среднее</option>
@@ -40,7 +63,9 @@ const Profile = () => {
       <input type="file" onChange={e => setSnilsFile(e.target.files[0])} />
       <button onClick={updateProfile}>Обновить профиль</button>
     </div>
-  ) : (<p>Загрузка...</p>);
+  ) : (
+    <p>Загрузка...</p>
+  );
 };
 
-export default Profile; 
+export default Profile;

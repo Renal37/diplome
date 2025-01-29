@@ -304,6 +304,7 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 }
 
+// loginUser обрабатывает запросы на авторизацию пользователя
 func loginUser(w http.ResponseWriter, r *http.Request) {
 	var credentials struct {
 		Username string `json:"username"`
@@ -362,6 +363,54 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	// Возвращаем токен в JSON-ответе
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+}
+
+// getProfile обрабатывает запросы на получение данных профиля пользователя
+func getProfile(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, "Ошибка при получении токена", http.StatusBadRequest)
+		return
+	}
+
+	tokenStr := cookie.Value
+
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Неверный токен", http.StatusUnauthorized)
+		return
+	}
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("diplome").Collection("users")
+
+	var user User
+	userID, err := primitive.ObjectIDFromHex(claims.UserID)
+	if err != nil {
+		http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
+		return
+	}
+	err = collection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		http.Error(w, "Пользователь не найден", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
 }
 
 // updateProfile обрабатывает запросы на обновление профиля пользователя
@@ -451,47 +500,6 @@ func updateProfile(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "Профиль пользователя успешно обновлен!")
 }
-
-// getProfile обрабатывает запросы на получение данных профиля пользователя
-func getProfile(w http.ResponseWriter, r *http.Request) {
-	tokenStr := r.Header.Get("Authorization")
-	if tokenStr == "" {
-		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
-		return
-	}
-
-	tokenStr = tokenStr[len("Bearer "):]
-
-	claims := &Claims{}
-	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-
-	if err != nil || !token.Valid {
-		http.Error(w, "Неверный токен", http.StatusUnauthorized)
-		return
-	}
-
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("users")
-
-	var user User
-	err = collection.FindOne(context.Background(), bson.M{"_id": claims.UserID}).Decode(&user)
-	if err != nil {
-		http.Error(w, "Пользователь не найден", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
-}
-
-// В main() добавьте маршрут для получения профиля
 
 func checkToken(w http.ResponseWriter, r *http.Request) {
 	tokenStr := r.Header.Get("Authorization")
