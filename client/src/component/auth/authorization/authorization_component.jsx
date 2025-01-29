@@ -12,6 +12,7 @@ const AuthorizationComponent = () => {
         e.preventDefault();
         const response = await fetch('http://localhost:5000/login', {
             method: 'POST',
+            credentials: "include", 
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -19,8 +20,6 @@ const AuthorizationComponent = () => {
         });
 
         if (response.ok) {
-            const data = await response.json();
-            localStorage.setItem('token', data.token);
             alert('Авторизация успешна!');
             navigate('/auth/profile');
         } else {

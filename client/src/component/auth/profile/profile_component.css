@@ -1,48 +1,45 @@
-.profile-component {
-    margin-top: 100px;
+.profile-container {
     max-width: 600px;
     margin: 0 auto;
     padding: 20px;
     border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
     background-color: #f9f9f9;
 }
 
-.profile-component h1 {
+.profile-header {
     text-align: center;
     margin-bottom: 20px;
-    color: #76F;
 }
 
-.profile-form {
-    display: flex;
-    flex-direction: column;
+.profile-info {
+    margin-bottom: 20px;
 }
 
-.profile-form input {
-    margin-bottom: 10px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    color: #333;
+.profile-info p {
+    margin: 5px 0;
+}
+
+.profile-input {
+    display: block;
     width: 100%;
-    box-sizing: border-box;
-}
-
-.profile-form input::placeholder {
-    color: #76F;
-}
-
-.profile-form button {
     padding: 10px;
-    border: none;
-    border-radius: 4px;
-    background-color: #76F;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.profile-button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
     color: white;
+    border: none;
+    border-radius: 5px;
     cursor: pointer;
 }
 
-.profile-form button:hover {
-    background-color: #5a5aff;
+.profile-button:hover {
+    background-color: #0056b3;
 }

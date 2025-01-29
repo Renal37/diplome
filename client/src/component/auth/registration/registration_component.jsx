@@ -63,6 +63,7 @@ const Registration = () => {
 
     const response = await fetch('http://localhost:5000/register', {
       method: 'POST',
+      credentials: "include", 
       headers: {
         'Content-Type': 'application/json',
       },
@@ -75,8 +76,6 @@ const Registration = () => {
     });
 
     if (response.ok) {
-      const data = await response.json();
-      localStorage.setItem('token', data.token);
       alert('Регистрация успешна!');
       navigate('/auth/profile');
     } else {

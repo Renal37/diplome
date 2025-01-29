@@ -92,7 +92,6 @@ func main() {
 	r.HandleFunc("/update-course/{id}", updateCourse).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/delete-course/{id}", deleteCourse).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/register", registerUser).Methods("POST", "OPTIONS")
-	r.HandleFunc("/update-profile/{id}", updateProfile).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/check-token", checkToken).Methods("POST", "OPTIONS")
 	r.HandleFunc("/login", loginUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/profile", getProfile).Methods("GET")
@@ -298,6 +297,15 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ошибка при создании токена", http.StatusInternalServerError)
 		return
 	}
+	// Устанавливаем куки с токеном
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		HttpOnly: true,
+		Secure:   false, // Поменять на true в продакшене с HTTPS
+		SameSite: http.SameSiteLaxMode,
+	})
 
 	// Возвращаем токен в JSON-ответе
 	w.Header().Set("Content-Type", "application/json")
@@ -358,6 +366,8 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		Value:    tokenString,
 		Expires:  expirationTime,
 		HttpOnly: true,
+		Secure:   false, // Поменять на true в продакшене с HTTPS
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	// Возвращаем токен в JSON-ответе
@@ -412,103 +422,15 @@ func getProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }
-
-// updateProfile обрабатывает запросы на обновление профиля пользователя
-func updateProfile(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(10 << 20) // 10 MB
-	if err != nil {
-		http.Error(w, "Ошибка при разборе формы", http.StatusBadRequest)
-		return
-	}
-
-	tokenStr := r.Header.Get("Authorization")
-	if tokenStr == "" {
-		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
-		return
-	}
-
-	tokenStr = tokenStr[len("Bearer "):]
-	claims := &Claims{}
-	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-
-	if err != nil || !token.Valid {
-		http.Error(w, "Неверный токен", http.StatusUnauthorized)
-		return
-	}
-
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("users")
-
-	// Проверка на уникальность email
-	email := r.FormValue("email")
-	var existingUser User
-	err = collection.FindOne(context.Background(), bson.M{"email": email, "_id": bson.M{"$ne": claims.UserID}}).Decode(&existingUser)
-	if err == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusConflict)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Пользователь с таким email уже существует"})
-		return
-	}
-
-	// Проверка на уникальность username
-	username := r.FormValue("username")
-	err = collection.FindOne(context.Background(), bson.M{"username": username, "_id": bson.M{"$ne": claims.UserID}}).Decode(&existingUser)
-	if err == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusConflict)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Пользователь с таким username уже существует"})
-		return
-	}
-
-	filter := bson.M{"_id": claims.UserID}
-	update := bson.M{
-		"$set": bson.M{
-			"fullName":    r.FormValue("fullName"),
-			"username":    username,
-			"email":       email,
-			"residence":   r.FormValue("residence"),
-			"education":   r.FormValue("education"),
-			"birthPlace":  r.FormValue("birthPlace"),
-			"homeAddress": r.FormValue("homeAddress"),
-		},
-	}
-
-	// Обработка загрузки фотографий
-	if passportPhoto, _, err := r.FormFile("passportPhoto"); err == nil {
-		defer passportPhoto.Close()
-		// Сохранение файла или обработка
-		// update["$set"].(bson.M)["passportPhoto"] = ""
-	}
-	if snilsPhoto, _, err := r.FormFile("snilsPhoto"); err == nil {
-		defer snilsPhoto.Close()
-		// Сохранение файла или обработка
-		// update["$set"].(bson.M)["snilsPhoto"] = путь_к_файлу
-	}
-
-	_, err = collection.UpdateOne(context.Background(), filter, update)
-	if err != nil {
-		http.Error(w, "Ошибка при обновлении профиля в базе данных", http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Fprintf(w, "Профиль пользователя успешно обновлен!")
-}
-
 func checkToken(w http.ResponseWriter, r *http.Request) {
-	tokenStr := r.Header.Get("Authorization")
-	if tokenStr == "" {
+	// Получаем токен из cookies
+	cookie, err := r.Cookie("token")
+	if err != nil {
 		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
 		return
 	}
 
-	tokenStr = tokenStr[len("Bearer "):]
+	tokenStr := cookie.Value
 
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
@@ -524,3 +446,4 @@ func checkToken(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Токен действителен для пользователя:", claims.UserID)
 	w.WriteHeader(http.StatusOK)
 }
+

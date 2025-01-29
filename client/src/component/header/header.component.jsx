@@ -10,36 +10,20 @@ const Header = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            checkToken(token);
-        }
+        checkToken();
 
-        // Добавляем слушатель для изменения токена в localStorage
-        const storageListener = () => {
-            const token = localStorage.getItem('token');
-            if (token) {
-                checkToken(token);
-            } else {
-                setIsAuthenticated(false);
-            }
-        };
+        // Проверять токен каждые 5 минут (можно изменить интервал)
+        const interval = setInterval(() => {
+            checkToken();
+        }, 5 * 60 * 1000); // 5 минут
 
-        window.addEventListener('storage', storageListener);
-
-        return () => {
-            window.removeEventListener('storage', storageListener);
-        };
+        return () => clearInterval(interval);
     }, []);
 
-    const checkToken = async (token) => {
+    const checkToken = async () => {
         const response = await fetch('http://localhost:5000/check-token', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-            credentials: 'include',
+            credentials: 'include', // Куки отправляются автоматически
         });
 
         if (response.ok) {
