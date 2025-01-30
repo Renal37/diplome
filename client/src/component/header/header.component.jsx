@@ -11,11 +11,10 @@ const Header = () => {
 
     useEffect(() => {
         checkToken();
-
         // Проверять токен каждые 5 минут (можно изменить интервал)
         const interval = setInterval(() => {
             checkToken();
-        }, 5 * 60 * 1000); // 5 минут
+        }, 1 *10 * 1000); // 5 минут
 
         return () => clearInterval(interval);
     }, []);
@@ -27,10 +26,8 @@ const Header = () => {
         });
 
         if (response.ok) {
-            console.log('Токен действителен');
             setIsAuthenticated(true);
         } else {
-            console.log('Неверный токен');
             setIsAuthenticated(false);
         }
     };

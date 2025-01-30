@@ -1,12 +1,15 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useCookies } from 'react-cookie';
 import './header_bottom.component.css';
 
 const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
+        // Удаление куки с токеном вручную
+        document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    
         setIsAuthenticated(false);
         navigate('/');
     };
@@ -20,10 +23,10 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
                     {isAuthenticated ? (
                         <>
                             <li><Link to="/auth/profile" className="a">Профиль</Link></li>
-                            <li><button onClick={handleLogout} >Выход</button></li>
+                            <li><button onClick={handleLogout} className="a">Выйти</button></li>
                         </>
                     ) : (
-                        <li><Link to="/auth" className="a">Вход системы</Link></li>
+                        <li><Link to="/auth" className="a">Войти</Link></li>
                     )}
                 </ul>
             </nav>
