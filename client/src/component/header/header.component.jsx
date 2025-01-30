@@ -8,16 +8,14 @@ import './header.component.css';
 
 const Header = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-
     useEffect(() => {
         checkToken();
-        // Проверять токен каждые 5 минут (можно изменить интервал)
         const interval = setInterval(() => {
             checkToken();
-        }, 1 *10 * 1000); // 5 минут
+        }, 1 * 1 * 1000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [0]);
 
     const checkToken = async () => {
         const response = await fetch('http://localhost:5000/check-token', {
@@ -31,7 +29,6 @@ const Header = () => {
             setIsAuthenticated(false);
         }
     };
-
     return (
         <Fragment>
             <header>
@@ -41,7 +38,7 @@ const Header = () => {
                 </div>
                 <Header_bottom isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated} />
             </header>
-            <Outlet />
+            <Outlet/>
         </Fragment>
     );
 };

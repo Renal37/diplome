@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './registration_component.css';
 
-const Registration = () => {
+const Registration = ({ setIsAuthenticated }) => {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -63,7 +63,7 @@ const Registration = () => {
 
     const response = await fetch('http://localhost:5000/register', {
       method: 'POST',
-      credentials: "include", 
+      credentials: "include",
       headers: {
         'Content-Type': 'application/json',
       },
@@ -115,17 +115,17 @@ const Registration = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-            <input
-          type={showPassword ? "text" : "password"}
-          placeholder="Повторите пароль"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Повторите пароль"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
           <button type="button" onClick={() => setShowPassword(!showPassword)}>
             {showPassword ? "Скрыть" : "Показать"}
           </button>
         </div>
-      
+
         <div className="agreement">
           <input
             type="checkbox"

@@ -95,6 +95,7 @@ func main() {
 	r.HandleFunc("/check-token", checkToken).Methods("POST", "OPTIONS")
 	r.HandleFunc("/login", loginUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/profile", getProfile).Methods("GET")
+	r.HandleFunc("/logout", logoutUser).Methods("POST", "OPTIONS")
 
 	// Запуск сервера
 	fmt.Println("Server is running on port 5000")
@@ -447,3 +448,19 @@ func checkToken(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// Добавьте новый маршрут для выхода из системы
+
+// Обработчик для выхода из системы
+func logoutUser(w http.ResponseWriter, r *http.Request) {
+	// Удаляем куки с токеном
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Expires:  time.Unix(0, 0), // Устанавливаем время истечения в прошлое
+		HttpOnly: true,
+		Secure:   false, // Поменять на true в продакшене с HTTPS
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	w.WriteHeader(http.StatusOK)
+}

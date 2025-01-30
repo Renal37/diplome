@@ -1,17 +1,31 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useCookies } from 'react-cookie';
 import './header_bottom.component.css';
+import Cookies from 'js-cookie';
 
 const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
     const navigate = useNavigate();
 
-    const handleLogout = () => {
-        // Удаление куки с токеном вручную
-        document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    
-        setIsAuthenticated(false);
-        navigate('/');
+    const handleLogout = async () => {
+        try {
+            // Отправляем запрос на сервер для удаления куки
+            const response = await fetch('http://localhost:5000/logout', {
+                method: 'POST',
+                credentials: 'include', // Отправляем куки
+            });
+
+            if (response.ok) {
+                // Удаляем куки на клиенте, если они не HttpOnly
+                Cookies.remove("token", { path: "/" });
+                localStorage.clear();
+                setIsAuthenticated(false);
+                navigate('/');
+            } else {
+                console.error('Ошибка при выходе из системы');
+            }
+        } catch (error) {
+            console.error('Ошибка при выходе из системы:', error);
+        }
     };
 
     return (
