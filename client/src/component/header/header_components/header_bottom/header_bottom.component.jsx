@@ -18,7 +18,7 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
                 // Удаляем куки на клиенте, если они не HttpOnly
                 Cookies.remove("token", { path: "/" });
                 localStorage.clear();
-                setIsAuthenticated(false);
+                setIsAuthenticated(false); // Обновляем состояние сразу
                 navigate('/');
             } else {
                 console.error('Ошибка при выходе из системы');
