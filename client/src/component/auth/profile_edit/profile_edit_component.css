@@ -1,5 +1,5 @@
-.profile-container {
-  max-width: 1680px;
+.profile-container_edit {
+  max-width: 600px;
   margin: 0 auto;
   padding: 20px;
   border: 1px solid #ccc;
@@ -7,8 +7,6 @@
 }
 
 .profile-header {
-  padding-bottom: 20px;
-  border-bottom: 1px solid black;
   text-align: center;
 }
 
@@ -36,28 +34,4 @@
 
 .profile-button:hover {
   background-color: #0056b3;
-}
-
-/* style for profile_menu */
-.profile_menu {
-  width: 100%;
-}
-
-/* style for profile_course */
-
-.profile_menu {
-  display: flex;
-
-}
-
-.profile-avatar {
-  gap: 20px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid black;
-}
-
-.profile_course {
-  padding: 20px;
 }

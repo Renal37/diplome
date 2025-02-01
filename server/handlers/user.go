@@ -9,7 +9,6 @@ import (
 	"github.com/Renal37/models"
 	"github.com/Renal37/utils"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -143,17 +142,14 @@ func LogoutUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	userID := mux.Vars(r)["id"]
 	var updateData struct {
+		FullName    string `json:"fullName"`
+		Education   string `json:"education"`
+		Residence   string `json:"residence"`
+		BirthDate   string `json:"birthDate"`
+		HomeAddress string `json:"homeAddress"`
 		OldPassword string `json:"oldPassword"`
 		NewPassword string `json:"newPassword"`
-		FullName    string `json:"fullName"`
-		Email       string `json:"email"`
-		BirthDate   string `json:"birthDate"`
-		Residence   string `json:"residence"`
-		Education   string `json:"education"`
-		BirthPlace  string `json:"birthPlace"`
-		HomeAddress string `json:"homeAddress"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&updateData)
@@ -161,6 +157,25 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
 		return
 	}
+
+	// Получаем ID пользователя из токена
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+		return
+	}
+
+	claims := &utils.Claims{}
+	token, err := jwt.ParseWithClaims(cookie.Value, claims, func(token *jwt.Token) (interface{}, error) {
+		return utils.JwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Неверный токен", http.StatusUnauthorized)
+		return
+	}
+
+	userID := claims.UserID
 
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
@@ -170,44 +185,47 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	collection := client.Database("diplome").Collection("users")
 
+	// Получаем текущие данные пользователя
 	var user models.User
-	err = collection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	objID, _ := primitive.ObjectIDFromHex(userID)
+	err = collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&user)
 	if err != nil {
 		http.Error(w, "Пользователь не найден", http.StatusNotFound)
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(updateData.OldPassword))
-	if err != nil {
-		http.Error(w, "Неверный старый пароль", http.StatusUnauthorized)
-		return
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updateData.NewPassword), bcrypt.DefaultCost)
-	if err != nil {
-		http.Error(w, "Ошибка при хешировании пароля", http.StatusInternalServerError)
-		return
-	}
-
+	// Обновляем данные пользователя
 	update := bson.M{
-		"$set": bson.M{
-			"fullName":    updateData.FullName,
-			"email":       updateData.Email,
-			"birthDate":   updateData.BirthDate,
-			"residence":   updateData.Residence,
-			"education":   updateData.Education,
-			"birthPlace":  updateData.BirthPlace,
-			"homeAddress": updateData.HomeAddress,
-			"password":    string(hashedPassword),
-		},
+		"fullName":    updateData.FullName,
+		"education":   updateData.Education,
+		"residence":   updateData.Residence,
+		"birthDate":   updateData.BirthDate,
+		"homeAddress": updateData.HomeAddress,
 	}
 
-	_, err = collection.UpdateOne(context.Background(), bson.M{"_id": userID}, update)
+	// Если пользователь хочет изменить пароль
+	if updateData.OldPassword != "" && updateData.NewPassword != "" {
+		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(updateData.OldPassword))
+		if err != nil {
+			http.Error(w, "Неверный старый пароль", http.StatusUnauthorized)
+			return
+		}
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updateData.NewPassword), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, "Ошибка при хешировании пароля", http.StatusInternalServerError)
+			return
+		}
+
+		update["password"] = string(hashedPassword)
+	}
+
+	_, err = collection.UpdateOne(context.Background(), bson.M{"_id": objID}, bson.M{"$set": update})
 	if err != nil {
-		http.Error(w, "Ошибка при обновлении профиля", http.StatusInternalServerError)
+		http.Error(w, "Ошибка при обновлении данных", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Профиль успешно обновлен"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Данные успешно обновлены"})
 }

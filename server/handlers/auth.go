@@ -86,6 +86,5 @@ func CheckToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Токен действителен для пользователя:", claims.UserID)
 	w.WriteHeader(http.StatusOK)
 }

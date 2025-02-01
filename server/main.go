@@ -43,7 +43,7 @@ func main() {
 	r.HandleFunc("/login", handlers.LoginUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/profile", handlers.GetProfile).Methods("GET")
 	r.HandleFunc("/logout", handlers.LogoutUser).Methods("POST", "OPTIONS")
-	r.HandleFunc("/update-profile/{id}", handlers.UpdateProfile).Methods("PUT")
+	r.HandleFunc("/update-profile", handlers.UpdateProfile).Methods("PUT", "OPTIONS")
 
 	// Запуск сервера
 	fmt.Println("Server is running on port 5000")

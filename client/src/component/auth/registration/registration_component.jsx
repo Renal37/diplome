@@ -5,7 +5,6 @@ import privates from "../../../assets/private.svg";
 import look from "../../../assets/eye-look-icon.svg";
 
 const Registration = ({ setIsAuthenticated }) => {
-  const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -92,12 +91,7 @@ const Registration = ({ setIsAuthenticated }) => {
 
       <form onSubmit={handleSubmit} className="registration-form">
         <div className='input'>
-          <input
-            type="text"
-            placeholder="Полное имя"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
+         
           <input
             type="text"
             placeholder="Логин"
@@ -132,6 +126,8 @@ const Registration = ({ setIsAuthenticated }) => {
             </button>
           </div>
         </div>
+      {error && <p className="error">{error}</p>}
+
 
 
         <div className="agreement">
@@ -148,7 +144,6 @@ const Registration = ({ setIsAuthenticated }) => {
           <Link to="authorization" className='btn'>Авторизация</Link>
         </div>
       </form>
-      {error && <p className="error">{error}</p>}
     </div>
   );
 };
