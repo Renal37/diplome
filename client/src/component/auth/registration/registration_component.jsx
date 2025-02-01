@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './registration_component.css';
+import privates from "../../../assets/private.svg";
+import look from "../../../assets/eye-look-icon.svg";
 
 const Registration = ({ setIsAuthenticated }) => {
   const [fullName, setFullName] = useState('');
@@ -87,55 +89,66 @@ const Registration = ({ setIsAuthenticated }) => {
   return (
     <div className="registration-component">
       <h1>Регистрация</h1>
-      <Link to="authorization">Авторизация</Link>
-      {error && <p className="error">{error}</p>}
+
       <form onSubmit={handleSubmit} className="registration-form">
-        <input
-          type="text"
-          placeholder="Полное имя"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Логин"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <div className="password-input">
+        <div className='input'>
           <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Пароль"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            type="text"
+            placeholder="Полное имя"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
           />
           <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Повторите пароль"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            type="text"
+            placeholder="Логин"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
-          <button type="button" onClick={() => setShowPassword(!showPassword)}>
-            {showPassword ? "Скрыть" : "Показать"}
-          </button>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <div className="password-input">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Пароль"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Повторите пароль"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+            <button type="button" onClick={() => setShowPassword(!showPassword)}>
+              {showPassword ? (
+                <img src={privates} alt="Скрыть" />
+              ) : (
+                <img src={look} alt="Показать" />
+              )}
+            </button>
+          </div>
         </div>
+
 
         <div className="agreement">
           <input
             type="checkbox"
             checked={agree}
             onChange={(e) => setAgree(e.target.checked)}
+            className="agree"
           />
           <label>Согласен с обработкой данных</label>
         </div>
-        <button type="submit">Зарегистрироваться</button>
+        <div className='buttons'>
+          <button type="submit" className='btn'>Зарегистрироваться</button>
+          <Link to="authorization" className='btn'>Авторизация</Link>
+        </div>
       </form>
+      {error && <p className="error">{error}</p>}
     </div>
   );
 };

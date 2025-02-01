@@ -4,6 +4,7 @@ import Registration from './registration/registration_component.jsx';
 import Authorization from './authorization/authorization_component.jsx';
 import Profile from './profile/profile_component.jsx';
 import './auth_component.css'
+import Profile_Edit from './profile_update/profile_update_component.jsx';
 
 const Auth = () => {
     return (
@@ -12,6 +13,7 @@ const Auth = () => {
                 <Route index element={<Registration />} />
                 <Route path="authorization" element={<Authorization />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="edit_profile" element={<Profile_Edit />} />
             </Routes>
         </div>
 

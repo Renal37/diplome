@@ -10,17 +10,17 @@ const Header_center = () => {
             <div className="header_logo">
                 <div className="logo"><Link to="/" className="a"><img src={logo} alt="" /></Link></div>
             </div>
-            <div className="header_info">
-                <p>
+            <Link to='/' className="header_info">
+                <p className='black'>
                     МИНИСТЕРСТВО ОБРАЗОВАНИЯ И НАУКИ РЕСПУБЛИКИ ТАТАРСТАН
                 </p>
-                <p className="small">
+                <p className="small black">
                     Государственное автономное профессиональное образовательное учреждение
                 </p>
                 <p className="apt_color bold">
                     «АЛЬМЕТЬЕВСКИЙ ПОЛИТЕХНИЧЕСКИЙ ТЕХНИКУМ»
                 </p>
-            </div>
+            </Link>
             <div className="header_addres">
                 <div className="header_dirrector">
                     <p>

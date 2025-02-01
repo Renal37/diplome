@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './authorization_component.css';
+import privates from "../../../assets/private.svg";
+import look from "../../../assets/eye-look-icon.svg";
 
 const AuthorizationComponent = ({ setIsAuthenticated }) => {
     const [username, setUsername] = useState('');
@@ -12,7 +14,7 @@ const AuthorizationComponent = ({ setIsAuthenticated }) => {
         e.preventDefault();
         const response = await fetch('http://localhost:5000/login', {
             method: 'POST',
-            credentials: "include", 
+            credentials: "include",
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -30,29 +32,34 @@ const AuthorizationComponent = ({ setIsAuthenticated }) => {
     return (
         <div className="authorization-component">
             <h1>Авторизация</h1>
-            <Link to="/auth">Регистрация</Link>
             <form onSubmit={handleSubmit} className="authorization-form">
-                <input
-                    type="text"
-                    placeholder="Логин"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                />
-                <div className="password-input">
+                <div className="input">
                     <input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Пароль"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        type="text"
+                        placeholder="Логин"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
                     />
-                    <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                    >
-                        {showPassword ? "Скрыть" : "Показать"}
-                    </button>
+                    <div className="password-input">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Пароль"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)}>
+                            {showPassword ? (
+                                <img src={privates} alt="Скрыть" />
+                            ) : (
+                                <img src={look} alt="Показать" />
+                            )}
+                        </button>
+                    </div>
                 </div>
-                <button type="submit">Войти</button>
+                <div className="btns">
+                    <button type="submit" className='btn'>Войти</button>
+                    <Link to="/auth" className='btn'>Регистрация</Link>
+                </div>
             </form>
         </div>
     );

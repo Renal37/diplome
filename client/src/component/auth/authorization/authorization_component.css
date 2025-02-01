@@ -1,5 +1,5 @@
 .authorization-component {
-  max-width: 600px;
+  max-width: 650px;
   margin: 0 auto;
   padding: 20px;
   border: 1px solid #ddd;
@@ -15,15 +15,23 @@
 }
 
 .authorization-form {
+  font-style: 18px;
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+}
+.input{
   display: flex;
   flex-direction: column;
+  gap: 10px;
 }
 
 .authorization-form input {
-  margin-bottom: 10px;
-  padding: 10px;
-  border: 1px solid #ccc;
+
+  padding: 12px;
+  border: 1px solid #ddd;
   border-radius: 4px;
+  font-size: 18px;
   color: #333;
   width: 100%;
   box-sizing: border-box;
@@ -33,16 +41,18 @@
   color: #76F;
 }
 
-.authorization-form button {
+.authorization-form .btn {
+  text-decoration: none;
   padding: 10px;
   border: none;
   border-radius: 4px;
   background-color: #76F;
   color: white;
   cursor: pointer;
+  font-size: 18px;
 }
 
-.authorization-form button:hover {
+.authorization-form .btn:hover {
   background-color: #5a5aff;
 }
 
@@ -52,7 +62,11 @@
 
 .password-input input {
   padding-right: 80px;
-  /* Adjust padding to make space for the button */
+}
+
+button img {
+  width: 40px;
+  height: 40px;
 }
 
 .password-input button {
@@ -64,4 +78,8 @@
   border: none;
   cursor: pointer;
   color: #007bff;
+}
+.btns{
+  display: flex;
+  justify-content: space-between;
 }

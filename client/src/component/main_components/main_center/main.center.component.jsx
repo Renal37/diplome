@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import './main.center.component.css';
 
 const Main_center = () => {
     const [courses, setCourses] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('');
+    const location = useLocation(); // Хук для получения текущего пути
 
     useEffect(() => {
         fetch('http://localhost:5000/courses')
@@ -13,10 +15,25 @@ const Main_center = () => {
             .catch(error => console.error('Error fetching courses:', error));
     }, []);
 
-    const filteredCourses = courses.filter(course =>
-        course.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (filterType ? course.type === filterType : true)
-    );
+    // Определяем тип курсов в зависимости от текущего пути
+    const getCourseTypeByPath = () => {
+        if (location.pathname === '/promotion') {
+            return 'Повышение квалификации';
+        } else if (location.pathname === '/professional') {
+            return 'Профессиональная переподготовка';
+        } else {
+            return ''; // На других страницах показываем все курсы
+        }
+    };
+
+    // Фильтруем курсы по поисковому запросу, типу фильтра и текущему пути
+    const filteredCourses = courses.filter(course => {
+        const matchesSearchTerm = course.title.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesFilterType = filterType ? course.type === filterType : true;
+        const matchesPathType = getCourseTypeByPath() ? course.type === getCourseTypeByPath() : true;
+
+        return matchesSearchTerm && matchesFilterType && matchesPathType;
+    });
 
     return (
         <div className="main_center">
@@ -33,11 +50,14 @@ const Main_center = () => {
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
-                    <select onChange={e => setFilterType(e.target.value)} value={filterType}>
-                        <option value="">Все типы</option>
-                        <option value="Профессиональная переподготовка">Профессиональная переподготовка</option>
-                        <option value="Повышение квалификации">Повышение квалификации</option>
-                    </select>
+                    {location.pathname !== '/promotion' && location.pathname !== '/professional' && (
+                        <select onChange={e => setFilterType(e.target.value)} value={filterType}>
+                            <option value="">Все типы</option>
+                            <option value="Профессиональная переподготовка">Профессиональная переподготовка</option>
+                            <option value="Повышение квалификации">Повышение квалификации</option>
+                        </select>
+                    )}
+
                 </form>
                 <div className="courses_list">
                     {filteredCourses.map(course => (

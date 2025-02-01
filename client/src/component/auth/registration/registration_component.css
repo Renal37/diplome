@@ -23,6 +23,13 @@
 .registration-form {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    gap: 10px;
+}
+
+.registration-form .input{
+    display: flex;
+    flex-direction: column;
     gap: 10px;
 }
 
@@ -30,11 +37,10 @@
 .registration-form input[type="email"],
 .registration-form input[type="password"],
 .registration-form input[type="date"] {
-     
-    padding: 10px;
+    padding: 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 16px;
+    font-size: 18px;
     color: #333;
     width: 100%;
     box-sizing: border-box;
@@ -47,46 +53,51 @@
 .registration-form .password-input {
     display: flex;
     align-items: center;
-    align-items: center;
-    gap: 10px;
+    justify-content: space-between;
 }
 
 .registration-form .password-input input {
     flex: 1;
 }
 
-.registration-form .password-input button {
-    border: none;
-    border-radius: 4px;
-    background-color: #76F;
-    color: white;
-    cursor: pointer;
-}
-
-.registration-form .password-input button:hover {
-    background-color: #5a5aff;
+.registration-form .password-input button img {
+    width: 40px;
+    height: 40px;
 }
 
 .registration-form .agreement {
     display: flex;
     align-items: center;
+    font-size: 20px;    
     margin-bottom: 10px;
+
 }
 
 .registration-form .agreement input {
     margin-right: 10px;
+    width: 25px;
+    transform:scale(1.5);
+    opacity:0.9;
+    cursor:pointer;
 }
 
-.registration-form button {
+.registration-form .btn {
+    text-decoration: none;
     padding: 10px;
     border: none;
     border-radius: 4px;
     background-color: #76F;
     color: white;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 18px;
 }
 
-.registration-form button:hover {
+.registration-form .btn:hover {
     background-color: #5a5aff;
+}
+
+.registration-form .buttons{
+    display: flex;
+    align-items: center;    
+    justify-content: space-between;
 }
