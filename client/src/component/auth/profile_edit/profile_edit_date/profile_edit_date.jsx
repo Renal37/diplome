@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import './profile_edit_date.css'; // Подключите стили, если необходимо
+import './profile_edit_date.css';
 
 const ProfileEditDate = () => {
     const [userData, setUserData] = useState({
-        fullName: '',
+        lastName: '',
+        firstName: '',
+        middleName: '',
         education: '',
         residence: '',
         birthDate: '',
@@ -11,6 +13,7 @@ const ProfileEditDate = () => {
         oldPassword: '',
         newPassword: '',
         confirmPassword: '',
+        agreeToProcessing: false,
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -23,9 +26,13 @@ const ProfileEditDate = () => {
                 });
                 if (response.ok) {
                     const data = await response.json();
+                    // Разделяем fullName на отдельные поля
+                    const [lastName, firstName, middleName] = data.fullName.split(' ');
                     setUserData({
                         ...userData,
-                        fullName: data.fullName || '',
+                        lastName: lastName || '',
+                        firstName: firstName || '',
+                        middleName: middleName || '',
                         education: data.education || '',
                         residence: data.residence || '',
                         birthDate: data.birthDate || '',
@@ -43,8 +50,11 @@ const ProfileEditDate = () => {
     }, []);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setUserData({ ...userData, [name]: value });
+        const { name, value, type, checked } = e.target;
+        setUserData({
+            ...userData,
+            [name]: type === 'checkbox' ? checked : value,
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -52,9 +62,35 @@ const ProfileEditDate = () => {
         setError('');
         setSuccess('');
 
+        if (!userData.agreeToProcessing) {
+            setError('Необходимо согласие на обработку данных');
+            return;
+        }
+
         if (userData.newPassword && userData.newPassword !== userData.confirmPassword) {
             setError('Новый пароль и подтверждение пароля не совпадают');
             return;
+        }
+
+        // Собираем fullName из отдельных полей
+        const fullName = `${userData.lastName} ${userData.firstName} ${userData.middleName}`.trim();
+
+        // Создаем объект для отправки только измененных данных
+        const updateData = {
+            fullName,
+            lastName : userData.lastName,
+            firstName: userData.firstName,
+            middleName: userData.middleName,
+            education: userData.education,
+            residence: userData.residence,
+            birthDate: userData.birthDate,
+            homeAddress: userData.homeAddress,
+        };
+
+        // Добавляем пароль только если он был изменен
+        if (userData.oldPassword && userData.newPassword) {
+            updateData.oldPassword = userData.oldPassword;
+            updateData.newPassword = userData.newPassword;
         }
 
         try {
@@ -64,12 +100,11 @@ const ProfileEditDate = () => {
                     'Content-Type': 'application/json',
                 },
                 credentials: 'include',
-                body: JSON.stringify(userData),
+                body: JSON.stringify(updateData),
             });
 
             if (response.ok) {
                 setSuccess('Данные успешно обновлены');
-                navigate('/profile');
             } else {
                 const data = await response.json();
                 setError(data.message || 'Ошибка при обновлении данных');
@@ -79,28 +114,51 @@ const ProfileEditDate = () => {
         }
     };
 
-
     return (
         <div className="profile-edit-container">
+            <h1>Редактирование профиля</h1>
+            {error && <div className="error-message">{error}</div>}
             {success && <div className="success-message">{success}</div>}
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label>Имя Фамилия Отчество:</label>
+                    <label>Фамилия:</label>
                     <input
                         type="text"
-                        name="fullName"
-                        value={userData.fullName}
+                        name="lastName"
+                        value={userData.lastName}
+                        onChange={handleChange}
+                    />
+                </div>
+                <div className="form-group">
+                    <label>Имя:</label>
+                    <input
+                        type="text"
+                        name="firstName"
+                        value={userData.firstName}
+                        onChange={handleChange}
+                    />
+                </div>
+                <div className="form-group">
+                    <label>Отчество:</label>
+                    <input
+                        type="text"
+                        name="middleName"
+                        value={userData.middleName}
                         onChange={handleChange}
                     />
                 </div>
                 <div className="form-group">
                     <label>Образование:</label>
-                    <input
-                        type="text"
+                    <select
                         name="education"
                         value={userData.education}
                         onChange={handleChange}
-                    />
+                    >
+                        <option value="">Выберите образование</option>
+                        <option value="Высшее">Высшее</option>
+                        <option value="Среднее профессиональное">Среднее профессиональное</option>
+                        <option value="Среднее общее">Среднее общее</option>
+                    </select>
                 </div>
                 <div className="form-group">
                     <label>Место жительства:</label>
@@ -155,6 +213,17 @@ const ProfileEditDate = () => {
                         value={userData.confirmPassword}
                         onChange={handleChange}
                     />
+                </div>
+                <div className="form-group">
+                    <label>
+                        <input
+                            type="checkbox"
+                            name="agreeToProcessing"
+                            checked={userData.agreeToProcessing}
+                            onChange={handleChange}
+                        />
+                        Согласен на обработку персональных данных
+                    </label>
                 </div>
                 <button type="submit" className="submit-button">Сохранить изменения</button>
             </form>

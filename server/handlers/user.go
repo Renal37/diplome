@@ -143,13 +143,16 @@ func LogoutUser(w http.ResponseWriter, r *http.Request) {
 
 func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	var updateData struct {
-		FullName    string `json:"fullName"`
-		Education   string `json:"education"`
-		Residence   string `json:"residence"`
-		BirthDate   string `json:"birthDate"`
-		HomeAddress string `json:"homeAddress"`
-		OldPassword string `json:"oldPassword"`
-		NewPassword string `json:"newPassword"`
+		FullName    string `json:"fullName,omitempty"`
+		LastName    string `json:"lastName,omitempty"`
+		FirstName   string `json:"firstName,omitempty"`
+		MiddleName  string `json:"middleName,omitempty"`
+		Education   string `json:"education,omitempty"`
+		Residence   string `json:"residence,omitempty"`
+		BirthDate   string `json:"birthDate,omitempty"`
+		HomeAddress string `json:"homeAddress,omitempty"`
+		OldPassword string `json:"oldPassword,omitempty"`
+		NewPassword string `json:"newPassword,omitempty"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&updateData)
@@ -194,13 +197,32 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Обновляем данные пользователя
-	update := bson.M{
-		"fullName":    updateData.FullName,
-		"education":   updateData.Education,
-		"residence":   updateData.Residence,
-		"birthDate":   updateData.BirthDate,
-		"homeAddress": updateData.HomeAddress,
+	// Создаем объект для обновления
+	update := bson.M{}
+
+	if updateData.FullName != "" {
+		update["fullName"] = updateData.FullName
+	}
+	if updateData.LastName != "" {
+		update["lastname"] = updateData.LastName
+	}
+	if updateData.FirstName != "" {
+		update["firstname"] = updateData.FirstName
+	}
+	if updateData.MiddleName != "" {
+		update["middlename"] = updateData.MiddleName
+	}
+	if updateData.Education != "" {
+		update["education"] = updateData.Education
+	}
+	if updateData.Residence != "" {
+		update["residence"] = updateData.Residence
+	}
+	if updateData.BirthDate != "" {
+		update["birthDate"] = updateData.BirthDate
+	}
+	if updateData.HomeAddress != "" {
+		update["homeAddress"] = updateData.HomeAddress
 	}
 
 	// Если пользователь хочет изменить пароль
@@ -220,10 +242,13 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		update["password"] = string(hashedPassword)
 	}
 
-	_, err = collection.UpdateOne(context.Background(), bson.M{"_id": objID}, bson.M{"$set": update})
-	if err != nil {
-		http.Error(w, "Ошибка при обновлении данных", http.StatusInternalServerError)
-		return
+	// Обновляем только те поля, которые были переданы
+	if len(update) > 0 {
+		_, err = collection.UpdateOne(context.Background(), bson.M{"_id": objID}, bson.M{"$set": update})
+		if err != nil {
+			http.Error(w, "Ошибка при обновлении данных", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)

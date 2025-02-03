@@ -69,7 +69,6 @@ const Registration = ({ setIsAuthenticated }) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        fullName,
         username,
         email,
         password,
@@ -91,7 +90,6 @@ const Registration = ({ setIsAuthenticated }) => {
 
       <form onSubmit={handleSubmit} className="registration-form">
         <div className='input'>
-         
           <input
             type="text"
             placeholder="Логин"
