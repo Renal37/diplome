@@ -48,7 +48,7 @@ const Profile = () => {
         <div className="profile-avatar">
           <h1>Ваши данные</h1>
           <div className="profile-info">
-            <p>Полное имя: {profile.fullName}</p>
+            <p>Полное имя: {profile.lastName}</p>
             <p>Email: {profile.email}</p>
             <p>Дата рождения: {profile.birthDate}</p>
             <p>Место жительства: {profile.residence}</p>

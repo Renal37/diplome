@@ -17,6 +17,24 @@ const ProfileEditDate = () => {
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [profile, setProfile] = useState(null);
+    useEffect(() => {
+        const fetchProfile = async () => {
+            const response = await fetch("http://localhost:5000/profile", {
+                method: "GET",
+                credentials: "include",
+            });
+
+            if (!response.ok) {
+                throw new Error("Ошибка при загрузке профиля");
+            }
+
+            const data = await response.json();
+            setProfile(data);
+        };
+
+        fetchProfile();
+    }, []);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -78,7 +96,7 @@ const ProfileEditDate = () => {
         // Создаем объект для отправки только измененных данных
         const updateData = {
             fullName,
-            lastName : userData.lastName,
+            lastName: userData.lastName,
             firstName: userData.firstName,
             middleName: userData.middleName,
             education: userData.education,
@@ -116,116 +134,128 @@ const ProfileEditDate = () => {
 
     return (
         <div className="profile-edit-container">
-            <h1>Редактирование профиля</h1>
-            {error && <div className="error-message">{error}</div>}
-            {success && <div className="success-message">{success}</div>}
+
             <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                    <label>Фамилия:</label>
-                    <input
-                        type="text"
-                        name="lastName"
-                        value={userData.lastName}
-                        onChange={handleChange}
-                    />
+                <div className="from_input_group">
+                    <div className="input_group">
+                        <div className="form-group">
+                            <label>Фамилия:</label>
+                            <input
+                                type="text"
+                                name="lastName"
+                                value={userData.lastName}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Имя:</label>
+                            <input
+                                type="text"
+                                name="firstName"
+                                value={userData.firstName}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Отчество:</label>
+                            <input
+                                type="text"
+                                name="middleName"
+                                value={userData.middleName}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Образование:</label>
+                            <select
+                                name="education"
+                                value={userData.education}
+                                onChange={handleChange}
+                            >
+                                <option value="">Выберите образование</option>
+                                <option value="Высшее">Высшее</option>
+                                <option value="Среднее профессиональное">Среднее профессиональное</option>
+                                <option value="Среднее общее">Среднее общее</option>
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>Место жительства:</label>
+                            <input
+                                type="text"
+                                name="residence"
+                                value={userData.residence}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    </div>
+                    <div className="input_group">
+                        <div className="form-group">
+                            <label>Дата рождения:</label>
+                            <input
+                                type="date"
+                                name="birthDate"
+                                value={userData.birthDate}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Домашний адрес:</label>
+                            <input
+                                type="text"
+                                name="homeAddress"
+                                value={userData.homeAddress}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Старый пароль (для изменения пароля):</label>
+                            <input
+                                type="password"
+                                name="oldPassword"
+                                value={userData.oldPassword}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Новый пароль:</label>
+                            <input
+                                type="password"
+                                name="newPassword"
+                                value={userData.newPassword}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Подтвердите новый пароль:</label>
+                            <input
+                                type="password"
+                                name="confirmPassword"
+                                value={userData.confirmPassword}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    </div>
                 </div>
-                <div className="form-group">
-                    <label>Имя:</label>
-                    <input
-                        type="text"
-                        name="firstName"
-                        value={userData.firstName}
-                        onChange={handleChange}
-                    />
+                {error && <div className="error-message">{error}</div>}
+                {success && <div className="success-message">{success}</div>}
+                <div className="btn">
+                    <div className="form-group">
+                        <label>
+                            <input
+                                type="checkbox"
+                                name="agreeToProcessing"
+                                checked={userData.agreeToProcessing}
+                                onChange={handleChange}
+                            />
+                            Согласен на обработку персональных данных
+                        </label>
+                    </div>
+                   
+                    <button type="submit" className="submit-button">Сохранить изменения</button>
                 </div>
-                <div className="form-group">
-                    <label>Отчество:</label>
-                    <input
-                        type="text"
-                        name="middleName"
-                        value={userData.middleName}
-                        onChange={handleChange}
-                    />
-                </div>
-                <div className="form-group">
-                    <label>Образование:</label>
-                    <select
-                        name="education"
-                        value={userData.education}
-                        onChange={handleChange}
-                    >
-                        <option value="">Выберите образование</option>
-                        <option value="Высшее">Высшее</option>
-                        <option value="Среднее профессиональное">Среднее профессиональное</option>
-                        <option value="Среднее общее">Среднее общее</option>
-                    </select>
-                </div>
-                <div className="form-group">
-                    <label>Место жительства:</label>
-                    <input
-                        type="text"
-                        name="residence"
-                        value={userData.residence}
-                        onChange={handleChange}
-                    />
-                </div>
-                <div className="form-group">
-                    <label>Дата рождения:</label>
-                    <input
-                        type="date"
-                        name="birthDate"
-                        value={userData.birthDate}
-                        onChange={handleChange}
-                    />
-                </div>
-                <div className="form-group">
-                    <label>Домашний адрес:</label>
-                    <input
-                        type="text"
-                        name="homeAddress"
-                        value={userData.homeAddress}
-                        onChange={handleChange}
-                    />
-                </div>
-                <div className="form-group">
-                    <label>Старый пароль (для изменения пароля):</label>
-                    <input
-                        type="password"
-                        name="oldPassword"
-                        value={userData.oldPassword}
-                        onChange={handleChange}
-                    />
-                </div>
-                <div className="form-group">
-                    <label>Новый пароль:</label>
-                    <input
-                        type="password"
-                        name="newPassword"
-                        value={userData.newPassword}
-                        onChange={handleChange}
-                    />
-                </div>
-                <div className="form-group">
-                    <label>Подтвердите новый пароль:</label>
-                    <input
-                        type="password"
-                        name="confirmPassword"
-                        value={userData.confirmPassword}
-                        onChange={handleChange}
-                    />
-                </div>
-                <div className="form-group">
-                    <label>
-                        <input
-                            type="checkbox"
-                            name="agreeToProcessing"
-                            checked={userData.agreeToProcessing}
-                            onChange={handleChange}
-                        />
-                        Согласен на обработку персональных данных
-                    </label>
-                </div>
-                <button type="submit" className="submit-button">Сохранить изменения</button>
+
+
+
             </form>
         </div>
     );
