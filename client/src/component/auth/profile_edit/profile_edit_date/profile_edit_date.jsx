@@ -17,30 +17,14 @@ const ProfileEditDate = () => {
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const [profile, setProfile] = useState(null);
-    useEffect(() => {
-        const fetchProfile = async () => {
-            const response = await fetch("http://localhost:5000/profile", {
-                method: "GET",
-                credentials: "include",
-            });
 
-            if (!response.ok) {
-                throw new Error("Ошибка при загрузке профиля");
-            }
-
-            const data = await response.json();
-            setProfile(data);
-        };
-
-        fetchProfile();
-    }, []);
-
+    // Загрузка данных пользователя при монтировании компонента
     useEffect(() => {
         const fetchUserData = async () => {
             try {
                 const response = await fetch('http://localhost:5000/profile', {
-                    credentials: 'include',
+                    method: "GET",
+                    credentials: 'include', // Для отправки куки с токеном
                 });
                 if (response.ok) {
                     const data = await response.json();
@@ -250,7 +234,7 @@ const ProfileEditDate = () => {
                             Согласен на обработку персональных данных
                         </label>
                     </div>
-                   
+
                     <button type="submit" className="submit-button">Сохранить изменения</button>
                 </div>
 

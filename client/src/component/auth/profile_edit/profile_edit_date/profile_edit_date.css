@@ -4,8 +4,19 @@
     color: #333;
 }
 
+.from_input_group{
+    padding-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.input_group{
+    width: 800px;    
+}
+
 .form-group {
     margin-bottom: 15px;
+    width: 100%;
 }
 
 .form-group label {
@@ -57,12 +68,4 @@
 
 .submit-button:hover {
     background-color: #5a5aff;
-}
-
-.from_input_group {
-    padding-top: 50px;
-    display: flex;
-    justify-content: space-between;
-    gap: 20px;
-    align-items: center;
 }
