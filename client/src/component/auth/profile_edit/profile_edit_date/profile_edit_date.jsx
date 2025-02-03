@@ -23,28 +23,32 @@ const ProfileEditDate = () => {
         const fetchUserData = async () => {
             try {
                 const response = await fetch('http://localhost:5000/profile', {
-                    method: "GET",
                     credentials: 'include', // Для отправки куки с токеном
                 });
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('Данные с сервера:', data); // Логируем данные для отладки
+
                     // Разделяем fullName на отдельные поля
-                    const [lastName, firstName, middleName] = data.fullName.split(' ');
-                    setUserData({
-                        ...userData,
-                        lastName: lastName || '',
-                        firstName: firstName || '',
-                        middleName: middleName || '',
+                    const nameParts = data.fullName ? data.fullName.split(' ') : ['', '', ''];
+                    
+                    // Обновляем состояние, сохраняя предыдущие значения
+                    setUserData((prevState) => ({
+                        ...prevState,
+                        lastName: data.lastName || '',
+                        firstName: data.firstName || '',
+                        middleName: data.middleName || '',
                         education: data.education || '',
                         residence: data.residence || '',
                         birthDate: data.birthDate || '',
                         homeAddress: data.homeAddress || '',
-                    });
+                    }));
                 } else {
                     setError('Ошибка при загрузке данных пользователя');
                 }
             } catch (err) {
                 setError('Ошибка при загрузке данных пользователя');
+                console.error('Ошибка при загрузке данных:', err);
             }
         };
 
@@ -53,10 +57,10 @@ const ProfileEditDate = () => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setUserData({
-            ...userData,
+        setUserData((prevState) => ({
+            ...prevState,
             [name]: type === 'checkbox' ? checked : value,
-        });
+        }));
     };
 
     const handleSubmit = async (e) => {
@@ -73,7 +77,6 @@ const ProfileEditDate = () => {
             setError('Новый пароль и подтверждение пароля не совпадают');
             return;
         }
-
         // Собираем fullName из отдельных полей
         const fullName = `${userData.lastName} ${userData.firstName} ${userData.middleName}`.trim();
 
@@ -245,4 +248,4 @@ const ProfileEditDate = () => {
     );
 };
 
-export default ProfileEditDate;
+export default ProfileEditDate; 

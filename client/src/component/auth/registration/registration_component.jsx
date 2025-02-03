@@ -138,8 +138,8 @@ const Registration = ({ setIsAuthenticated }) => {
           <label>Согласен с обработкой данных</label>
         </div>
         <div className='buttons'>
-          <button type="submit" className='btn'>Зарегистрироваться</button>
           <Link to="authorization" className='btn'>Авторизация</Link>
+          <button type="submit" className='btn'>Зарегистрироваться</button>
         </div>
       </form>
     </div>

@@ -57,8 +57,8 @@ const AuthorizationComponent = ({ setIsAuthenticated }) => {
                     </div>
                 </div>
                 <div className="btns">
-                    <button type="submit" className='btn'>Войти</button>
                     <Link to="/auth" className='btn'>Регистрация</Link>
+                    <button type="submit" className='btn'>Войти</button>
                 </div>
             </form>
         </div>
