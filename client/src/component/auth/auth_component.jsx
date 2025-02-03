@@ -13,7 +13,7 @@ const Auth = () => {
                 <Route index element={<Registration />} />
                 <Route path="authorization" element={<Authorization />} />
                 <Route path="profile" element={<Profile />} />
-                <Route path="edit_profile" element={<Profile_Edit />} />
+                <Route path="/edit_profile" element={<Profile_Edit />} />
             </Routes>
         </div>
 

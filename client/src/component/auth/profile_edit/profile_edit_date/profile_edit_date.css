@@ -7,7 +7,7 @@
 .from_input_group{
     padding-top: 20px;
     display: flex;
-    align-items: center;
+    align-items: start;
     justify-content: space-between;
 }
 .input_group{

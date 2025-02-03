@@ -17,6 +17,7 @@ const ProfileEditDate = () => {
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     // Загрузка данных пользователя при монтировании компонента
     useEffect(() => {
@@ -31,7 +32,7 @@ const ProfileEditDate = () => {
 
                     // Разделяем fullName на отдельные поля
                     const nameParts = data.fullName ? data.fullName.split(' ') : ['', '', ''];
-                    
+
                     // Обновляем состояние, сохраняя предыдущие значения
                     setUserData((prevState) => ({
                         ...prevState,
@@ -72,6 +73,7 @@ const ProfileEditDate = () => {
             setError('Необходимо согласие на обработку данных');
             return;
         }
+
 
         if (userData.newPassword && userData.newPassword !== userData.confirmPassword) {
             setError('Новый пароль и подтверждение пароля не совпадают');
@@ -119,9 +121,12 @@ const ProfileEditDate = () => {
         }
     };
 
+    const toggleShowPassword = () => {
+        setShowPassword(!showPassword);
+    };
+
     return (
         <div className="profile-edit-container">
-
             <form onSubmit={handleSubmit}>
                 <div className="from_input_group">
                     <div className="input_group">
@@ -165,15 +170,7 @@ const ProfileEditDate = () => {
                                 <option value="Среднее общее">Среднее общее</option>
                             </select>
                         </div>
-                        <div className="form-group">
-                            <label>Место жительства:</label>
-                            <input
-                                type="text"
-                                name="residence"
-                                value={userData.residence}
-                                onChange={handleChange}
-                            />
-                        </div>
+                     
                     </div>
                     <div className="input_group">
                         <div className="form-group">
@@ -186,6 +183,15 @@ const ProfileEditDate = () => {
                             />
                         </div>
                         <div className="form-group">
+                        <div className="form-group">
+                            <label>Место жительства:</label>
+                            <input
+                                type="text"
+                                name="residence"
+                                value={userData.residence}
+                                onChange={handleChange}
+                            />
+                        </div>
                             <label>Домашний адрес:</label>
                             <input
                                 type="text"
@@ -195,38 +201,6 @@ const ProfileEditDate = () => {
                             />
                         </div>
                         <div className="form-group">
-                            <label>Старый пароль (для изменения пароля):</label>
-                            <input
-                                type="password"
-                                name="oldPassword"
-                                value={userData.oldPassword}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Новый пароль:</label>
-                            <input
-                                type="password"
-                                name="newPassword"
-                                value={userData.newPassword}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Подтвердите новый пароль:</label>
-                            <input
-                                type="password"
-                                name="confirmPassword"
-                                value={userData.confirmPassword}
-                                onChange={handleChange}
-                            />
-                        </div>
-                    </div>
-                </div>
-                {error && <div className="error-message">{error}</div>}
-                {success && <div className="success-message">{success}</div>}
-                <div className="btn">
-                    <div className="form-group">
                         <label>
                             <input
                                 type="checkbox"
@@ -237,15 +211,48 @@ const ProfileEditDate = () => {
                             Согласен на обработку персональных данных
                         </label>
                     </div>
+                        {/* <div className="form-group">
+                            <label>Старый пароль (для изменения пароля):</label>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="oldPassword"
+                                value={userData.oldPassword}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Новый пароль:</label>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="newPassword"
+                                value={userData.newPassword}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Подтвердите новый пароль:</label>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="confirmPassword"
+                                value={userData.confirmPassword}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <button type="button" onClick={toggleShowPassword}>
+                            {showPassword ? "Скрыть пароль" : "Показать пароль"}
+                        </button> */}
+                    </div>
+                </div>
+                {error && <div className="error-message">{error}</div>}
+                {success && <div className="success-message">{success}</div>}
+                <div className="btn">
+                   
 
                     <button type="submit" className="submit-button">Сохранить изменения</button>
                 </div>
-
-
-
             </form>
         </div>
     );
 };
 
-export default ProfileEditDate; 
+export default ProfileEditDate;
