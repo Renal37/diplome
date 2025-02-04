@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import './main.center.component.css';
 
 const Main_center = () => {
@@ -67,6 +67,7 @@ const Main_center = () => {
                             <p>Продолжительность: {course.duration} часов</p>
                             <p>Стоимость: {course.price} руб.</p>
                             <p>Тип: {course.type}</p>
+                            <Link to={`/courses/register/${course._id}`}>Записаться на курс</Link>
                         </div>
                     ))}
                 </div>

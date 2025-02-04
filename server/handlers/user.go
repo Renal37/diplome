@@ -221,19 +221,19 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		update["residence"] = updateData.Residence
 	}
 	if updateData.BirthDate != "" {
-		update["birthDate"] = updateData.BirthDate
+		update["birthdate"] = updateData.BirthDate
 	}
 	if updateData.HomeAddress != "" {
-		update["homeAddress"] = updateData.HomeAddress
+		update["homeaddress"] = updateData.HomeAddress
 	}
 	if updateData.PassportData != "" {
-		update["passportData"] = updateData.PassportData
+		update["passportdata"] = updateData.PassportData
 	}
 	if updateData.SNILS != "" {
 		update["snils"] = updateData.SNILS
 	}
 	if updateData.AgreeToProcessing {
-		update["agreeToProcessing"] = updateData.AgreeToProcessing
+		update["agreetoprocessing"] = updateData.AgreeToProcessing
 	}
 
 	// Если пользователь хочет изменить пароль

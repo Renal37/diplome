@@ -10,6 +10,7 @@ import './style.css';
 import AdminComponent from './component/admin/admin_component.jsx';
 import Auth from './component/auth/auth_component.jsx';
 import Profile_Edit from './component/auth/profile_edit/profile_edit_component.jsx';
+import CourseRegistration from './component/course/ course_component.jsx';
 
 const routes = [
   { path: "/", element: <Main_top_center /> },
@@ -33,6 +34,7 @@ const App = () => {
         <Route path="/admin/*" element={<AdminComponent />} />
         <Route path="/auth/*" element={<Auth />} />
         <Route path="/auth/edit_profile/*" element={<Profile_Edit />} />
+        <Route path="/courses/register/:courseId" element={<CourseRegistration/>} />
       </Routes>
     </div>
   );

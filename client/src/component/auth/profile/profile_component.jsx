@@ -41,31 +41,26 @@ const Profile = () => {
   }
 
   return profile ? (
-
     <div className="profile-container">
       <h1 className="profile-header">Ваш профиль</h1>
       <div className="profile_menu">
         <div className="profile-avatar">
           <h1>Ваши данные</h1>
           <div className="profile-info">
-            <p>Ваше имя: {profile.fullName}</p>
-            <p>Email: {profile.email}</p>
-            <p>Дата рождения: {profile.birthDate}</p>
-            <p>Место жительства: {profile.residence}</p>
-            <p>Образование: {profile.education}</p>
+            <p>Ваше ФИО: {profile.lastName && profile.firstName && profile.middleName ? `${profile.lastName} ${profile.firstName} ${profile.middleName}` : "Данные отсутствуют"}</p>
+            <p>Email: {profile.email || "Данные отсутствуют"}</p>
+            <p>Дата рождения: {profile.birthDate || "Данные отсутствуют"}</p>
+            <p>Место жительства: {profile.residence || "Данные отсутствуют"}</p>
+            <p>Образование: {profile.education || "Данные отсутствуют"}</p>
           </div>
         </div>
         <div className="profile_course">
           <h1>Ваши пройденные курсы</h1>
           <div className="course_end">
-
           </div>
-
         </div>
       </div>
-
     </div>
-
 
   ) : (
     <p>Загрузка...</p>
