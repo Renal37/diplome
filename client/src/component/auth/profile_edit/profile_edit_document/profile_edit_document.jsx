@@ -3,7 +3,7 @@ import './profile_edit_document.css';
 
 const ProfileEditDocument = () => {
     const [userData, setUserData] = useState({
-        passportdata: '',
+        passportData: '',
         snils: '',
         agreeToProcessing: false,
     });
@@ -23,7 +23,7 @@ const ProfileEditDocument = () => {
                     // Обновляем состояние, сохраняя предыдущие значения
                     setUserData((prevState) => ({
                         ...prevState,
-                        passportdata: data.passportdata || '',
+                        passportData: data.passportData || '',
                         snils: data.snils || ''
                     }));
                 } else {
@@ -57,7 +57,7 @@ const ProfileEditDocument = () => {
         }
         // Создаем объект для отправки только измененных данных
         const updateData = {
-            passportdata: userData.passportdata,
+            passportData: userData.passportData,
             snils: userData.snils,
         };
 
@@ -82,8 +82,6 @@ const ProfileEditDocument = () => {
         }
     };
 
-
-
     return (
         <div className="profile-edit-container">
             <form onSubmit={handleSubmit}>
@@ -91,40 +89,26 @@ const ProfileEditDocument = () => {
                     <div className="input_group">
                         <div className="form-group">
                             <label>Паспортные данные:</label>
-                            <div className="pacport">
-                                <input
-                                    placeholder='Серия'
-                                    type="text"
-                                    name="lastName"
-                                    value={userData.passportdata}
-                                    onChange={handleChange}
-                                />
-                                <input
-                                    placeholder='Номер'
-                                    type="text"
-                                    name="lastName"
-                                    value={userData.passportdata}
-                                    onChange={handleChange}
-                                />
-                            </div>
-
+                            <input
+                                type="text"
+                                name="passportData"
+                                value={userData.passportData}
+                                onChange={handleChange}
+                                placeholder="Серия и номер"
+                            />
                         </div>
-
-
-
                     </div>
                     <div className="input_group">
                         <div className="form-group">
                             <label>Снилс:</label>
                             <input
                                 type="text"
-                                name="firstName"
+                                name="snils"
                                 value={userData.snils}
                                 onChange={handleChange}
                             />
                         </div>
                     </div>
-
                 </div>
                 {error && <div className="error-message">{error}</div>}
                 {success && <div className="success-message">{success}</div>}
@@ -140,7 +124,6 @@ const ProfileEditDocument = () => {
                             Согласен на обработку персональных данных
                         </label>
                     </div>
-
                     <button type="submit" className="submit-button">Сохранить изменения</button>
                 </div>
             </form>
