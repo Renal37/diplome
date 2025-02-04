@@ -142,18 +142,19 @@ func LogoutUser(w http.ResponseWriter, r *http.Request) {
 }
 func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	var updateData struct {
-		FullName     string `json:"fullName,omitempty"`
-		LastName     string `json:"lastName,omitempty"`
-		FirstName    string `json:"firstName,omitempty"`
-		MiddleName   string `json:"middleName,omitempty"`
-		Education    string `json:"education,omitempty"`
-		Residence    string `json:"residence,omitempty"`
-		BirthDate    string `json:"birthDate,omitempty"`
-		HomeAddress  string `json:"homeAddress,omitempty"`
-		OldPassword  string `json:"oldPassword,omitempty"`
-		NewPassword  string `json:"newPassword,omitempty"`
-		PassportData string `json:"passportData,omitempty"`
-		SNILS        string `json:"snils,omitempty"`
+		FullName          string `json:"fullName,omitempty"`
+		LastName          string `json:"lastName,omitempty"`
+		FirstName         string `json:"firstName,omitempty"`
+		MiddleName        string `json:"middleName,omitempty"`
+		Education         string `json:"education,omitempty"`
+		Residence         string `json:"residence,omitempty"`
+		BirthDate         string `json:"birthDate,omitempty"`
+		HomeAddress       string `json:"homeAddress,omitempty"`
+		OldPassword       string `json:"oldPassword,omitempty"`
+		NewPassword       string `json:"newPassword,omitempty"`
+		PassportData      string `json:"passportData,omitempty"`
+		SNILS             string `json:"snils,omitempty"`
+		AgreeToProcessing bool   `json:"agreeToProcessing,omitempty"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&updateData)
@@ -230,6 +231,9 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	if updateData.SNILS != "" {
 		update["snils"] = updateData.SNILS
+	}
+	if updateData.AgreeToProcessing {
+		update["agreeToProcessing"] = updateData.AgreeToProcessing
 	}
 
 	// Если пользователь хочет изменить пароль

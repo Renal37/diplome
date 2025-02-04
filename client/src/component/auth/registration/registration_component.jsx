@@ -72,6 +72,7 @@ const Registration = ({ setIsAuthenticated }) => {
         username,
         email,
         password,
+        agreeToProcessing: agree,
       }),
     });
 
@@ -124,9 +125,7 @@ const Registration = ({ setIsAuthenticated }) => {
             </button>
           </div>
         </div>
-      {error && <p className="error">{error}</p>}
-
-
+        {error && <p className="error">{error}</p>}
 
         <div className="agreement">
           <input

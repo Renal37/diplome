@@ -3,7 +3,8 @@ import './profile_edit_document.css';
 
 const ProfileEditDocument = () => {
     const [userData, setUserData] = useState({
-        passportData: '',
+        passportSeries: '',
+        passportNumber: '',
         snils: '',
         agreeToProcessing: false,
     });
@@ -23,8 +24,10 @@ const ProfileEditDocument = () => {
                     // Обновляем состояние, сохраняя предыдущие значения
                     setUserData((prevState) => ({
                         ...prevState,
-                        passportData: data.passportData || '',
-                        snils: data.snils || ''
+                        passportSeries: data.passportData ? data.passportData.split(' ')[0] : '',
+                        passportNumber: data.passportData ? data.passportData.split(' ')[1] : '',
+                        snils: data.snils || '',
+                        agreeToProcessing: data.agreeToProcessing || false,
                     }));
                 } else {
                     setError('Ошибка при загрузке данных пользователя');
@@ -55,10 +58,15 @@ const ProfileEditDocument = () => {
             setError('Необходимо согласие на обработку данных');
             return;
         }
+
+        // Объединяем серию и номер паспорта
+        const passportData = `${userData.passportSeries} ${userData.passportNumber}`.trim();
+
         // Создаем объект для отправки только измененных данных
         const updateData = {
-            passportData: userData.passportData,
+            passportData,
             snils: userData.snils,
+            agreeToProcessing: userData.agreeToProcessing,
         };
 
         try {
@@ -89,13 +97,22 @@ const ProfileEditDocument = () => {
                     <div className="input_group">
                         <div className="form-group">
                             <label>Паспортные данные:</label>
-                            <input
-                                type="text"
-                                name="passportData"
-                                value={userData.passportData}
-                                onChange={handleChange}
-                                placeholder="Серия и номер"
-                            />
+                            <div className="pacport">
+                                <input
+                                    type="text"
+                                    name="passportSeries"
+                                    value={userData.passportSeries}
+                                    onChange={handleChange}
+                                    placeholder="Серия паспорта"
+                                />
+                                <input
+                                    type="text"
+                                    name="passportNumber"
+                                    value={userData.passportNumber}
+                                    onChange={handleChange}
+                                    placeholder="Номер паспорта"
+                                />
+                            </div>
                         </div>
                     </div>
                     <div className="input_group">
@@ -108,22 +125,25 @@ const ProfileEditDocument = () => {
                                 onChange={handleChange}
                             />
                         </div>
+                          {/* {!userData.agreeToProcessing && ( */}
+                          <div className="form-group">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    name="agreeToProcessing"
+                                    checked={userData.agreeToProcessing}
+                                    onChange={handleChange}
+                                />
+                                Согласен на обработку персональных данных
+                            </label>
+                        </div>
+                    {/* )} */}
                     </div>
                 </div>
                 {error && <div className="error-message">{error}</div>}
                 {success && <div className="success-message">{success}</div>}
                 <div className="btn">
-                    <div className="form-group">
-                        <label>
-                            <input
-                                type="checkbox"
-                                name="agreeToProcessing"
-                                checked={userData.agreeToProcessing}
-                                onChange={handleChange}
-                            />
-                            Согласен на обработку персональных данных
-                        </label>
-                    </div>
+                  
                     <button type="submit" className="submit-button">Сохранить изменения</button>
                 </div>
             </form>
