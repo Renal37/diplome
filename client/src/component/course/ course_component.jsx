@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 
 const CourseRegistration = () => {
     const { courseId } = useParams();
-    const navigate = useNavigate();
+    const navigate = useNavigate(); // Используем useNavigate вместо useHistory
     const [course, setCourse] = useState(null);
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -28,25 +28,23 @@ const CourseRegistration = () => {
             method: "GET",
             credentials: "include",
         })
-            .then(response => response.json(),
-            // console.log('response:', data)
-        )
+            .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    history.push('/auth/login');
+                    navigate('/auth/login'); 
                 } else {
                     setUser(data);
                 }
             })
             .catch(error => {
                 console.error('Error fetching user data:', error);
-                history.push('/auth/login');
+                // navigate('/auth/login'); // Используем navigate вместо history.push
             });
-        }, [courseId]);
+    }, [courseId, navigate]);
 
     const handleRegister = () => {
-        if (!user || !user.fullName || !user.email || !user.phone) {
-            history.push('/auth/edit_profile');
+        if (!user.lastName || !user.firstName || !user.middleName) {
+            navigate('/auth/edit_profile'); // Используем navigate вместо history.push
             return;
         }
 
@@ -65,7 +63,7 @@ const CourseRegistration = () => {
             .then(data => {
                 if (data.success) {
                     alert('Вы успешно записаны на курс! Ожидайте одобрения администратора.');
-                    history.push('/');
+                    navigate('/'); // Используем navigate вместо history.push
                 } else {
                     setError(data.message || 'Ошибка при записи на курс');
                 }

@@ -48,9 +48,7 @@ func main() {
 	r.HandleFunc("/admin/approve-registration/{id}", handlers.ApproveRegistration).Methods("POST")
 	r.HandleFunc("/admin/reject-registration/{id}", handlers.RejectRegistration).Methods("POST")
 	r.HandleFunc("/courses/{id}", handlers.GetCourseByID).Methods("GET")
-	r.HandleFunc("/courses/register", handlers.RegisterForCourse).Methods("POST")
-
-	// Запуск сервера
+	r.HandleFunc("/courses/register", handlers.RegisterForCourse).Methods("POST", "OPTIONS")
 	fmt.Println("Server is running on port 5000")
 	log.Fatal(http.ListenAndServe(":5000", r))
 }
