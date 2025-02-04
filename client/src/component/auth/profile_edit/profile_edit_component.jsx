@@ -7,8 +7,11 @@ const Profile_Edit = () => {
   return (
     <div className="profile-container_edit">
       <h1 className="profile-header">Редактирование профиля</h1>
-      <Link to="auth/edit_profile">Ваши данные</Link>
-      <Link to="document">Ваши документы</Link>
+      <div className="profile_nav">
+        <Link className="a" to="/auth/edit_profile">Ваши данные</Link>
+        <Link className="a" to="document">Ваши документы</Link>
+      </div>
+
       <div className="profile-info">
         <Routes>
           <Route index element={<ProfileEditDate />} />

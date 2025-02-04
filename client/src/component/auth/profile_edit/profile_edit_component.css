@@ -4,6 +4,7 @@
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 8px;
+  margin-top: 50px;
 }
 
 .profile-header {
@@ -34,4 +35,24 @@
 
 .profile-button:hover {
   background-color: #0056b3;
+}
+.profile_nav{
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  border-bottom: 1px solid black;
+}
+.profile_nav .a{
+  padding: 10px;
+  font-size: 18px;
+  text-decoration: none;
+  border-radius: 4px;
+  background-color: #76F;
+  color: white;
+}
+
+.profile_nav .a:hover{
+  background-color: #5a5aff;
 }
