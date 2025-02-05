@@ -8,14 +8,14 @@ const AdminApprovalPage = () => {
     const [error, setError] = useState('');
     const [rejectReason, setRejectReason] = useState(''); // Состояние для причины отклонения
     const [selectedRegistrationId, setSelectedRegistrationId] = useState(null); // ID выбранной заявки
-    const navigate = useNavigate();
 
     useEffect(() => {
         fetch('http://localhost:5000/admin/course-registrations', {
-            credentials: 'include',
+            credentials: 'include'
         })
-            .then((response) => response.json())
-            .then((data) => {
+            .then(response => response.json())
+            .then(data => {
+                console.log("Data from backend:", data); // Проверьте структуру данных
                 if (data.error) {
                     setError(data.error);
                 } else {
@@ -23,7 +23,7 @@ const AdminApprovalPage = () => {
                 }
                 setIsLoading(false);
             })
-            .catch((error) => {
+            .catch(error => {
                 console.error('Error fetching registrations:', error);
                 setError('Ошибка при загрузке заявок');
                 setIsLoading(false);
@@ -33,59 +33,61 @@ const AdminApprovalPage = () => {
     const handleApprove = (registrationId) => {
         fetch(`http://localhost:5000/admin/approve-registration/${registrationId}`, {
             method: 'POST',
-            credentials: 'include',
+            credentials: 'include'
         })
-            .then((response) => response.json())
-            .then((data) => {
+            .then(response => response.json())
+            .then(data => {
                 if (data.success) {
-                    setRegistrations(
-                        registrations.map((reg) =>
-                            reg._id === registrationId ? { ...reg, status: 'Одобренный' } : reg
-                        )
-                    );
+                    // Обновляем список заявок после одобрения
+                    setRegistrations(registrations.map(reg =>
+                        reg._id === registrationId ? { ...reg, status: 'Одобренный' } : reg
+                    ));
                 } else {
                     setError(data.message || 'Ошибка при одобрении заявки');
                 }
             })
-            .catch((error) => {
+            .catch(error => {
                 console.error('Error approving registration:', error);
                 setError('Ошибка при одобрении заявки');
             });
     };
 
     const handleReject = (registrationId) => {
-        setSelectedRegistrationId(registrationId); // Открываем форму для ввода причины
+        // Устанавливаем ID выбранной заявки и открываем модальное окно
+        setSelectedRegistrationId(registrationId);
     };
 
-    const handleRejectSubmit = () => {
-        const registrationId = selectedRegistrationId;
-        if (!registrationId) return;
+    const confirmReject = () => {
+        if (!rejectReason) {
+            setError('Укажите причину отклонения');
+            return;
+        }
 
-        fetch(`http://localhost:5000/admin/reject-registration/${registrationId}`, {
+        fetch(`http://localhost:5000/admin/reject-registration/${selectedRegistrationId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+            },
             credentials: 'include',
-            body: JSON.stringify({ reason: rejectReason }), // Отправляем причину
+            body: JSON.stringify({ reason: rejectReason }), // Отправляем причину отклонения
         })
-            .then((response) => response.json())
-            .then((data) => {
+            .then(response => response.json())
+            .then(data => {
                 if (data.success) {
-                    setRegistrations(
-                        registrations.map((reg) =>
-                            reg._id === registrationId
-                                ? { ...reg, status: 'Отклоненный', rejectionReason: rejectReason } // Добавляем причину
-                                : reg
-                        )
-                    );
-                    setSelectedRegistrationId(null); // Закрываем форму
-                    setRejectReason(''); // Очищаем причину
+                    // Обновляем список заявок после отклонения
+                    setRegistrations(registrations.map(reg =>
+                        reg._id === selectedRegistrationId ? { ...reg, status: 'Отклоненный', rejectReason: rejectReason } : reg
+                    ));
+                    setRejectReason(''); // Очищаем поле причины
+                    setSelectedRegistrationId(null); // Закрываем модальное окно
                 } else {
                     setError(data.message || 'Ошибка при отклонении заявки');
                 }
             })
-            .catch((error) => {
+            .catch(error => {
                 console.error('Error rejecting registration:', error);
                 setError('Ошибка при отклонении заявки');
+
             });
     };
 
@@ -110,7 +112,7 @@ const AdminApprovalPage = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {registrations.map((registration) => (
+                    {registrations.map(registration => (
                         <tr key={registration._id}>
                             <td>{registration.courseTitle}</td>
                             <td>{registration.userName}</td>
@@ -132,16 +134,14 @@ const AdminApprovalPage = () => {
             {selectedRegistrationId && (
                 <div className="modal">
                     <div className="modal-content">
-                        <h3>Введите причину отклонения:</h3>
+                        <h2>Укажите причину отклонения</h2>
                         <textarea
                             value={rejectReason}
                             onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="Укажите причину..."
+                            placeholder="Причина отклонения"
                         />
-                        <div className="modal-actions">
-                            <button onClick={handleRejectSubmit}>Отклонить</button>
-                            <button onClick={() => setSelectedRegistrationId(null)}>Отмена</button>
-                        </div>
+                        <button onClick={confirmReject}>Подтвердить</button>
+                        <button onClick={() => setSelectedRegistrationId(null)}>Отмена</button>
                     </div>
                 </div>
             )}

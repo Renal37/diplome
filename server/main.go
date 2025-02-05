@@ -47,7 +47,7 @@ func main() {
 	r.HandleFunc("/update-profile", handlers.UpdateProfile).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/admin/course-registrations", handlers.GetCourseRegistrations).Methods("GET")
 	r.HandleFunc("/admin/approve-registration/{id}", handlers.ApproveRegistration).Methods("POST")
-	r.HandleFunc("/admin/reject-registration/{id}", handlers.RejectRegistration).Methods("POST")
+	r.HandleFunc("/admin/reject-registration/{id}", handlers.RejectRegistration).Methods("POST", "OPTIONS")
 	r.HandleFunc("/courses/{id}", handlers.GetCourseByID).Methods("GET")
 	r.HandleFunc("/courses/register", handlers.RegisterForCourse).Methods("POST", "OPTIONS")
 	r.HandleFunc("/user/courses", handlers.GetCoursesForUser).Methods("GET")

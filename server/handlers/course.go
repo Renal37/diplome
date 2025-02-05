@@ -188,9 +188,9 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 	collection := client.Database("diplome").Collection("course_registrations")
 
 	registration := bson.M{
-		"courseId": request.CourseID,
-		"userId":   request.UserID,
-		"status":   "Ожидание", // Статус ожидания одобрения
+		"courseId":        request.CourseID,
+		"userId":          request.UserID,
+		"status":          "Ожидание", // Статус ожидания одобрения
 	}
 
 	_, err = collection.InsertOne(context.Background(), registration)
