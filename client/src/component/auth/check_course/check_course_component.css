@@ -1,13 +1,89 @@
+/* CheckCourse.css */
+
+.check-course-container {
+    display: flex;
+    flex-direction: column;
+    max-width: 800px;
+    display: flex;
+    align-items: start;
+    flex-direction: column;;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.profile_course_nav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
 .prifle_nav_button {
+    padding: 10px 20px;
     background-color: #007bff;
     color: white;
     border: none;
-    padding: 10px 20px;
-    margin: 5px;
-    cursor: pointer;
     border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
 .prifle_nav_button:hover {
     background-color: #0056b3;
+}
+
+.prifle_nav_button.active {
+    background-color: #28a745;
+}
+
+.course-list-container {
+    margin-top: 20px;
+}
+
+.course-list-title {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.course-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.course-item {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+}
+
+.course-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.course-status {
+    margin-bottom: 5px;
+}
+
+.reject-reason {
+    color: red;
+    font-style: italic;
+}
+
+.no-courses-message {
+    color: gray;
+    font-style: italic;
+}
+
+.loading {
+    color: #007bff;
+    font-weight: bold;
+}
+
+.error {
+    color: red;
+    font-weight: bold;
 }

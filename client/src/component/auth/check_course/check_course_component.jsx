@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import "./check_course_component.css";
 
 const CheckCourse = () => {
     const [courses, setCourses] = useState([]); // Инициализируем как пустой массив
@@ -13,16 +14,13 @@ const CheckCourse = () => {
             if (status !== "all") {
                 endpoint = `/user/courses/status?status=${status}`; // Курсы по статусу
             }
-
             const response = await fetch(`http://localhost:5000${endpoint}`, {
                 method: "GET",
                 credentials: "include", // Включаем аутентификацию через cookies
             });
-
             if (!response.ok) {
                 throw new Error("Ошибка при загрузке курсов");
             }
-
             const data = await response.json();
             // Проверяем, что данные являются массивом
             if (!Array.isArray(data)) {
@@ -30,7 +28,6 @@ const CheckCourse = () => {
                 setCourses([]);
                 return;
             }
-
             setCourses(data);
         } catch (err) {
             setError(err.message);
@@ -43,52 +40,60 @@ const CheckCourse = () => {
     // Загрузка данных при изменении selectedStatus
     useEffect(() => {
         fetchCourses(selectedStatus);
+
     }, [selectedStatus]);
 
     // Обработка отображения
-    if (loading) return <p>Загрузка...</p>;
-    if (error) return <p>{error}</p>;
+    if (loading) return <p className="loading">Загрузка...</p>;
+    if (error) return <p className="error">{error}</p>;
+    console.log(courses);
 
     return (
-        <div>
+        <div className="check-course-container">
             {/* Навигация по статусам */}
             <div className="profile_course_nav">
                 <button
                     onClick={() => setSelectedStatus("all")}
-                    className="prifle_nav_button"
+                    className={`prifle_nav_button ${selectedStatus === "all" ? "active" : ""}`}
                 >
                     Все курсы
                 </button>
                 <button
                     onClick={() => setSelectedStatus("Одобренный")}
-                    className="prifle_nav_button"
+                    className={`prifle_nav_button ${selectedStatus === "Одобренный" ? "active" : ""}`}
                 >
                     Одобренные
                 </button>
                 <button
                     onClick={() => setSelectedStatus("Отклоненный")}
-                    className="prifle_nav_button"
+                    className={`prifle_nav_button ${selectedStatus === "Отклоненный" ? "active" : ""}`}
                 >
                     Отклоненные
                 </button>
                 <button
                     onClick={() => setSelectedStatus("Ожидание")}
-                    className="prifle_nav_button"
+                    className={`prifle_nav_button ${selectedStatus === "Ожидание" ? "active" : ""}`}
                 >
                     Ожидают одобрения
                 </button>
             </div>
 
             {/* Отображение списка курсов */}
-            <div>
-                <h2>Список курсов:</h2>
-                {courses.length === 0 ? ( // Проверяем, что courses является массивом
-                    <p>Нет доступных курсов для выбранного статуса.</p>
+            <div className="course-list-container">
+                <h2 className="course-list-title">Список курсов:</h2>
+                {courses.length === 0 ? (
+                    <p className="no-courses-message">Нет доступных курсов для выбранного статуса.</p>
                 ) : (
-                    <ul>
+                    <ul className="course-list">
                         {courses.map((course, index) => (
-                            <li key={index}>
-                                Название: {course.courseTitle}, Статус: {course.status}
+                            <li key={index} className="course-item">
+                                <span className="course-title">Название: {course.courseTitle}</span>
+                                <span className="course-status">Статус: {course.status}</span>
+                                {course.status === "Отклоненный" && course.rejectReason && (
+                                    <span className="reject-reason">
+                                        Причина отказа: {course.rejectReason}
+                                    </span>
+                                )}
                             </li>
                         ))}
                     </ul>

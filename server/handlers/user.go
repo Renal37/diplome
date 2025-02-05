@@ -147,9 +147,12 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		FirstName         string `json:"firstName,omitempty"`
 		MiddleName        string `json:"middleName,omitempty"`
 		Education         string `json:"education,omitempty"`
-		Residence         string `json:"residence,omitempty"`
+		Phone         string `json:"phone,omitempty"`
 		BirthDate         string `json:"birthDate,omitempty"`
+		BirthPlace        string `json:"birthPlace,omitempty"`
 		HomeAddress       string `json:"homeAddress,omitempty"`
+		WorkPlace         string `json:"workPlace,omitempty"`
+		JobTitle          string `json:"jobTitle,omitempty"`
 		OldPassword       string `json:"oldPassword,omitempty"`
 		NewPassword       string `json:"newPassword,omitempty"`
 		PassportData      string `json:"passportData,omitempty"`
@@ -179,7 +182,7 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный токен", http.StatusUnauthorized)
 		return
 	}
-
+	
 	userID := claims.UserID
 
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
@@ -217,14 +220,23 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	if updateData.Education != "" {
 		update["education"] = updateData.Education
 	}
-	if updateData.Residence != "" {
-		update["residence"] = updateData.Residence
+	if updateData.Phone != "" {
+		update["phone"] = updateData.Phone
 	}
 	if updateData.BirthDate != "" {
 		update["birthdate"] = updateData.BirthDate
 	}
+	if updateData.BirthPlace != "" {
+		update["birthplace"] = updateData.BirthPlace
+	}
 	if updateData.HomeAddress != "" {
 		update["homeaddress"] = updateData.HomeAddress
+	}
+	if updateData.WorkPlace != "" {
+		update["workplace"] = updateData.WorkPlace
+	}
+	if updateData.JobTitle != "" {
+		update["jobtitle"] = updateData.JobTitle
 	}
 	if updateData.PassportData != "" {
 		update["passportdata"] = updateData.PassportData
@@ -261,7 +273,7 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
+	
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Данные успешно обновлены"})
 }

@@ -456,6 +456,7 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 				"status": 1,
+				"rejectReason": 1,
 			},
 		},
 	}
@@ -544,6 +545,7 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 				"status": 1,
+				"rejectReason": 1,
 			},
 		},
 	}

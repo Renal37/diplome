@@ -7,9 +7,12 @@ const ProfileEditDate = () => {
         firstName: '',
         middleName: '',
         education: '',
-        residence: '',
+        phone: '',
         birthDate: '',
+        birthPlace: '',
         homeAddress: '',
+        workPlace: '',
+        jobTitle: '',
         oldPassword: '',
         newPassword: '',
         confirmPassword: '',
@@ -30,9 +33,6 @@ const ProfileEditDate = () => {
                     const data = await response.json();
                     console.log('Данные с сервера:', data); // Логируем данные для отладки
 
-                    // Разделяем fullName на отдельные поля
-                    const nameParts = data.fullName ? data.fullName.split(' ') : ['', '', ''];
-
                     // Обновляем состояние, сохраняя предыдущие значения
                     setUserData((prevState) => ({
                         ...prevState,
@@ -40,9 +40,12 @@ const ProfileEditDate = () => {
                         firstName: data.firstName || '',
                         middleName: data.middleName || '',
                         education: data.education || '',
-                        residence: data.residence || '',
+                        phone: data.phone || '',
                         birthDate: data.birthDate || '',
+                        birthPlace: data.birthPlace || '',
                         homeAddress: data.homeAddress || '',
+                        workPlace: data.workPlace || '',
+                        jobTitle: data.jobTitle || '',
                         agreeToProcessing: data.agreeToProcessing || false,
                     }));
                 } else {
@@ -74,7 +77,6 @@ const ProfileEditDate = () => {
             setError('Необходимо согласие на обработку данных');
             return;
         }
-
         if (userData.newPassword && userData.newPassword !== userData.confirmPassword) {
             setError('Новый пароль и подтверждение пароля не совпадают');
             return;
@@ -90,12 +92,14 @@ const ProfileEditDate = () => {
             firstName: userData.firstName,
             middleName: userData.middleName,
             education: userData.education,
-            residence: userData.residence,
+            phone: userData.phone,
             birthDate: userData.birthDate,
+            birthPlace: userData.birthPlace,
             homeAddress: userData.homeAddress,
+            workPlace: userData.workPlace,
+            jobTitle: userData.jobTitle,
             agreeToProcessing: userData.agreeToProcessing,
         };
-
         // Добавляем пароль только если он был изменен
         if (userData.oldPassword && userData.newPassword) {
             updateData.oldPassword = userData.oldPassword;
@@ -160,6 +164,26 @@ const ProfileEditDate = () => {
                             />
                         </div>
                         <div className="form-group">
+                            <label>Дата рождения:</label>
+                            <input
+                                type="date"
+                                name="birthDate"
+                                value={userData.birthDate}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Место рождения:</label>
+                            <input
+                                type="text"
+                                name="birthPlace"
+                                value={userData.birthPlace}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    </div>
+                    <div className="input_group">
+                        <div className="form-group">
                             <label>Образование:</label>
                             <select
                                 name="education"
@@ -172,28 +196,36 @@ const ProfileEditDate = () => {
                                 <option value="Среднее общее">Среднее общее</option>
                             </select>
                         </div>
-                    </div>
-                    <div className="input_group">
                         <div className="form-group">
-                            <label>Дата рождения:</label>
+                            <label>Место работы и занимая должность:</label>
+                            <div className="form-group_input">
+                                <input
+                                    placeholder='Место работы'
+                                    type="text"
+                                    name="workPlace"
+                                    value={userData.workPlace}
+                                    onChange={handleChange}
+                                />
+                                <input
+                                    placeholder='Должность'
+                                    type="text"
+                                    name="jobTitle"
+                                    value={userData.jobTitle}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label>Номер телефона:</label>
                             <input
-                                type="date"
-                                name="birthDate"
-                                value={userData.birthDate}
+                                type="phone"
+                                name="phone"
+                                value={userData.phone}
                                 onChange={handleChange}
                             />
                         </div>
                         <div className="form-group">
-                            <label>Место жительства:</label>
-                            <input
-                                type="text"
-                                name="residence"
-                                value={userData.residence}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Домашний адрес:</label>
+                            <label>Домашний адрес (прописка):</label>
                             <input
                                 type="text"
                                 name="homeAddress"

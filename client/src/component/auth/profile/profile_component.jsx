@@ -51,18 +51,10 @@ const Profile = () => {
             <p>Ваше ФИО: {profile.lastName && profile.firstName && profile.middleName ? `${profile.lastName} ${profile.firstName} ${profile.middleName}` : "Данные отсутствуют"}</p>
             <p>Email: {profile.email || "Данные отсутствуют"}</p>
             <p>Дата рождения: {profile.birthDate || "Данные отсутствуют"}</p>
-            <p>Место жительства: {profile.residence || "Данные отсутствуют"}</p>
             <p>Образование: {profile.education || "Данные отсутствуют"}</p>
           </div>
         </div>
         <div className="profile_course">
-          <div className="profile_course_top">
-            <div className="profile_course_text">
-              <h1>Курсы:</h1>
-            </div>
-          </div>
-
-
           <div className="course_end">
             <CheckCourse />
           </div>
