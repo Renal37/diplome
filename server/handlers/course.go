@@ -235,67 +235,137 @@ func ApproveCourseRegistration(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("course_registrations")
+    clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+    client, err := mongo.Connect(context.Background(), clientOptions)
+    if err != nil {
+        http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+        return
+    }
+    defer client.Disconnect(context.Background())
 
-	// Агрегация для получения данных о курсе и пользователе
-	pipeline := bson.A{
-		bson.M{
-			"$lookup": bson.M{
-				"from":         "courses",
-				"localField":   "courseId",
-				"foreignField": "_id",
-				"as":           "course",
-			},
-		},
-		bson.M{
-			"$lookup": bson.M{
-				"from":         "users",
-				"localField":   "userId",
-				"foreignField": "_id",
-				"as":           "user",
-			},
-		},
+    collection := client.Database("diplome").Collection("course_registrations")
 
-		bson.M{
-			"$project": bson.M{
-				"courseTitle": bson.M{
-					"$ifNull": bson.A{
-						bson.M{"$arrayElemAt": bson.A{"$course.title", 0}},
-						"Unknown Course", // Значение по умолчанию, если курс не найден
-					},
-				},
-				"userName": bson.M{
-					"$ifNull": bson.A{
-						bson.M{"$arrayElemAt": bson.A{"$user.username", 0}},
-						"Unknown User", // Значение по умолчанию, если пользователь не найден
-					},
-				},
-				"status": 1,
-			},
-		},
-	}
+    // Агрегация для получения данных о курсе и пользователе
+    pipeline := bson.A{
+        bson.M{
+            "$lookup": bson.M{
+                "from":         "courses",
+                "localField":   "courseId",
+                "foreignField": "_id",
+                "as":           "course",
+            },
+        },
+        bson.M{
+            "$lookup": bson.M{
+                "from":         "users",
+                "localField":   "userId",
+                "foreignField": "_id",
+                "as":           "user",
+            },
+        },
+        bson.M{
+            "$project": bson.M{
+                "courseTitle": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$course.title", 0}},
+                        "Unknown Course", // Значение по умолчанию, если курс не найден
+                    },
+                },
+                "userName": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.username", 0}},
+                        "Unknown User", // Значение по умолчанию, если пользователь не найден
+                    },
+                },
+                "status": 1,
+                "userEmail": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.email", 0}},
+                        "Unknown Email",
+                    },
+                },
+                "userFullname": bson.M{
+                    "$concat": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.lastname", 0}},
+                        " ",
+                        bson.M{"$arrayElemAt": bson.A{"$user.firstname", 0}},
+                        " ",
+                        bson.M{"$arrayElemAt": bson.A{"$user.middlename", 0}},
+                    },
+                },
+                "userBirthdate": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.birthdate", 0}},
+                        "Unknown Birthdate",
+                    },
+                },
+                "userBirthplace": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.birthplace", 0}},
+                        "Unknown Birthplace",
+                    },
+                },
+                "userEducation": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.education", 0}},
+                        "Unknown Education",
+                    },
+                },
+                "userWorkplace": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.workplace", 0}},
+                        "Unknown Workplace",
+                    },
+                },
+                "userJobtitle": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.jobtitle", 0}},
+                        "Unknown Jobtitle",
+                    },
+                },
+                "userHomeaddress": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.homeaddress", 0}},
+                        "Unknown Homeaddress",
+                    },
+                },
+                "userPhone": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.phone", 0}},
+                        "Unknown Phone",
+                    },
+                },
+                "userPassportdata": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.passportdata", 0}},
+                        "Unknown Passportdata",
+                    },
+                },
+                "userSnils": bson.M{
+                    "$ifNull": bson.A{
+                        bson.M{"$arrayElemAt": bson.A{"$user.snils", 0}},
+                        "Unknown Snils",
+                    },
+                },
+            },
+        },
+    }
 
-	cursor, err := collection.Aggregate(context.Background(), pipeline)
-	if err != nil {
-		http.Error(w, "Ошибка при получении заявок", http.StatusInternalServerError)
-		return
-	}
-	defer cursor.Close(context.Background())
+    cursor, err := collection.Aggregate(context.Background(), pipeline)
+    if err != nil {
+        http.Error(w, "Ошибка при получении заявок", http.StatusInternalServerError)
+        return
+    }
+    defer cursor.Close(context.Background())
 
-	var registrations []bson.M
-	if err = cursor.All(context.Background(), &registrations); err != nil {
-		http.Error(w, "Ошибка при обработке данных заявок", http.StatusInternalServerError)
-		return
-	}
+    var registrations []bson.M
+    if err = cursor.All(context.Background(), &registrations); err != nil {
+        http.Error(w, "Ошибка при обработке данных заявок", http.StatusInternalServerError)
+        return
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(registrations)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(registrations)
 }
 
 func ApproveRegistration(w http.ResponseWriter, r *http.Request) {
