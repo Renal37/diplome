@@ -339,6 +339,20 @@ func RejectRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var requestBody struct {
+		Reason string `json:"reason"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+
+	if requestBody.Reason == "" {
+		http.Error(w, "Причина отклонения обязательна", http.StatusBadRequest)
+		return
+	}
+
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
@@ -350,7 +364,8 @@ func RejectRegistration(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
 		"$set": bson.M{
-			"status": "Отклоненный",
+			"status":       "Отклоненный",
+			"rejectReason": requestBody.Reason, // Сохраняем причину отклонения
 		},
 	}
 
