@@ -1,0 +1,13 @@
+.prifle_nav_button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 5px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.prifle_nav_button:hover {
+    background-color: #0056b3;
+}

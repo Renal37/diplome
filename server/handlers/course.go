@@ -362,3 +362,136 @@ func RejectRegistration(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
+func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
+	// Получаем userId из контекста или токена
+	userIdHex := r.Context().Value("userId").(string)
+	userId, err := primitive.ObjectIDFromHex(userIdHex)
+	if err != nil {
+		http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
+		return
+	}
+
+	// Получаем параметр status из запроса
+	status := r.URL.Query().Get("status")
+	if status == "" {
+		http.Error(w, "Не указан статус", http.StatusBadRequest)
+		return
+	}
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	defer client.Disconnect(context.Background())
+
+	collection := client.Database("diplome").Collection("course_registrations")
+
+	// Агрегация для получения курсов конкретного пользователя с указанным статусом
+	pipeline := bson.A{
+		bson.M{
+			"$match": bson.M{
+				"userId": userId, // Фильтр по userId
+				"status": status, // Фильтр по статусу
+			},
+		},
+		bson.M{
+			"$lookup": bson.M{
+				"from":         "courses",
+				"localField":   "courseId",
+				"foreignField": "_id",
+				"as":           "course",
+			},
+		},
+		bson.M{
+			"$project": bson.M{
+				"courseTitle": bson.M{
+					"$ifNull": bson.A{
+						bson.M{"$arrayElemAt": bson.A{"$course.title", 0}},
+						"Unknown Course",
+					},
+				},
+				"status": 1,
+			},
+		},
+	}
+
+	cursor, err := collection.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		http.Error(w, "Ошибка при получении курсов", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var courses []bson.M
+	if err = cursor.All(context.Background(), &courses); err != nil {
+		http.Error(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(courses)
+}
+
+func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
+	// Получаем userId из контекста или токена
+	userIdHex := r.Context().Value("userId").(string)
+	userId, err := primitive.ObjectIDFromHex(userIdHex)
+	if err != nil {
+		http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
+		return
+	}
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	defer client.Disconnect(context.Background())
+
+	collection := client.Database("diplome").Collection("course_registrations")
+
+	// Агрегация для получения курсов конкретного пользователя
+	pipeline := bson.A{
+		bson.M{
+			"$match": bson.M{"userId": userId}, // Фильтр по userId
+		},
+		bson.M{
+			"$lookup": bson.M{
+				"from":         "courses",
+				"localField":   "courseId",
+				"foreignField": "_id",
+				"as":           "course",
+			},
+		},
+		bson.M{
+			"$project": bson.M{
+				"courseTitle": bson.M{
+					"$ifNull": bson.A{
+						bson.M{"$arrayElemAt": bson.A{"$course.title", 0}},
+						"Unknown Course",
+					},
+				},
+				"status": 1,
+			},
+		},
+	}
+
+	cursor, err := collection.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		http.Error(w, "Ошибка при получении курсов", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var courses []bson.M
+	if err = cursor.All(context.Background(), &courses); err != nil {
+		http.Error(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(courses)
+}

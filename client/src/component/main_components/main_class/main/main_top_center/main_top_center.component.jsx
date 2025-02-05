@@ -1,8 +1,8 @@
-import React from 'react';
-import Slider from 'react-slick';
+import React from "react";
+import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import './main_top_center.component.css';
+import "./main_top_center.component.css";
 import apt from "../../../../../assets/apt.png";
 
 const Main_top_center = () => {
@@ -18,24 +18,43 @@ const Main_top_center = () => {
 
     return (
         <div className="main_top_center_slider">
-           <img src={apt} alt="" />
-                <Slider {...settings} className='main_top_slider'>
-                    <div>
+            {/* Статичное изображение */}
+            <img src={apt} alt="Наш техникум" className="static-image" />
+
+            {/* Слайдер с текстовым содержимым */}
+            <Slider {...settings} className="main_top_slider">
+                {/* Слайд 1 */}
+                <div className="slider-item">
+                    <div className="slider-content">
                         <h3>Почему наш сайт?</h3>
-                        <p>Мы предлагаем качественные образовательные программы, разработанные опытными преподавателями.</p>
+                        <p>
+                            Мы предлагаем качественные образовательные программы, разработанные опытными преподавателями.
+                        </p>
                     </div>
-                    <div>
+                </div>
+
+                {/* Слайд 2 */}
+                <div className="slider-item">
+                    <div className="slider-content">
                         <h3>Почему именно у нас?</h3>
-                        <p>Наши курсы помогут вам получить актуальные знания и навыки, необходимые для успешной карьеры.</p>
+                        <p>
+                            Наши курсы помогут вам получить актуальные знания и навыки, необходимые для успешной карьеры.
+                        </p>
                     </div>
-                    <div>
+                </div>
+
+                {/* Слайд 3 */}
+                <div className="slider-item">
+                    <div className="slider-content">
                         <h3>Преимущества наших курсов</h3>
-                        <p>Гибкий график обучения, доступные цены и поддержка на всех этапах обучения.</p>
+                        <p>
+                            Гибкий график обучения, доступные цены и поддержка на всех этапах обучения.
+                        </p>
                     </div>
-                </Slider>
-              
-            </div>
+                </div>
+            </Slider>
+        </div>
     );
-}
+};
 
 export default Main_top_center;

@@ -35,7 +35,7 @@ func main() {
 	r := mux.NewRouter()
 	r.Use(middleware.CorsMiddleware)
 	r.HandleFunc("/add-course", handlers.AddCourse).Methods("POST", "OPTIONS")
-	r.HandleFunc("/courses", handlers.GetCourses).Methods("GET")
+		r.HandleFunc("/courses", handlers.GetCourses).Methods("GET")
 	r.HandleFunc("/users", handlers.GetUser).Methods("GET")
 	r.HandleFunc("/update-course/{id}", handlers.UpdateCourse).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/delete-course/{id}", handlers.DeleteCourse).Methods("DELETE", "OPTIONS")
@@ -50,6 +50,9 @@ func main() {
 	r.HandleFunc("/admin/reject-registration/{id}", handlers.RejectRegistration).Methods("POST")
 	r.HandleFunc("/courses/{id}", handlers.GetCourseByID).Methods("GET")
 	r.HandleFunc("/courses/register", handlers.RegisterForCourse).Methods("POST", "OPTIONS")
+	r.HandleFunc("/user/courses", handlers.GetCoursesForUser).Methods("GET")
+	r.HandleFunc("/user/courses/status", handlers.GetCoursesByStatus).Methods("GET")
+
 	fmt.Println("Server is running on port 5000")
 	log.Fatal(http.ListenAndServe(":5000", r))
 }
