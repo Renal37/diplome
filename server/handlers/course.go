@@ -189,7 +189,7 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 	registration := bson.M{
 		"courseId": request.CourseID,
 		"userId":   request.UserID,
-		"status":   "pending", // Статус ожидания одобрения
+		"status":   "Ожидание", // Статус ожидания одобрения
 	}
 
 	_, err = collection.InsertOne(context.Background(), registration)
@@ -220,7 +220,7 @@ func ApproveCourseRegistration(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
 		"$set": bson.M{
-			"status": "approved",
+			"status": "Пройдено",
 		},
 	}
 
@@ -316,7 +316,7 @@ func ApproveRegistration(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
 		"$set": bson.M{
-			"status": "approved",
+			"status": "Одобренный",
 		},
 	}
 
@@ -349,7 +349,7 @@ func RejectRegistration(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
 		"$set": bson.M{
-			"status": "rejected",
+			"status": "Отклоненный",
 		},
 	}
 

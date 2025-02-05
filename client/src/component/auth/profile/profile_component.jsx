@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "./profile_component.css";
+import { Link } from "react-router-dom";
 
 
 const Profile = () => {
@@ -55,7 +56,20 @@ const Profile = () => {
           </div>
         </div>
         <div className="profile_course">
-          <h1>Ваши пройденные курсы</h1>
+          <div className="profile_course_top">
+            <div className="profile_course_text">
+              <h1>Курсы:</h1>
+            </div>
+            <div className="profile_course_nav">
+              <Link className="prifle_nav_a" to='/auth/profile'>Пройденные курсы</Link>
+              <Link className="prifle_nav_a" to='end'>Законченный курсы</Link>
+              <Link className="prifle_nav_a" to='/auth/profile/approved'>Одобренные курсы</Link>
+              <Link className="prifle_nav_a" to='/auth/profile/wait'>Ждут одобрения</Link>
+              <Link className="prifle_nav_a" to='/auth/profile/rejected'>Отклоненые одобрения</Link>
+            </div>
+          </div>
+
+
           <div className="course_end">
           </div>
         </div>

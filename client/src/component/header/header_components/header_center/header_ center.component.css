@@ -20,9 +20,10 @@
     font-size: 20px;
 }
 
-.header_info{
+.header_info {
     text-decoration: none;
 }
+
 .header_center .header_addres .header_icons {
     display: flex;
     align-items: center;
@@ -34,6 +35,7 @@
     width: 25px;
     height: 25px;
 }
+
 .black {
     color: black;
 }
