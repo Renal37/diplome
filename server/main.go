@@ -35,7 +35,7 @@ func main() {
 	r := mux.NewRouter()
 	r.Use(middleware.CorsMiddleware)
 	r.HandleFunc("/add-course", handlers.AddCourse).Methods("POST", "OPTIONS")
-		r.HandleFunc("/courses", handlers.GetCourses).Methods("GET")
+	r.HandleFunc("/courses", handlers.GetCourses).Methods("GET")
 	r.HandleFunc("/users", handlers.GetUser).Methods("GET")
 	r.HandleFunc("/update-course/{id}", handlers.UpdateCourse).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/delete-course/{id}", handlers.DeleteCourse).Methods("DELETE", "OPTIONS")

@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import './check_course_component.css';
 
 const CheckCourse = () => {
-    const [courses, setCourses] = useState([]); // Список курсов
+    const [courses, setCourses] = useState([]); // Инициализируем как пустой массив
     const [loading, setLoading] = useState(true); // Состояние загрузки
     const [error, setError] = useState(null); // Состояние ошибки
     const [selectedStatus, setSelectedStatus] = useState("all"); // Текущий статус
@@ -17,7 +16,7 @@ const CheckCourse = () => {
 
             const response = await fetch(`http://localhost:5000${endpoint}`, {
                 method: "GET",
-                credentials: "include", // Включаем аутентификацию через токен
+                credentials: "include", // Включаем аутентификацию через cookies
             });
 
             if (!response.ok) {
@@ -25,9 +24,17 @@ const CheckCourse = () => {
             }
 
             const data = await response.json();
+            // Проверяем, что данные являются массивом
+            if (!Array.isArray(data)) {
+                console.error("Сервер вернул некорректные данные:", data);
+                setCourses([]);
+                return;
+            }
+
             setCourses(data);
         } catch (err) {
             setError(err.message);
+            setCourses([]); // При ошибке очищаем список курсов
         } finally {
             setLoading(false);
         }
@@ -75,7 +82,7 @@ const CheckCourse = () => {
             {/* Отображение списка курсов */}
             <div>
                 <h2>Список курсов:</h2>
-                {courses.length === 0 ? (
+                {courses.length === 0 ? ( // Проверяем, что courses является массивом
                     <p>Нет доступных курсов для выбранного статуса.</p>
                 ) : (
                     <ul>

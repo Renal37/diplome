@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-
 	"github.com/Renal37/models"
+	"github.com/Renal37/utils"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"net/http"
 )
 
 func AddCourse(w http.ResponseWriter, r *http.Request) {
@@ -363,9 +364,35 @@ func RejectRegistration(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
-	// Получаем userId из контекста или токена
-	userIdHex := r.Context().Value("userId").(string)
-	userId, err := primitive.ObjectIDFromHex(userIdHex)
+	// Получаем cookie с именем "token"
+	tokenCookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+		return
+	}
+
+	// Парсим токен
+	tokenStr := tokenCookie.Value
+	claims := &utils.Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return utils.JwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Неверный токен", http.StatusUnauthorized)
+		fmt.Println("Неверный токен:", err)
+		return
+	}
+
+	// Извлекаем userId из claims
+	userId := claims.UserID
+	if userId == "" {
+		http.Error(w, "Идентификатор пользователя не найден", http.StatusUnauthorized)
+		return
+	}
+
+	// Преобразуем userId в ObjectID
+	userIdObj, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
 		http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
 		return
@@ -378,6 +405,7 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Подключаемся к базе данных
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
@@ -392,8 +420,8 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 	pipeline := bson.A{
 		bson.M{
 			"$match": bson.M{
-				"userId": userId, // Фильтр по userId
-				"status": status, // Фильтр по статусу
+				"userId": userIdObj,
+				"status": status,
 			},
 		},
 		bson.M{
@@ -435,14 +463,40 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
-	// Получаем userId из контекста или токена
-	userIdHex := r.Context().Value("userId").(string)
-	userId, err := primitive.ObjectIDFromHex(userIdHex)
+	// Получаем cookie с именем "token"
+	tokenCookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+		return
+	}
+
+	// Парсим токен
+	tokenStr := tokenCookie.Value
+	claims := &utils.Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return utils.JwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Неверный токен", http.StatusUnauthorized)
+		return
+	}
+
+	// Извлекаем userId из claims
+	userId := claims.UserID
+	if userId == "" {
+		http.Error(w, "Идентификатор пользователя не найден", http.StatusUnauthorized)
+		return
+	}
+
+	// Преобразуем userId в ObjectID
+	userIdObj, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
 		http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
 		return
 	}
 
+	// Подключаемся к базе данных
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
@@ -456,7 +510,7 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 	// Агрегация для получения курсов конкретного пользователя
 	pipeline := bson.A{
 		bson.M{
-			"$match": bson.M{"userId": userId}, // Фильтр по userId
+			"$match": bson.M{"userId": userIdObj},
 		},
 		bson.M{
 			"$lookup": bson.M{

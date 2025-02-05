@@ -19,7 +19,7 @@ const AdminApprovalPage = () => {
                     setError(data.error);
                 } else {
                     setRegistrations(data);
-                    
+
                 }
                 setIsLoading(false);
             })
@@ -40,7 +40,7 @@ const AdminApprovalPage = () => {
                 if (data.success) {
                     // Обновляем список заявок после одобрения
                     setRegistrations(registrations.map(reg =>
-                        reg._id === registrationId ? { ...reg, status: 'approved' } : reg
+                        reg._id === registrationId ? { ...reg, status: 'Одобренный' } : reg
                     ));
                     console.log(registrations.map)
                 } else {
@@ -63,7 +63,7 @@ const AdminApprovalPage = () => {
                 if (data.success) {
                     // Обновляем список заявок после отклонения
                     setRegistrations(registrations.map(reg =>
-                        reg._id === registrationId ? { ...reg, status: 'rejected' } : reg
+                        reg._id === registrationId ? { ...reg, status: 'Отклоненный' } : reg
                     ));
                     console.log(registrations.map)
                 } else {
@@ -83,7 +83,7 @@ const AdminApprovalPage = () => {
     if (error) {
         return <div>{error}</div>;
     }
-    
+
 
     return (
         <div className="admin-approval-page">
@@ -104,7 +104,7 @@ const AdminApprovalPage = () => {
                             <td>{registration.userName}</td>   {/* Используем userName */}
                             <td>{registration.status}</td>
                             <td>
-                                {registration.status === 'pending' && (
+                                {registration.status === 'Ожидание' && (
                                     <>
                                         <button onClick={() => handleApprove(registration._id)}>Одобрить</button>
                                         <button onClick={() => handleReject(registration._id)}>Отклонить</button>
