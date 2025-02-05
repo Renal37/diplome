@@ -3,7 +3,8 @@ package models
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
 type User struct {
-    ID               primitive.ObjectID `bson:"_id,omitempty"`
+    ID               primitive.ObjectID `bson:"_id,omitempty"` 
+    // Попробывать удалить omitempty
     LastName         string             `json:"lastName"`
     FirstName        string             `json:"firstName"`
     MiddleName       string             `json:"middleName"`

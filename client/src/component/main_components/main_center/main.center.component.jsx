@@ -60,14 +60,21 @@ const Main_center = () => {
 
                 </form>
                 <div className="courses_list">
-                    {filteredCourses.map(course => (
-                        <div key={course._id} className="course_item">
-                            <h2>{course.title}</h2>
-                            <p>{course.description}</p>
-                            <p>Продолжительность: {course.duration} часов</p>
-                            <p>Стоимость: {course.price} руб.</p>
-                            <p>Тип: {course.type}</p>
-                            <Link to={`/courses/register/${course._id}`}>Записаться на курс</Link>
+                    {filteredCourses.map((course, index) => (
+                        <div
+                            key={course._id}
+                            className={`course_item ${index % 2 === 0 ? 'even' : 'odd'}`} // Добавляем классы even и odd
+                        >
+
+                            <div className='course_text'>
+                                <h2>{course.title}</h2>
+                                <p>{course.description}</p>
+                             
+                            </div>
+
+                            <div className='course_btn'>
+                                <Link to={`/courses/register/${course._id}`}>Записаться на курс</Link>
+                            </div>
                         </div>
                     ))}
                 </div>

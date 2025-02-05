@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import './course_component.css';
 
 const CourseRegistration = () => {
     const { courseId } = useParams();
@@ -31,7 +32,7 @@ const CourseRegistration = () => {
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    navigate('/auth/login'); 
+                    navigate('/auth/login');
                 } else {
                     setUser(data);
                 }
@@ -43,6 +44,10 @@ const CourseRegistration = () => {
     }, [courseId, navigate]);
 
     const handleRegister = () => {
+        if (!user || !user.ID) {
+            console.error("User ID is missing");
+            return;
+        }
         if (!user.lastName || !user.firstName || !user.middleName) {
             navigate('/auth/edit_profile'); // Используем navigate вместо history.push
             return;
@@ -56,7 +61,7 @@ const CourseRegistration = () => {
             credentials: 'include',
             body: JSON.stringify({
                 courseId: courseId,
-                userId: user._id,
+                userId: user.ID,
             }),
         })
             .then(response => response.json())
@@ -84,12 +89,19 @@ const CourseRegistration = () => {
 
     return (
         <div className="course-registration">
-            <h1>Запись на курс: {course.title}</h1>
-            <p>{course.description}</p>
-            <p>Продолжительность: {course.duration} часов</p>
-            <p>Стоимость: {course.price} руб.</p>
-            <p>Тип: {course.type}</p>
-            <button onClick={handleRegister}>Записаться на курс</button>
+            <div className="course-registration-container">
+                <h1 className="course-registration-title">Запись на курс: {course.title}</h1>
+                <p className="course-registration-description">{course.description}</p>
+                <div className="course-registration-details">
+                    <p><strong>Продолжительность:</strong> {course.duration} часов</p>
+                    <p><strong>Стоимость:</strong> {course.price} руб.</p>
+                    <p><strong>Тип:</strong> {course.type}</p>
+                </div>
+                <button className="course-registration-button" onClick={handleRegister}>
+                    Записаться на курс
+                </button>
+                {error && <p className="course-registration-error">{error}</p>}
+            </div>
         </div>
     );
 };

@@ -265,3 +265,33 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Данные успешно обновлены"})
 }
+
+func GetUser(w http.ResponseWriter, r *http.Request) {
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("diplome").Collection("users")
+
+	cursor, err := collection.Find(context.Background(), bson.M{})
+	if err != nil {
+		http.Error(w, "Ошибка при получении курсов из базы данных", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var users []bson.M
+	if err = cursor.All(context.Background(), &users); err != nil {
+		http.Error(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
+		return
+	}
+
+	for i := range users {
+		users[i]["_id"] = users[i]["_id"].(primitive.ObjectID).Hex()
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}

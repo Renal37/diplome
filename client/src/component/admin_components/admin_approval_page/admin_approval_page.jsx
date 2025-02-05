@@ -1,24 +1,25 @@
 import React, { useState, useEffect } from 'react';
-// import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // Используем useNavigate вместо useHistory
 import './admin_approval_page.css';
 
 const AdminApprovalPage = () => {
     const [registrations, setRegistrations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const history = useHistory();r.HandleFunc("/update-course/{id}", handlers.UpdateCourse).Methods("PUT", "OPTIONS")
+    const navigate = useNavigate(); // Используем useNavigate
 
     useEffect(() => {
-        // Загружаем список заявок на курсы
         fetch('http://localhost:5000/admin/course-registrations', {
             credentials: 'include'
         })
             .then(response => response.json())
             .then(data => {
+                console.log("Data from backend:", data); // Проверьте структуру данных
                 if (data.error) {
                     setError(data.error);
                 } else {
                     setRegistrations(data);
+                    
                 }
                 setIsLoading(false);
             })
@@ -41,6 +42,7 @@ const AdminApprovalPage = () => {
                     setRegistrations(registrations.map(reg =>
                         reg._id === registrationId ? { ...reg, status: 'approved' } : reg
                     ));
+                    console.log(registrations.map)
                 } else {
                     setError(data.message || 'Ошибка при одобрении заявки');
                 }
@@ -63,6 +65,7 @@ const AdminApprovalPage = () => {
                     setRegistrations(registrations.map(reg =>
                         reg._id === registrationId ? { ...reg, status: 'rejected' } : reg
                     ));
+                    console.log(registrations.map)
                 } else {
                     setError(data.message || 'Ошибка при отклонении заявки');
                 }
@@ -80,6 +83,7 @@ const AdminApprovalPage = () => {
     if (error) {
         return <div>{error}</div>;
     }
+    
 
     return (
         <div className="admin-approval-page">
@@ -96,8 +100,8 @@ const AdminApprovalPage = () => {
                 <tbody>
                     {registrations.map(registration => (
                         <tr key={registration._id}>
-                            <td>{registration.courseTitle}</td>
-                            <td>{registration.userName}</td>
+                            <td>{registration.courseTitle}</td> {/* Используем courseTitle */}
+                            <td>{registration.userName}</td>   {/* Используем userName */}
                             <td>{registration.status}</td>
                             <td>
                                 {registration.status === 'pending' && (

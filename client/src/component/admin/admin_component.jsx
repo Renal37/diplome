@@ -9,6 +9,10 @@ import AdminCheckProfile from '../admin_components/admin_check_profile/admin_che
 const AdminComponent = () => {
   return (
     <div className="admin-component">
+      <div>
+      <h1 className="admin-title">Административная панель</h1>
+
+      </div>
       <nav>
         <ul className="nav-links">
           <li>
@@ -21,7 +25,7 @@ const AdminComponent = () => {
             <Link to="/admin/delete" className="nav-link">Удалить курс</Link>
           </li>
           <li>
-            <Link to="/admin/profile" className="nav-link">Просмотр курса</Link>
+            <Link to="/admin/profile" className="nav-link">Просмотр всех профилей</Link>
           </li>
           <li>
             <Link to="/admin/approval" className="nav-link">Одобрение курса</Link>

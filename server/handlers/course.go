@@ -138,40 +138,40 @@ func DeleteCourse(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Курс успешно удален!")
 }
 func GetCourseByID(w http.ResponseWriter, r *http.Request) {
-    vars := mux.Vars(r)
-    courseID, err := primitive.ObjectIDFromHex(vars["id"])
-    if err != nil {
-        http.Error(w, "Неверный формат идентификатора курса", http.StatusBadRequest)
-        return
-    }
+	vars := mux.Vars(r)
+	courseID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		http.Error(w, "Неверный формат идентификатора курса", http.StatusBadRequest)
+		return
+	}
 
-    clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-    client, err := mongo.Connect(context.Background(), clientOptions)
-    if err != nil {
-        http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-        return
-    }
-    collection := client.Database("diplome").Collection("courses")
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("diplome").Collection("courses")
 
-    var course models.Course
-    filter := bson.M{"_id": courseID}
-    err = collection.FindOne(context.Background(), filter).Decode(&course)
-    if err != nil {
-        if err == mongo.ErrNoDocuments {
-            http.Error(w, "Курс не найден", http.StatusNotFound)
-        } else {
-            http.Error(w, "Ошибка при получении курса", http.StatusInternalServerError)
-        }
-        return
-    }
+	var course models.Course
+	filter := bson.M{"_id": courseID}
+	err = collection.FindOne(context.Background(), filter).Decode(&course)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			http.Error(w, "Курс не найден", http.StatusNotFound)
+		} else {
+			http.Error(w, "Ошибка при получении курса", http.StatusInternalServerError)
+		}
+		return
+	}
 
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(course)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(course)
 }
 func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 	var request struct {
-		CourseID string `json:"courseId"`
-		UserID   string `json:"userId"`
+		CourseID primitive.ObjectID `json:"courseId"`
+		UserID   primitive.ObjectID `json:"userId"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -260,11 +260,22 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 				"as":           "user",
 			},
 		},
+
 		bson.M{
 			"$project": bson.M{
-				"courseTitle": bson.M{"$arrayElemAt": bson.A{"$course.title", 0}},
-				"userName":    bson.M{"$arrayElemAt": bson.A{"$user.fullName", 0}},
-				"status":      1,
+				"courseTitle": bson.M{
+					"$ifNull": bson.A{
+						bson.M{"$arrayElemAt": bson.A{"$course.title", 0}},
+						"Unknown Course", // Значение по умолчанию, если курс не найден
+					},
+				},
+				"userName": bson.M{
+					"$ifNull": bson.A{
+						bson.M{"$arrayElemAt": bson.A{"$user.username", 0}},
+						"Unknown User", // Значение по умолчанию, если пользователь не найден
+					},
+				},
+				"status": 1,
 			},
 		},
 	}
