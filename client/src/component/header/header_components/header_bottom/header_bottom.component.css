@@ -56,8 +56,12 @@
 
 .header_bottom {
     width: 100%;
+}
+.header_bottom_bg {
+    width: 100%;
     background-color: #76F;
-    padding: 20px 0 0px 0px;
+    transition: all 0.3s ease;
+    padding: 20px 0 20px 0px;
 }
 
 .header_bottom nav ul {
@@ -99,6 +103,13 @@
     transition: all 0.3s ease;
     /* Плавный переход */
 }
+.header_bottom.scrolled .header_bottom_bg{
+    background-color: white;
+    /* Измените цвет фона */
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;  
+    /* Добавьте тень */
+}
 
 
 .header_bottom.scrolled nav ul li .a {
@@ -116,7 +127,7 @@
 /* style for request_course */
 /* Общий стиль для request_course */
 .request_course {
-    margin-top: 20px;
+    transition: all 0.3s ease;
     background: white;
     width: 100%;
     padding: 10px 0;
@@ -188,7 +199,7 @@
 }
 
 .header_bottom.scrolled .request_course {
-    margin-top: 20px;
+    transition: all 0.3s ease;
     background: #76F;
     width: 100%;
     padding: 10px 0;

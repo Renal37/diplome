@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './header_bottom.component.css';
 import Cookies from 'js-cookie';
 
 const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
     const navigate = useNavigate();
+    const location = useLocation(); // Получаем текущий путь
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false); // Новое состояние для отслеживания скролла
 
@@ -18,7 +19,7 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
 
         // Функция для отслеживания скролла
         const handleScroll = () => {
-            if (window.scrollY > 220) { // Если прокручено больше 100px
+            if (window.scrollY > 230) {
                 setIsScrolled(true);
             } else {
                 setIsScrolled(false);
@@ -59,42 +60,46 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
 
     return (
         <div className={`header_bottom ${isScrolled ? 'scrolled' : ''}`}>
-            <nav>
-                <ul>
-                    <li><Link to="/professional" className="a">Профессиональная переподготовка</Link></li>
-                    <li><Link to="/promotion" className="a">Повышение квалификации</Link></li>
-                    {isAuthenticated ? (
-                        <li className="dropdown">
-                            <Link onClick={toggleDropdown} id="drop" className="a">
-                                Мои данные
-                            </Link>
-                            {isDropdownOpen && (
-                                <div className="dropdown-menu">
-                                    <Link to="/auth/profile" className="dropdown-item">Профиль</Link>
-                                    <Link to="/auth/edit_profile" className="dropdown-item">Редактировать профиль</Link>
-                                    <button onClick={handleLogout} className="dropdown-item">Выйти</button>
-                                </div>
-                            )}
-                        </li>
-                    ) : (
-                        <li><Link to="/auth" className="a">Войти</Link></li>
-                    )}
-                </ul>
-            </nav>
-            <div className='request_course'>
-                <div className="request_card">
-                    <div className="request_item">
-                        <div className="request_text">
-                            <h1>Записаться на интересный курс: </h1>
-                            <p>Педагог профессионального обучения</p>
-                        </div>
-
-                        <Link to="/courses/register/678df19a0a96fa5b989aeaa5" className="request_button">Записаться</Link>
-                    </div>
-
-                </div>
-
+            <div className="header_bottom_bg">
+                <nav>
+                    <ul>
+                        <li><Link to="/professional" className="a">Профессиональная переподготовка</Link></li>
+                        <li><Link to="/promotion" className="a">Повышение квалификации</Link></li>
+                        {isAuthenticated ? (
+                            <li className="dropdown">
+                                <Link onClick={toggleDropdown} id="drop" className="a">
+                                    Мои данные
+                                </Link>
+                                {isDropdownOpen && (
+                                    <div className="dropdown-menu">
+                                        <Link to="/auth/profile" className="dropdown-item">Профиль</Link>
+                                        <Link to="/auth/edit_profile" className="dropdown-item">Редактировать профиль</Link>
+                                        <button onClick={handleLogout} className="dropdown-item">Выйти</button>
+                                    </div>
+                                )}
+                            </li>
+                        ) : (
+                            <li><Link to="/auth" className="a">Войти</Link></li>
+                        )}
+                    </ul>
+                </nav>
             </div>
+
+
+            {/* Проверяем, чтобы путь не начинался с /admin */}
+            {!(location.pathname.startsWith('/admin') || location.pathname.startsWith('/auth')) && (
+                <div className='request_course'>
+                    <div className="request_card">
+                        <div className="request_item">
+                            <div className="request_text">
+                                <h1>Записаться на интересный курс:</h1>
+                                <p>Педагог профессионального обучения</p>
+                            </div>
+                            <Link to="/courses/register/678df19a0a96fa5b989aeaa5" className="request_button">Записаться</Link>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
