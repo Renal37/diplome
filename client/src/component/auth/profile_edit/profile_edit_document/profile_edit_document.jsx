@@ -58,8 +58,10 @@ const ProfileEditDocument = () => {
         const { name, value, type, checked } = e.target;
 
         if (name === "snils") {
+            // Оставляем только цифры
+            const numbers = value.replace(/\D/g, "");
             // Форматируем СНИЛС при изменении
-            const formattedValue = formatSnils(value);
+            const formattedValue = formatSnils(numbers);
             setUserData((prevState) => ({
                 ...prevState,
                 [name]: formattedValue,
@@ -150,12 +152,13 @@ const ProfileEditDocument = () => {
                         <div className="form-group">
                             <label>СНИЛС:</label>
                             <input
-                                type="text"
+                                type="text" // Используем type="tel" для мобильных устройств
                                 name="snils"
                                 value={userData.snils}
                                 onChange={handleChange}
                                 placeholder="Формат: XXX-XXX-XXX XX"
                                 maxLength={14} // Ограничиваем длину
+                                pattern="\d{3}-\d{3}-\d{3} \d{2}" // Паттерн для валидации
                             />
                         </div>
                         {/* {!userData.agreeToProcessing && ( */}
@@ -171,6 +174,7 @@ const ProfileEditDocument = () => {
                             </label>
                         </div>
                         {/* )} */}
+
                     </div>
                 </div>
                 {error && <div className="error-message">{error}</div>}
