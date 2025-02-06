@@ -11,13 +11,17 @@ import AdminComponent from './component/admin/admin_component.jsx';
 import Auth from './component/auth/auth_component.jsx';
 import Profile_Edit from './component/auth/profile_edit/profile_edit_component.jsx';
 import CourseRegistration from './component/course/ course_component.jsx';
+import Sveden from './component/sveden/sveden_component.jsx';
+import Document from './component/document/document_component.jsx';
 
 const routes = [
   { path: "/", element: <Main_top_center /> },
   { path: "teacher", element: <Teacher_top_center /> },
   { path: "organization", element: <Organization_top_center /> },
   { path: "professional", element: <Professional_top_center /> },
-  { path: "promotion", element: <Promotion_top_center /> }
+  { path: "promotion", element: <Promotion_top_center /> },
+  { path: "sveden", element: <Sveden /> },
+  { path: "document", element: <Document /> }
 ];
 
 const App = () => {

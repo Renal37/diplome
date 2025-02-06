@@ -6,9 +6,9 @@ const Header_top = () => {
         <div className="header_top ">
             <nav>
                 <ul>
-                    <li><Link to="/" className="a">Нормативные документы</Link></li>
+                    <li><Link to="/document" className="a">Нормативные документы</Link></li>
                     <li><Link to="/teacher" className="a">Преподаватели</Link></li>
-                    <li><Link to="/" className="a">Сведения об образовательной организации</Link></li>
+                    <li><Link to="/sveden" className="a">Сведения об образовательной организации</Link></li>
                     <li><Link to="/" className="a">Контакты</Link></li>
                 </ul>
             </nav>
