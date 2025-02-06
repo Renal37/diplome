@@ -6,15 +6,32 @@ import Cookies from 'js-cookie';
 const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
     const navigate = useNavigate();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false); // Новое состояние для отслеживания скролла
 
     useEffect(() => {
         if (isAuthenticated) {
-            // Получаем имя пользователя из localStorage или из другого источника
             const storedUsername = localStorage.getItem('username');
             if (storedUsername) {
                 setUsername(storedUsername);
             }
         }
+
+        // Функция для отслеживания скролла
+        const handleScroll = () => {
+            if (window.scrollY > 220) { // Если прокручено больше 100px
+                setIsScrolled(true);
+            } else {
+                setIsScrolled(false);
+            }
+        };
+
+        // Добавляем слушатель события scroll
+        window.addEventListener('scroll', handleScroll);
+
+        // Удаляем слушатель при размонтировании компонента
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
     }, [isAuthenticated]);
 
     const handleLogout = async () => {
@@ -23,7 +40,6 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
                 method: 'POST',
                 credentials: 'include',
             });
-
             if (response.ok) {
                 Cookies.remove("token", { path: "/" });
                 localStorage.clear();
@@ -42,7 +58,7 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
     };
 
     return (
-        <div className="header_bottom">
+        <div className={`header_bottom ${isScrolled ? 'scrolled' : ''}`}>
             <nav>
                 <ul>
                     <li><Link to="/professional" className="a">Профессиональная переподготовка</Link></li>
@@ -65,6 +81,20 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
                     )}
                 </ul>
             </nav>
+            <div className='request_course'>
+                <div className="request_card">
+                    <div className="request_item">
+                        <div className="request_text">
+                            <h1>Записаться на интересный курс: </h1>
+                            <p>Педагог профессионального обучения</p>
+                        </div>
+
+                        <Link to="/courses/register/678df19a0a96fa5b989aeaa5" className="request_button">Записаться</Link>
+                    </div>
+
+                </div>
+
+            </div>
         </div>
     );
 };
