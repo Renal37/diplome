@@ -4,24 +4,27 @@
     color: #333;
 }
 
-.from_input_group{
+.from_input_group {
     padding-top: 20px;
     display: flex;
     align-items: start;
     justify-content: space-between;
 }
-.input_group{
-    width: 800px;    
+
+.input_group {
+    width: 800px;
 }
 
 .form-group {
     margin-bottom: 15px;
     width: 100%;
 }
-.form-group_input{
+
+.form-group_input {
     display: flex;
     gap: 10px;
 }
+
 .form-group label {
     display: block;
     margin-bottom: 5px;
@@ -72,4 +75,26 @@
 
 .submit-button:hover {
     background-color: #5a5aff;
+}
+
+.form-group input[type="text"][name="phone"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.form-group input[type="text"][name="phone"]::placeholder {
+    color: #999;
+}
+
+.error-message {
+    color: red;
+    margin-bottom: 10px;
+}
+
+.success-message {
+    color: green;
+    margin-bottom: 10px;
 }

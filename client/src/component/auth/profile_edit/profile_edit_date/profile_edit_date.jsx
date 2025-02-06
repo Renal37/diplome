@@ -68,10 +68,41 @@ const ProfileEditDate = () => {
         }));
     };
 
+    const validatePhone = (phone) => {
+        const phoneRegex = /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/;
+        return phoneRegex.test(phone);
+    };
+
+    const handlePhoneChange = (e) => {
+        const { value } = e.target;
+        let formattedValue = value.replace(/\D/g, ''); // Удаляем все нецифровые символы
+
+        if (formattedValue.length > 0) {
+            formattedValue = `+7 (${formattedValue.substring(1, 4)}) ${formattedValue.substring(4, 7)}-${formattedValue.substring(7, 9)}-${formattedValue.substring(9, 11)}`;
+        }
+
+        setUserData((prevState) => ({
+            ...prevState,
+            phone: formattedValue,
+        }));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setSuccess('');
+
+        // Валидация обязательных полей
+        if (!userData.lastName || !userData.firstName || !userData.birthDate || !userData.agreeToProcessing) {
+            setError('Пожалуйста, заполните все обязательные поля');
+            return;
+        }
+
+        // Валидация номера телефона
+        if (!validatePhone(userData.phone)) {
+            setError('Номер телефона должен быть в формате +7 (XXX) XXX-XX-XX');
+            return;
+        }
 
         if (!userData.agreeToProcessing) {
             setError('Необходимо согласие на обработку данных');
@@ -143,6 +174,7 @@ const ProfileEditDate = () => {
                                 name="lastName"
                                 value={userData.lastName}
                                 onChange={handleChange}
+                                required
                             />
                         </div>
                         <div className="form-group">
@@ -152,6 +184,7 @@ const ProfileEditDate = () => {
                                 name="firstName"
                                 value={userData.firstName}
                                 onChange={handleChange}
+                                required
                             />
                         </div>
                         <div className="form-group">
@@ -161,6 +194,8 @@ const ProfileEditDate = () => {
                                 name="middleName"
                                 value={userData.middleName}
                                 onChange={handleChange}
+                                required
+
                             />
                         </div>
                         <div className="form-group">
@@ -218,10 +253,11 @@ const ProfileEditDate = () => {
                         <div className="form-group">
                             <label>Номер телефона:</label>
                             <input
-                                type="phone"
+                                type="text"
                                 name="phone"
                                 value={userData.phone}
-                                onChange={handleChange}
+                                onChange={handlePhoneChange}
+                                placeholder="+7 (XXX) XXX-XX-XX"
                             />
                         </div>
                         <div className="form-group">
@@ -233,7 +269,6 @@ const ProfileEditDate = () => {
                                 onChange={handleChange}
                             />
                         </div>
-                        {/* {!userData.agreeToProcessing && ( */}
                         <div className="form-group">
                             <label>
                                 <input
@@ -241,6 +276,7 @@ const ProfileEditDate = () => {
                                     name="agreeToProcessing"
                                     checked={userData.agreeToProcessing}
                                     onChange={handleChange}
+                                    required
                                 />
                                 Согласен на обработку персональных данных
                             </label>

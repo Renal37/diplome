@@ -1,15 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import './profile_edit_document.css';
+import React, { useState, useEffect } from "react";
+import "./profile_edit_document.css";
+
+const formatSnils = (input) => {
+    // Оставляем только цифры
+    const numbers = input.replace(/\D/g, "");
+    // Форматируем в виде XXX-XXX-XXX XX
+    const part1 = numbers.slice(0, 3);
+    const part2 = numbers.slice(3, 6);
+    const part3 = numbers.slice(6, 9);
+    const part4 = numbers.slice(9, 11);
+
+    return `${part1}-${part2}-${part3} ${part4}`.trim();
+};
 
 const ProfileEditDocument = () => {
     const [userData, setUserData] = useState({
-        passportSeries: '',
-        passportNumber: '',
-        snils: '',
+        passportSeries: "",
+        passportNumber: "",
+        snils: "",
         agreeToProcessing: false,
     });
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -43,19 +56,35 @@ const ProfileEditDocument = () => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setUserData((prevState) => ({
-            ...prevState,
-            [name]: type === 'checkbox' ? checked : value,
-        }));
+
+        if (name === "snils") {
+            // Форматируем СНИЛС при изменении
+            const formattedValue = formatSnils(value);
+            setUserData((prevState) => ({
+                ...prevState,
+                [name]: formattedValue,
+            }));
+        } else {
+            setUserData((prevState) => ({
+                ...prevState,
+                [name]: type === "checkbox" ? checked : value,
+            }));
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        setSuccess('');
+        setError("");
+        setSuccess("");
+
+        // Простая валидация
+        if (!userData.snils.match(/^\d{3}-\d{3}-\d{3} \d{2}$/)) {
+            setError("Неверный формат СНИЛСа (XXX-XXX-XXX XX)");
+            return;
+        }
 
         if (!userData.agreeToProcessing) {
-            setError('Необходимо согласие на обработку данных');
+            setError("Необходимо согласие на обработку данных");
             return;
         }
 
@@ -103,30 +132,34 @@ const ProfileEditDocument = () => {
                                     name="passportSeries"
                                     value={userData.passportSeries}
                                     onChange={handleChange}
-                                    placeholder="Серия паспорта"
+                                    placeholder="Серия паспорта (4 цифры)"
+                                    maxLength={4}
                                 />
                                 <input
                                     type="text"
                                     name="passportNumber"
                                     value={userData.passportNumber}
                                     onChange={handleChange}
-                                    placeholder="Номер паспорта"
+                                    placeholder="Номер паспорта (6 цифр)"
+                                    maxLength={6}
                                 />
                             </div>
                         </div>
                     </div>
                     <div className="input_group">
                         <div className="form-group">
-                            <label>Снилс:</label>
+                            <label>СНИЛС:</label>
                             <input
                                 type="text"
                                 name="snils"
                                 value={userData.snils}
                                 onChange={handleChange}
+                                placeholder="Формат: XXX-XXX-XXX XX"
+                                maxLength={14} // Ограничиваем длину
                             />
                         </div>
-                          {/* {!userData.agreeToProcessing && ( */}
-                          <div className="form-group">
+                        {/* {!userData.agreeToProcessing && ( */}
+                        <div className="form-group">
                             <label>
                                 <input
                                     type="checkbox"
@@ -137,14 +170,15 @@ const ProfileEditDocument = () => {
                                 Согласен на обработку персональных данных
                             </label>
                         </div>
-                    {/* )} */}
+                        {/* )} */}
                     </div>
                 </div>
                 {error && <div className="error-message">{error}</div>}
                 {success && <div className="success-message">{success}</div>}
                 <div className="btn">
-                  
-                    <button type="submit" className="submit-button">Сохранить изменения</button>
+                    <button type="submit" className="submit-button">
+                        Сохранить изменения
+                    </button>
                 </div>
             </form>
         </div>
