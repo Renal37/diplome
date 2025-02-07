@@ -2,27 +2,25 @@ import { useState, useEffect } from "react";
 import "./check_course_component.css";
 
 const CheckCourse = () => {
-    const [courses, setCourses] = useState([]); // Инициализируем как пустой массив
-    const [loading, setLoading] = useState(true); // Состояние загрузки
-    const [error, setError] = useState(null); // Состояние ошибки
-    const [selectedStatus, setSelectedStatus] = useState("all"); // Текущий статус
+    const [courses, setCourses] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [selectedStatus, setSelectedStatus] = useState("all");
 
-    // Функция для получения курсов
     const fetchCourses = async (status) => {
         try {
-            let endpoint = "/user/courses"; // По умолчанию все курсы пользователя
+            let endpoint = "/user/courses";
             if (status !== "all") {
-                endpoint = `/user/courses/status?status=${status}`; // Курсы по статусу
+                endpoint = `/user/courses/status?status=${status}`;
             }
             const response = await fetch(`http://localhost:5000${endpoint}`, {
                 method: "GET",
-                credentials: "include", // Включаем аутентификацию через cookies
+                credentials: "include",
             });
             if (!response.ok) {
                 throw new Error("Ошибка при загрузке курсов");
             }
             const data = await response.json();
-            // Проверяем, что данные являются массивом
             if (!Array.isArray(data)) {
                 console.error("Сервер вернул некорректные данные:", data);
                 setCourses([]);
@@ -31,26 +29,46 @@ const CheckCourse = () => {
             setCourses(data);
         } catch (err) {
             setError(err.message);
-            setCourses([]); // При ошибке очищаем список курсов
+            setCourses([]);
         } finally {
             setLoading(false);
         }
     };
 
-    // Загрузка данных при изменении selectedStatus
     useEffect(() => {
         fetchCourses(selectedStatus);
-
     }, [selectedStatus]);
 
-    // Обработка отображения
+    const handleDownloadContract = async (courseId) => {
+        try {
+            const response = await fetch(`http://localhost:5000/user/download-contract/${courseId}`, {
+                method: "GET",
+                credentials: "include",
+            });
+    
+            if (!response.ok) {
+                throw new Error("Ошибка при скачивании договора");
+            }
+    
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = "contract.pdf";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
     if (loading) return <p className="loading">Загрузка...</p>;
     if (error) return <p className="error">{error}</p>;
-    console.log(courses);
 
     return (
         <div className="check-course-container">
-            {/* Навигация по статусам */}
             <div className="profile_course_nav">
                 <button
                     onClick={() => setSelectedStatus("all")}
@@ -77,8 +95,6 @@ const CheckCourse = () => {
                     Ожидают одобрения
                 </button>
             </div>
-
-            {/* Отображение списка курсов */}
             <div className="course-list-container">
                 <h2 className="course-list-title">Список курсов:</h2>
                 {courses.length === 0 ? (
@@ -93,6 +109,14 @@ const CheckCourse = () => {
                                     <span className="reject-reason">
                                         Причина отказа: {course.rejectReason}
                                     </span>
+                                )}
+                                {course.status === "Одобренный" && (
+                                    <button
+                                        className="download-contract-button"
+                                        onClick={() => handleDownloadContract(course._id)}
+                                    >
+                                        Скачать договор
+                                    </button>
                                 )}
                             </li>
                         ))}
