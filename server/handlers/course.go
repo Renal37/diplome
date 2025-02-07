@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"net/http"
+	"os"
 )
 
 func AddCourse(w http.ResponseWriter, r *http.Request) {
@@ -638,7 +639,6 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(courses)
 }
-
 func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	courseId, err := primitive.ObjectIDFromHex(vars["courseId"])
@@ -715,10 +715,31 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	// Создание PDF-документа
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
-	pdf.SetFont("Arial", "B", 16)
+
+	// Путь к файлу шрифта Times New Roman
+	fontPath := "../server/font/timesnewromanpsmt.ttf" // Укажите правильный путь к файлу шрифта
+
+	// Проверка существования файла шрифта
+	_, err = os.Stat(fontPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("Font file not found: %v", err)
+			http.Error(w, "Шрифт не найден", http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Error checking font file: %v", err)
+		http.Error(w, "Ошибка при проверке шрифта", http.StatusInternalServerError)
+		return
+	}
+
+	// Добавление шрифта
+	pdf.AddUTF8Font("TimesNewRoman", "", fontPath)
+	pdf.SetFont("TimesNewRoman", "", 16)
+
+	// Заголовок
 	pdf.Cell(40, 10, "Договор на обучение")
 
-	pdf.SetFont("Arial", "", 12)
+	pdf.SetFont("TimesNewRoman", "", 12)
 	pdf.Ln(10)
 	pdf.Cell(0, 10, fmt.Sprintf("ФИО: %v %v %v", user["lastname"], user["firstname"], user["middlename"]))
 	pdf.Ln(10)
