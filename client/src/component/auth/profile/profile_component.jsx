@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import "./profile_component.css";
 import CheckCourse from "../check_course/check_course_component";
+import { Link } from "react-router-dom";
 
 
 const Profile = () => {
@@ -52,6 +53,7 @@ const Profile = () => {
             <p>Email: {profile.email || "Данные отсутствуют"}</p>
             <p>Дата рождения: {profile.birthDate || "Данные отсутствуют"}</p>
             <p>Образование: {profile.education || "Данные отсутствуют"}</p>
+            <Link to="/auth/edit_profile">Заполнить профиль</Link>
           </div>
         </div>
         <div className="profile_course">

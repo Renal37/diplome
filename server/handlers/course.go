@@ -638,6 +638,7 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(courses)
 }
+
 func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	courseId, err := primitive.ObjectIDFromHex(vars["courseId"])
@@ -700,7 +701,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Данные пользователя не найдены", http.StatusNotFound)
 		return
 	}
-	user := userArray[0].(map[string]interface{})
+	user := userArray[0].(primitive.M)
 
 	// Обработка данных курса
 	courseArray, ok := result[0]["course"].(primitive.A)
@@ -709,7 +710,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Данные курса не найдены", http.StatusNotFound)
 		return
 	}
-	course := courseArray[0].(map[string]interface{})
+	course := courseArray[0].(primitive.M)
 
 	// Создание PDF-документа
 	pdf := gofpdf.New("P", "mm", "A4", "")
