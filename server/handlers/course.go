@@ -762,3 +762,100 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ошибка при генерации PDF", http.StatusInternalServerError)
 	}
 }
+
+// Отчисление пользователя
+func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		return
+	}
+
+	var requestBody struct {
+		Reason string `json:"reason"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+
+	if requestBody.Reason == "" {
+		http.Error(w, "Причина отчисления обязательна", http.StatusBadRequest)
+		return
+	}
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("diplome").Collection("course_registrations")
+
+	filter := bson.M{"_id": registrationID}
+	update := bson.M{
+		"$set": bson.M{
+			"status":       "Отчисленный",
+			"rejectReason": requestBody.Reason, // Сохраняем причину отчисления
+		},
+	}
+
+	_, err = collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		http.Error(w, "Ошибка при отчислении", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+// Выдача документа (сертификат/диплом)
+func IssueDocument(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		return
+	}
+
+	var requestBody struct {
+		DocumentType string `json:"documentType"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+
+	if requestBody.DocumentType == "" {
+		http.Error(w, "Тип документа обязателен", http.StatusBadRequest)
+		return
+	}
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("diplome").Collection("course_registrations")
+
+	filter := bson.M{"_id": registrationID}
+	update := bson.M{
+		"$set": bson.M{
+			"documentType": requestBody.DocumentType, // Сохраняем тип документа
+		},
+	}
+
+	_, err = collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		http.Error(w, "Ошибка при выдаче документа", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}

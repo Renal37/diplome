@@ -5,12 +5,13 @@ import AdminAddComponent from '../admin_components/admin_add/admin_add_component
 import './admin_component.css';
 import AdminApprovalPage from '../admin_components/admin_approval_page/admin_approval_page';
 import AdminCheckProfile from '../admin_components/admin_check_profile/admin_check_profile';
+import AdminAcceptPage from '../admin_components/admin_accept_page/admin_accept_page';
 
 const AdminComponent = () => {
   return (
     <div className="admin-component">
       <div>
-      <h1 className="admin-title">Административная панель</h1>
+        <h1 className="admin-title">Административная панель</h1>
 
       </div>
       <nav>
@@ -28,7 +29,10 @@ const AdminComponent = () => {
             <Link to="/admin/profile" className="nav-link">Просмотр всех профилей</Link>
           </li>
           <li>
-            <Link to="/admin/approval" className="nav-link">Одобрение курса</Link>
+            <Link to="/admin/approval" className="nav-link">Проверка заявок на курсы</Link>
+          </li>
+          <li>
+            <Link to="/admin/accept" className="nav-link">Одобренный курсы</Link>
           </li>
         </ul>
       </nav>
@@ -39,6 +43,7 @@ const AdminComponent = () => {
           <Route path="delete" element={<AdminDeleteComponent />} />
           <Route path="profile" element={<AdminCheckProfile />} />
           <Route path="approval" element={<AdminApprovalPage />} />
+          <Route path="accept" element={<AdminAcceptPage />} />
         </Routes>
       </div>
 
