@@ -53,8 +53,8 @@ func main() {
 	r.HandleFunc("/user/courses", handlers.GetCoursesForUser).Methods("GET")
 	r.HandleFunc("/user/courses/status", handlers.GetCoursesByStatus).Methods("GET")
 	r.HandleFunc("/user/download-contract/{courseId}", handlers.DownloadContract).Methods("GET")
-	r.HandleFunc("/admin/expel-registration/{courseId}", handlers.ExpelRegistration).Methods("POST")
-	r.HandleFunc("/admin/issue-document/{courseId}", handlers.IssueDocument).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/expel-registration/{id}", handlers.ExpelRegistration).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/issue-document/{id}", handlers.IssueDocument).Methods("POST", "OPTIONS")
 
 	fmt.Println("Server is running on port 5000")
 	log.Fatal(http.ListenAndServe(":5000", r))
