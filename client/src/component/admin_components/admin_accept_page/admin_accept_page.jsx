@@ -17,11 +17,9 @@ const AdminAcceptPage = () => {
         })
             .then((response) => response.json())
             .then((data) => {
-                console.log("Data from backend:", data);
                 if (data.error) {
                     setError(data.error);
                 } else {
-                    // Фильтруем заявки по статусу "Одобренный"
                     const approvedRegistrations = data.filter(
                         (reg) => reg.status === "Одобренный"
                     );
@@ -45,14 +43,11 @@ const AdminAcceptPage = () => {
             setError("Укажите причину отчисления");
             return;
         }
-
         fetch(`http://localhost:5000/admin/expel-registration/${selectedRegistrationId}`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ reason: rejectReason }), // Отправляем причину отчисления
+            body: JSON.stringify({ reason: rejectReason }),
         })
             .then((response) => response.json())
             .then((data) => {
@@ -60,12 +55,11 @@ const AdminAcceptPage = () => {
                     setRegistrations(
                         registrations.map((reg) =>
                             reg._id === selectedRegistrationId
-                                ? { ...reg, status: "Отчисленный", rejectReason: rejectReason }
+                                ? { ...reg, status: "Отчисленный", rejectReason }
                                 : reg
                         )
                     );
-                    setRejectReason(""); // Очищаем поле причины
-                    setSelectedRegistrationId(null); // Закрываем модальное окно
+                    clearModalState();
                 } else {
                     setError(data.message || "Ошибка при отчислении");
                 }
@@ -85,27 +79,23 @@ const AdminAcceptPage = () => {
             setError("Выберите тип документа");
             return;
         }
-
-        fetch(`http://localhost:5000/admin/issue-document/${selectedRegistrationId}`, {
+        fetch(`http://localhost:5000/admin/issue-document/${selectedDocumentId}`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ documentType }), // Отправляем тип документа
+            body: JSON.stringify({ documentType }),
         })
             .then((response) => response.json())
             .then((data) => {
                 if (data.success) {
                     setRegistrations(
                         registrations.map((reg) =>
-                            reg._id === selectedRegistrationId
-                                ? { ...reg, documentType: documentType }
+                            reg._id === selectedDocumentId
+                                ? { ...reg, documentType }
                                 : reg
                         )
                     );
-                    setDocumentType(""); // Очищаем выбор типа документа
-                    setSelectedDocumentId(null); // Закрываем модальное окно
+                    clearModalState();
                 } else {
                     setError(data.message || "Ошибка при выдаче документа");
                 }
@@ -121,16 +111,30 @@ const AdminAcceptPage = () => {
     };
 
     const handleCloseUserInfo = () => {
+        clearModalState();
+    };
+
+    const clearModalState = () => {
+        setRejectReason("");
+        setDocumentType("");
+        setSelectedRegistrationId(null);
+        setSelectedDocumentId(null);
         setSelectedUser(null);
     };
 
-    if (isLoading) {
-        return <div>Загрузка...</div>;
-    }
+    const closeModalOnEscape = (e) => {
+        if (e.key === "Escape") {
+            clearModalState();
+        }
+    };
 
-    if (error) {
-        return <div>{error}</div>;
-    }
+    useEffect(() => {
+        document.addEventListener("keydown", closeModalOnEscape);
+        return () => document.removeEventListener("keydown", closeModalOnEscape);
+    }, []);
+
+    if (isLoading) return <div>Загрузка...</div>;
+    if (error) return <div>{error}</div>;
 
     return (
         <div className="admin-approval-page">
@@ -149,43 +153,27 @@ const AdminAcceptPage = () => {
                         <tr key={registration._id}>
                             <td>{registration.courseTitle}</td>
                             <td>
-                                <span
-                                    style={{
-                                        color: "#007bff",
-                                        cursor: "pointer",
-                                        textDecoration: "underline",
-                                    }}
-                                    onClick={() =>
-                                        handleViewUser({
-                                            username: registration.userName,
-                                            email: registration.userEmail,
-                                            fullname: registration.userFullname,
-                                            birthdate: registration.userBirthdate,
-                                            birthplace: registration.userBirthplace,
-                                            education: registration.userEducation,
-                                            workplace: registration.userWorkplace,
-                                            jobtitle: registration.userJobtitle,
-                                            homeaddress: registration.userHomeaddress,
-                                            phone: registration.userPhone,
-                                            passportdata: registration.userPassportdata,
-                                            snils: registration.userSnils,
-                                        })
-                                    }
-                                >
+                                <button onClick={() => handleViewUser({
+                                    username: registration.userName,
+                                    email: registration.userEmail,
+                                    fullname: registration.userFullname,
+                                    birthdate: registration.userBirthdate,
+                                    birthplace: registration.userBirthplace,
+                                    education: registration.userEducation,
+                                    workplace: registration.userWorkplace,
+                                    jobtitle: registration.userJobtitle,
+                                    homeaddress: registration.userHomeaddress,
+                                    phone: registration.userPhone,
+                                    passportdata: registration.userPassportdata,
+                                    snils: registration.userSnils,
+                                })}>
                                     {registration.userName}
-                                </span>
+                                </button>
                             </td>
                             <td>{registration.status}</td>
                             <td>
-                                <button className="expel-btn" onClick={() => handleExpel(registration._id)}>
-                                    Отчислить
-                                </button>
-                                <button
-                                    className="issue-document-btn"
-                                    onClick={() => handleIssueDocument(registration._id)}
-                                >
-                                    Выдать документ
-                                </button>
+                                <button className="reject-btn" onClick={() => handleExpel(registration._id)}>Отчислить</button>
+                                <button className="approve-btn" onClick={() => handleIssueDocument(registration._id)}>Выдать документ</button>
                             </td>
                         </tr>
                     ))}
@@ -196,14 +184,15 @@ const AdminAcceptPage = () => {
             {selectedRegistrationId && (
                 <div className="modal">
                     <div className="modal-content">
-                        <h2>Укажите причину отчисления</h2>
-                        <textarea
+                        <h3>Укажите причину отчисления</h3>
+                        <input
+                            type="text"
                             value={rejectReason}
                             onChange={(e) => setRejectReason(e.target.value)}
                             placeholder="Причина отчисления"
                         />
                         <button onClick={confirmExpel}>Подтвердить</button>
-                        <button onClick={() => setSelectedRegistrationId(null)}>Отмена</button>
+                        <button onClick={clearModalState}>Отмена</button>
                     </div>
                 </div>
             )}
@@ -212,17 +201,14 @@ const AdminAcceptPage = () => {
             {selectedDocumentId && (
                 <div className="modal">
                     <div className="modal-content">
-                        <h2>Выберите тип документа</h2>
-                        <select
-                            value={documentType}
-                            onChange={(e) => setDocumentType(e.target.value)}
-                        >
+                        <h3>Выберите тип документа</h3>
+                        <select value={documentType} onChange={(e) => setDocumentType(e.target.value)}>
                             <option value="">Выберите тип</option>
                             <option value="Сертификат">Сертификат</option>
                             <option value="Диплом">Диплом</option>
                         </select>
                         <button onClick={confirmIssueDocument}>Подтвердить</button>
-                        <button onClick={() => setSelectedDocumentId(null)}>Отмена</button>
+                        <button onClick={clearModalState}>Отмена</button>
                     </div>
                 </div>
             )}

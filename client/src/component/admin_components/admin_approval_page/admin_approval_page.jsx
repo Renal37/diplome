@@ -127,31 +127,22 @@ const AdminApprovalPage = () => {
                         <tr key={registration._id}>
                             <td>{registration.courseTitle}</td>
                             <td>
-                                <span
-                                    style={{
-                                        color: "#007bff",
-                                        cursor: "pointer",
-                                        textDecoration: "underline",
-                                    }}
-                                    onClick={() =>
-                                        handleViewUser({
-                                            username: registration.userName,
-                                            email: registration.userEmail,
-                                            fullname: registration.userFullname,
-                                            birthdate: registration.userBirthdate,
-                                            birthplace: registration.userBirthplace,
-                                            education: registration.userEducation,
-                                            workplace: registration.userWorkplace,
-                                            jobtitle: registration.userJobtitle,
-                                            homeaddress: registration.userHomeaddress,
-                                            phone: registration.userPhone,
-                                            passportdata: registration.userPassportdata,
-                                            snils: registration.userSnils,
-                                        })
-                                    }
-                                >
+                            <button onClick={() => handleViewUser({
+                                    username: registration.userName,
+                                    email: registration.userEmail,
+                                    fullname: registration.userFullname,
+                                    birthdate: registration.userBirthdate,
+                                    birthplace: registration.userBirthplace,
+                                    education: registration.userEducation,
+                                    workplace: registration.userWorkplace,
+                                    jobtitle: registration.userJobtitle,
+                                    homeaddress: registration.userHomeaddress,
+                                    phone: registration.userPhone,
+                                    passportdata: registration.userPassportdata,
+                                    snils: registration.userSnils,
+                                })}>
                                     {registration.userName}
-                                </span>
+                                </button>
                             </td>
                             <td>{registration.status}</td>
                             <td>
