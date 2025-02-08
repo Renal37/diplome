@@ -6,7 +6,8 @@ const AdminAcceptPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
     const [rejectReason, setRejectReason] = useState(""); // Причина отчисления
-    const [selectedRegistrationId, setSelectedRegistrationId] = useState(null); // ID выбранной заявки
+    const [selectedRegistrationId, setSelectedRegistrationId] = useState(null);
+    const [selectedDocumentId, setSelectedDocumentId] = useState(null); // ID выбранной заявки
     const [selectedUser, setSelectedUser] = useState(null); // Выбранный пользователь
     const [documentType, setDocumentType] = useState(""); // Тип документа (сертификат/диплом)
 
@@ -76,7 +77,7 @@ const AdminAcceptPage = () => {
     };
 
     const handleIssueDocument = (registrationId) => {
-        setSelectedRegistrationId(registrationId);
+        setSelectedDocumentId(registrationId);
     };
 
     const confirmIssueDocument = () => {
@@ -104,7 +105,7 @@ const AdminAcceptPage = () => {
                         )
                     );
                     setDocumentType(""); // Очищаем выбор типа документа
-                    setSelectedRegistrationId(null); // Закрываем модальное окно
+                    setSelectedDocumentId(null); // Закрываем модальное окно
                 } else {
                     setError(data.message || "Ошибка при выдаче документа");
                 }
@@ -208,7 +209,7 @@ const AdminAcceptPage = () => {
             )}
 
             {/* Модальное окно для выбора типа документа */}
-            {selectedRegistrationId && (
+            {selectedDocumentId && (
                 <div className="modal">
                     <div className="modal-content">
                         <h2>Выберите тип документа</h2>
@@ -221,7 +222,7 @@ const AdminAcceptPage = () => {
                             <option value="Диплом">Диплом</option>
                         </select>
                         <button onClick={confirmIssueDocument}>Подтвердить</button>
-                        <button onClick={() => setSelectedRegistrationId(null)}>Отмена</button>
+                        <button onClick={() => setSelectedDocumentId(null)}>Отмена</button>
                     </div>
                 </div>
             )}
