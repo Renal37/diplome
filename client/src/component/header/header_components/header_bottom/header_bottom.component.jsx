@@ -19,7 +19,7 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
 
         // Функция для отслеживания скролла
         const handleScroll = () => {
-            if (window.scrollY > 270) {
+            if (window.scrollY > 350) {
                 setIsScrolled(true);
             } else {
                 setIsScrolled(false);
@@ -34,7 +34,23 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
             window.removeEventListener('scroll', handleScroll);
         };
     }, [isAuthenticated]);
+    useEffect(() => {
+        const handleScroll = () => {
+            if (window.scrollY > 350) {
+                setIsScrolled(true);
+                document.querySelector('.main_top').style.paddingTop = '170px'; // Замените на актуальную высоту
+            } else {
+                setIsScrolled(false);
+                document.querySelector('.main_top').style.paddingTop = '0';
+            }
+        };
 
+        window.addEventListener('scroll', handleScroll);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, []);
     const handleLogout = async () => {
         try {
             const response = await fetch('http://localhost:5000/logout', {

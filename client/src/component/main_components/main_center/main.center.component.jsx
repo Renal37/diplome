@@ -68,7 +68,7 @@ const Main_center = () => {
 
                             <div className='course_text'>
                                 <h2>{course.title}</h2>
-                                <p>{course.description}</p>
+                                {/* <p>{course.description}</p> */}
                              
                             </div>
 

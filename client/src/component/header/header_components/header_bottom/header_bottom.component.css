@@ -56,7 +56,9 @@
 
 .header_bottom {
     width: 100%;
+    height: 170px;
 }
+
 .header_bottom_bg {
     width: 100%;
     background-color: #76F;
@@ -93,21 +95,18 @@
 
 /* Стили для header_bottom при скролле */
 .header_bottom.scrolled {
+    position: fixed;
     top: 0;
     z-index: 9999;
-    position: fixed;
-    background-color: white;
-    /* Измените цвет фона */
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
-    /* Добавьте тень */
     transition: all 0.3s ease;
-    /* Плавный переход */
 }
-.header_bottom.scrolled .header_bottom_bg{
+
+.header_bottom.scrolled .header_bottom_bg {
     background-color: white;
     /* Измените цвет фона */
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;  
+    transition: all 0.3s ease;
     /* Добавьте тень */
 }
 
@@ -131,19 +130,26 @@
     background: white;
     width: 100%;
     padding: 10px 0;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); /* Тень */
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    /* Тень */
     display: flex;
-    justify-content: center; /* Центрирование содержимого */
+    justify-content: center;
+    /* Центрирование содержимого */
 }
 
 /* Стиль контейнера request_card */
 .request_card {
-    max-width: 1680px; /* Максимальная ширина */
-    width: 90%; /* Ширина для адаптивности */
-    margin: 0 auto; /* Центрирование по горизонтали */
+    max-width: 1680px;
+    /* Максимальная ширина */
+    width: 90%;
+    /* Ширина для адаптивности */
+    margin: 0 auto;
+    /* Центрирование по горизонтали */
     /* background: white;  */
-    border-radius: 10px; /* Закругленные углы */
-    overflow: hidden; /* Для скрытия внутренних границ */
+    border-radius: 10px;
+    /* Закругленные углы */
+    overflow: hidden;
+    /* Для скрытия внутренних границ */
 }
 
 /* Стиль request_item */
@@ -151,17 +157,20 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 30px; /* Отступы внутри карточки */
-    gap: 20px; /* Пространство между элементами */
+    padding: 20px 30px;
+    /* Отступы внутри карточки */
+    gap: 20px;
+    /* Пространство между элементами */
 }
 
 .request_text {
     display: flex;
-    align-items: end;    
+    align-items: end;
     justify-content: center;
     gap: 20px;
 }
-.request_text p{
+
+.request_text p {
     padding: 7px 30px;
     border-radius: 20px;
     font-weight: bold;
@@ -169,33 +178,49 @@
     font-size: 18px;
     background: #76F;
 }
+
 /* Стиль заголовка */
 .request_course h1 {
-    font-size: 28px; /* Размер шрифта */
-    color: #333; /* Темно-серый цвет */
-    font-weight: bold; /* Жирный шрифт */
+    font-size: 28px;
+    /* Размер шрифта */
+    color: #333;
+    /* Темно-серый цвет */
+    font-weight: bold;
+    /* Жирный шрифт */
     margin: 0px;
 }
 
 /* Стиль кнопки */
 .request_button {
-    background-color: red; /* Оранжевый цвет */
-    color: white; /* Белый текст */
-    border: none; /* Без границ */
-    padding: 15px 40px; /* Отступы */
-    border-radius: 5px; /* Закругленные углы */
-    font-size: 18px; /* Размер шрифта */
-    font-weight: bold; /* Жирный шрифт */
-    cursor: pointer; /* Курсор указателя */
-    transition: all 0.3s ease; /* Плавные переходы */
+    background-color: red;
+    /* Оранжевый цвет */
+    color: white;
+    /* Белый текст */
+    border: none;
+    /* Без границ */
+    padding: 15px 40px;
+    /* Отступы */
+    border-radius: 5px;
+    /* Закругленные углы */
+    font-size: 18px;
+    /* Размер шрифта */
+    font-weight: bold;
+    /* Жирный шрифт */
+    cursor: pointer;
+    /* Курсор указателя */
+    transition: all 0.3s ease;
+    /* Плавные переходы */
     text-decoration: none;
 }
 
 /* Эффект при наведении на кнопку */
 .request_button:hover {
-    background-color: green; /* Темнее оранжевый */
-    transform: translateY(-2px); /* Небольшой подъем */
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2); /* Тень */
+    background-color: green;
+    /* Темнее оранжевый */
+    transform: translateY(-2px);
+    /* Небольшой подъем */
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+    /* Тень */
 }
 
 .header_bottom.scrolled .request_course {
@@ -203,17 +228,24 @@
     background: #76F;
     width: 100%;
     padding: 10px 0;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); /* Тень */
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    /* Тень */
     display: flex;
-    justify-content: center; /* Центрирование содержимого */
+    justify-content: center;
+    /* Центрирование содержимого */
 }
+
 .header_bottom.scrolled .request_course h1 {
-    font-size: 28px; /* Размер шрифта */
-    color: white; /* Темно-серый цвет */
-    font-weight: bold; /* Жирный шрифт */
+    font-size: 28px;
+    /* Размер шрифта */
+    color: white;
+    /* Темно-серый цвет */
+    font-weight: bold;
+    /* Жирный шрифт */
     margin: 0px;
 }
-.header_bottom.scrolled .request_text p{
+
+.header_bottom.scrolled .request_text p {
     padding: 7px 30px;
     border-radius: 20px;
     font-weight: bold;
