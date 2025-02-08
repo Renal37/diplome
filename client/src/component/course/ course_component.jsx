@@ -90,16 +90,21 @@ const CourseRegistration = () => {
     return (
         <div className="course-registration">
             <div className="course-registration-container">
-                <h1 className="course-registration-title">Запись на курс: {course.title}</h1>
-                <p className="course-registration-description">{course.description}</p>
+                <div className='course-registration-text'>
+                    <h1 className="course-registration-title">Запись на курс: {course.title}</h1>
+                    <p className="course-registration-description">{course.description}</p>
+                </div>
                 <div className="course-registration-details">
                     <p><strong>Продолжительность:</strong> {course.duration} часов</p>
                     <p><strong>Стоимость:</strong> {course.price} руб.</p>
                     <p><strong>Тип:</strong> {course.type}</p>
                 </div>
+                <div className='course_btn'>
                 <button className="course-registration-button" onClick={handleRegister}>
                     Записаться на курс
                 </button>
+                </div>
+               
                 {error && <p className="course-registration-error">{error}</p>}
             </div>
         </div>

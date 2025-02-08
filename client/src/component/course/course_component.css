@@ -10,11 +10,14 @@
     padding: 30px;
     border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    max-width: 600px;
+    max-width: 1000px;
     width: 100%;
-    text-align: center;
 }
-
+.course-registration-text{
+    display: flex;
+    align-items: start  ;
+    flex-direction: column;
+}
 .course-registration-title {
     font-size: 2rem;
     color: #333;
@@ -22,6 +25,7 @@
 }
 
 .course-registration-description {
+    justify-content: center;
     font-size: 1.1rem;
     color: #666;
     margin-bottom: 20px;
@@ -67,4 +71,9 @@
     color: #dc3545;
     margin-top: 20px;
     font-size: 0.9rem;
+}
+.course_btn{
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

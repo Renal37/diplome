@@ -19,7 +19,7 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
 
         // Функция для отслеживания скролла
         const handleScroll = () => {
-            if (window.scrollY > 230) {
+            if (window.scrollY > 270) {
                 setIsScrolled(true);
             } else {
                 setIsScrolled(false);
