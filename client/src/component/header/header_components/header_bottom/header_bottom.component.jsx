@@ -67,8 +67,13 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
         setIsDropdownOpen(!isDropdownOpen);
     };
 
+    // Определяем класс для header_bottom с учетом текущего пути
+    const headerBottomClass = location.pathname.startsWith('/admin') || location.pathname.startsWith('/auth')
+        ? 'header_bottom' // Без класса "scrolled" на страницах /admin и /auth
+        : `header_bottom ${isScrolled ? 'scrolled' : ''}`;
+
     return (
-        <div className={`header_bottom ${isScrolled ? 'scrolled' : ''}`}>
+        <div className={headerBottomClass}>
             <div className="header_bottom_bg">
                 <nav>
                     <ul>
@@ -93,7 +98,6 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
                     </ul>
                 </nav>
             </div>
-
             {/* Проверяем, чтобы путь не начинался с /admin или /auth */}
             {!(location.pathname.startsWith('/admin') || location.pathname.startsWith('/auth')) && (
                 <div className='request_course'>
