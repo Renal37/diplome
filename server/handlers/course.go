@@ -641,152 +641,184 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(courses)
 }
 func DownloadContract(w http.ResponseWriter, r *http.Request) {
-    vars := mux.Vars(r)
-    courseId, err := primitive.ObjectIDFromHex(vars["courseId"])
-    if err != nil {
-        log.Printf("Invalid courseId: %v", err)
-        http.Error(w, "Неверный формат идентификатора курса", http.StatusBadRequest)
-        return
-    }
+	vars := mux.Vars(r)
+	courseId, err := primitive.ObjectIDFromHex(vars["courseId"])
+	if err != nil {
+		log.Printf("Invalid courseId: %v", err)
+		http.Error(w, "Неверный формат идентификатора курса", http.StatusBadRequest)
+		return
+	}
 
-    clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-    client, err := mongo.Connect(context.Background(), clientOptions)
-    if err != nil {
-        log.Printf("Database connection error: %v", err)
-        http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-        return
-    }
-    defer client.Disconnect(context.Background())
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		log.Printf("Database connection error: %v", err)
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	defer client.Disconnect(context.Background())
 
-    collection := client.Database("diplome").Collection("course_registrations")
-    pipeline := bson.A{
-        bson.M{"$match": bson.M{"_id": courseId}},
-        bson.M{"$lookup": bson.M{
-            "from":         "users",
-            "localField":   "userId",
-            "foreignField": "_id",
-            "as":           "user",
-        }},
-        bson.M{"$lookup": bson.M{
-            "from":         "courses",
-            "localField":   "courseId",
-            "foreignField": "_id",
-            "as":           "course",
-        }},
-        bson.M{"$project": bson.M{
-            "user":   1,
-            "course": 1,
-            "status": 1,
-        }},
-    }
+	collection := client.Database("diplome").Collection("course_registrations")
+	pipeline := bson.A{
+		bson.M{"$match": bson.M{"_id": courseId}},
+		bson.M{"$lookup": bson.M{
+			"from":         "users",
+			"localField":   "userId",
+			"foreignField": "_id",
+			"as":           "user",
+		}},
+		bson.M{"$lookup": bson.M{
+			"from":         "courses",
+			"localField":   "courseId",
+			"foreignField": "_id",
+			"as":           "course",
+		}},
+		bson.M{"$project": bson.M{
+			"user":   1,
+			"course": 1,
+			"status": 1,
+		}},
+	}
 
-    cursor, err := collection.Aggregate(context.Background(), pipeline)
-    if err != nil {
-        log.Printf("Aggregation error: %v", err)
-        http.Error(w, "Ошибка при получении данных", http.StatusInternalServerError)
-        return
-    }
-    defer cursor.Close(context.Background())
+	cursor, err := collection.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		log.Printf("Aggregation error: %v", err)
+		http.Error(w, "Ошибка при получении данных", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
 
-    var result []bson.M
-    if err = cursor.All(context.Background(), &result); err != nil || len(result) == 0 {
-        log.Println("No data found")
-        http.Error(w, "Данные не найдены", http.StatusNotFound)
-        return
-    }
+	var result []bson.M
+	if err = cursor.All(context.Background(), &result); err != nil || len(result) == 0 {
+		log.Println("No data found")
+		http.Error(w, "Данные не найдены", http.StatusNotFound)
+		return
+	}
 
-    // Обработка данных пользователя
-    userArray, ok := result[0]["user"].(primitive.A)
-    if !ok || len(userArray) == 0 {
-        log.Println("User data not found or invalid format")
-        http.Error(w, "Данные пользователя не найдены", http.StatusNotFound)
-        return
-    }
-    user := userArray[0].(primitive.M)
+	// Обработка данных пользователя
+	userArray, ok := result[0]["user"].(primitive.A)
+	if !ok || len(userArray) == 0 {
+		log.Println("User data not found or invalid format")
+		http.Error(w, "Данные пользователя не найдены", http.StatusNotFound)
+		return
+	}
+	user := userArray[0].(primitive.M)
 
-    // Обработка данных курса
-    courseArray, ok := result[0]["course"].(primitive.A)
-    if !ok || len(courseArray) == 0 {
-        log.Println("Course data not found or invalid format")
-        http.Error(w, "Данные курса не найдены", http.StatusNotFound)
-        return
-    }
-    course := courseArray[0].(primitive.M)
+	// Обработка данных курса
+	courseArray, ok := result[0]["course"].(primitive.A)
+	if !ok || len(courseArray) == 0 {
+		log.Println("Course data not found or invalid format")
+		http.Error(w, "Данные курса не найдены", http.StatusNotFound)
+		return
+	}
+	course := courseArray[0].(primitive.M)
 
-    // Создание PDF-документа
-    pdf := gofpdf.New("P", "mm", "A4", "")
-    pdf.AddPage()
+	// Создание PDF-документа
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
 
-    // Путь к файлам шрифтов
-    fontPathRegular := "../server/font/timesnewromanpsmt.ttf"
-    fontPathBold := "../server/font/timesnewromanpsmt_bold.ttf"
+	// Добавление шрифта Times New Roman
+	fontPathRegular := "../server/font/timesnewromanpsmt.ttf"
+	fontPathBold := "../server/font/timesnewromanbold.ttf"
 
-    // Проверка существования файлов шрифтов
-    _, err = os.Stat(fontPathRegular)
-    if err != nil {
-        if os.IsNotExist(err) {
-            log.Printf("Regular font file not found: %v", err)
-            http.Error(w, "Шрифт (Regular) не найден", http.StatusInternalServerError)
-            return
-        }
-        log.Printf("Error checking regular font file: %v", err)
-        http.Error(w, "Ошибка при проверке шрифта (Regular)", http.StatusInternalServerError)
-        return
-    }
+	_, err = os.Stat(fontPathRegular)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("Regular font file not found: %v", err)
+			http.Error(w, "Шрифт (Regular) не найден", http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Error checking regular font file: %v", err)
+		http.Error(w, "Ошибка при проверке шрифта (Regular)", http.StatusInternalServerError)
+		return
+	}
 
-    _, err = os.Stat(fontPathBold)
-    if err != nil {
-        if os.IsNotExist(err) {
-            log.Printf("Bold font file not found: %v", err)
-            http.Error(w, "Шрифт (Bold) не найден", http.StatusInternalServerError)
-            return
-        }
-        log.Printf("Error checking bold font file: %v", err)
-        http.Error(w, "Ошибка при проверке шрифта (Bold)", http.StatusInternalServerError)
-        return
-    }
+	_, err = os.Stat(fontPathBold)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("Bold font file not found: %v", err)
+			http.Error(w, "Шрифт (Bold) не найден", http.StatusInternalServerError)
+			return
+		}
+		log.Printf("Error checking bold font file: %v", err)
+		http.Error(w, "Ошибка при проверке шрифта (Bold)", http.StatusInternalServerError)
+		return
+	}
 
-    // Добавление шрифтов
-    pdf.AddUTF8Font("TimesNewRoman", "", fontPathRegular)
-    pdf.AddUTF8Font("TimesNewRoman", "B", fontPathBold)
+	pdf.AddUTF8Font("TimesNewRoman", "", fontPathRegular)
+	pdf.AddUTF8Font("TimesNewRoman", "B", fontPathBold)
 
-    // Установка шрифта (Regular)
-    pdf.SetFont("TimesNewRoman", "", 16)
+	// Настройка отступов и шрифтов
+	topMargin := 20.0
+	leftMargin := 20.0
+	rightMargin := 20.0
+	lineHeight := 7.0
 
-    // Заголовок
-    pdf.Cell(40, 10, "Договор на обучение")
-    pdf.Ln(10)
+	pdf.SetMargins(leftMargin, topMargin, rightMargin)
+	pdf.SetAutoPageBreak(true, 20)
 
-    // Установка шрифта (Bold) для заголовков
-    pdf.SetFont("TimesNewRoman", "B", 12)
-    pdf.Cell(0, 10, "I. Предмет Договора")
-    pdf.Ln(10)
+	// Заголовок
+	pdf.SetFont("TimesNewRoman", "B", 14)
+	pdf.CellFormat(0, 10, "ДОГОВОР № _______", "", 0, "C", false, 0, "")
+	pdf.Ln(10)
+	pdf.SetFont("TimesNewRoman", "", 12)
+	pdf.CellFormat(0, 10, "об образовании на обучение по дополнительным образовательным программам", "", 0, "C", false, 0, "")
+	pdf.Ln(10)
+	pdf.CellFormat(0, 10, "г. Альметьевск                                  «___» ____________ 20__ г.", "", 0, "L", false, 0, "")
+	pdf.Ln(20)
 
-    // Установка шрифта (Regular) для текста
-    pdf.SetFont("TimesNewRoman", "", 12)
-    pdf.MultiCell(0, 5, "1.1. Исполнитель обязуется предоставить образовательную услугу по обучению по программе, указанной в п.1.2. настоящего договора, в пределах федерального государственного образовательного стандарта и (или) профессиональных стандартов в соответствии с учебным планом, в том числе индивидуальным, и образовательной программой Исполнителя, а Обучающийся обязуется оплатить указанную образовательную услугу.", "0", "L", false)
-    pdf.Ln(5)
+	// Раздел I. Предмет Договора
+	pdf.SetFont("TimesNewRoman", "B", 12)
+	pdf.CellFormat(0, 10, "I. Предмет Договора", "", 0, "L", false, 0, "")
+	pdf.Ln(10)
+	pdf.SetFont("TimesNewRoman", "", 12)
+	pdf.MultiCell(0, lineHeight, "1.1. Исполнитель обязуется предоставить образовательную услугу по обучению по программе, указанной в п.1.2. настоящего договора, в пределах федерального государственного образовательного стандарта и (или) профессиональных стандартов в соответствии с учебным планом, в том числе индивидуальным, и образовательной программой Исполнителя, а Обучающийся обязуется оплатить указанную образовательную услугу.", "", "L", false)
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, fmt.Sprintf("1.2. Наименование дополнительной образовательной программы: %s", course["title"]), "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, fmt.Sprintf("1.3. Срок обучения составляет %d часов.", course["duration"]), "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, "1.4. Форма обучения – очно-заочная.", "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.MultiCell(0, lineHeight, "1.5. После освоения Обучающимся образовательной программы, успешного прохождения итоговой аттестации и полностью оплатившему за обучение, в соответствии с условиями договора выдается документ установленного образца - диплом о профессиональной переподготовке.", "", "L", false)
+	pdf.Ln(20)
 
-    // Добавление данных пользователя
-    pdf.Cell(0, 10, fmt.Sprintf("ФИО: %v %v %v", user["lastname"], user["firstname"], user["middlename"]))
-    pdf.Ln(10)
-    pdf.Cell(0, 10, fmt.Sprintf("Email: %v", user["email"]))
-    pdf.Ln(10)
-    pdf.Cell(0, 10, fmt.Sprintf("Телефон: %v", user["phone"]))
-    pdf.Ln(10)
-    pdf.Cell(0, 10, fmt.Sprintf("Курс: %v", course["title"]))
-    pdf.Ln(10)
-    pdf.Cell(0, 10, fmt.Sprintf("Продолжительность: %v часов", course["duration"]))
-    pdf.Ln(10)
-    pdf.Cell(0, 10, fmt.Sprintf("Цена: %v рублей", course["price"]))
+	// Раздел IX. Адреса и реквизиты сторон
+	pdf.SetFont("TimesNewRoman", "B", 12)
+	pdf.CellFormat(0, 10, "IX. Адреса и реквизиты сторон", "", 0, "L", false, 0, "")
+	pdf.Ln(10)
+	pdf.SetFont("TimesNewRoman", "", 12)
+	pdf.CellFormat(0, 10, "Исполнитель:", "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, "ГАПОУ «Альметьевский политехнический техникум»", "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, "423457, РТ, г. Альметьевск, ул. Мира д.10.", "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, "ИНН/КПП 1644005722/164401001", "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, "ОГРН 1021601625352", "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, "Тел.8(8553)33-48-60", "", 0, "L", false, 0, "")
+	pdf.Ln(10)
+	pdf.CellFormat(0, 10, "Обучающийся:", "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, fmt.Sprintf("ФИО: %s %s %s", user["lastname"], user["firstname"], user["middlename"]), "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, fmt.Sprintf("Адрес: %s", user["homeAddress"]), "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, fmt.Sprintf("Паспорт: %s", user["passportData"]), "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, fmt.Sprintf("Телефон: %s", user["phone"]), "", 0, "L", false, 0, "")
+	pdf.Ln(5)
+	pdf.CellFormat(0, 10, fmt.Sprintf("E-mail: %s", user["email"]), "", 0, "L", false, 0, "")
 
-    // Отправка PDF-файла клиенту
-    w.Header().Set("Content-Type", "application/pdf")
-    w.Header().Set("Content-Disposition", "attachment; filename=contract.pdf")
-    if err := pdf.Output(w); err != nil {
-        log.Printf("PDF generation error: %v", err)
-        http.Error(w, "Ошибка при генерации PDF", http.StatusInternalServerError)
-    }
+	// Отправка PDF-файла клиенту
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", "attachment; filename=contract.pdf")
+	if err := pdf.Output(w); err != nil {
+		log.Printf("PDF generation error: %v", err)
+		http.Error(w, "Ошибка при генерации PDF", http.StatusInternalServerError)
+	}
 }
 
 // Отчисление пользователя
