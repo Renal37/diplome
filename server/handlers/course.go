@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jung-kurt/gofpdf"
+	"github.com/phpdave11/gofpdi"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/Renal37/models"
 	"github.com/Renal37/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
-	"github.com/jung-kurt/gofpdf"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -715,102 +715,37 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 
 	// Создание PDF-документа
 	pdf := gofpdf.New("P", "mm", "A4", "")
+	importer := gofpdi.NewImporter()
+
+	// Загрузка шаблона PDF
+	templatePath := "ДОГОВОР с Физ. Л. ДПП 2021.pdf"         // Укажите путь к вашему шаблону PDF
+	tpl := importer.ImportPage(templatePath, 1, "/MediaBox") // Импорт первой страницы шаблона
+
+	// Добавление страницы и использование импортированного шаблона
 	pdf.AddPage()
+	importer.UseImportedTemplate(pdf, tpl, 0, 0, 210, 297) // Размещение шаблона на странице
 
-	// Добавление шрифта Times New Roman
-	fontPathRegular := "../server/font/timesnewromanpsmt.ttf"
-	fontPathBold := "../server/font/timesnewromanbold.ttf"
+	// Установка шрифта
+	pdf.SetFont("Arial", "", 12)
 
-	_, err = os.Stat(fontPathRegular)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.Printf("Regular font file not found: %v", err)
-			http.Error(w, "Шрифт (Regular) не найден", http.StatusInternalServerError)
-			return
-		}
-		log.Printf("Error checking regular font file: %v", err)
-		http.Error(w, "Ошибка при проверке шрифта (Regular)", http.StatusInternalServerError)
-		return
-	}
+	// Заполнение полей PDF
+	pdf.SetXY(50, 50) // Координаты для ФИО
+	pdf.CellFormat(80, 10, fmt.Sprintf("%v %v %v", user["lastname"], user["firstname"], user["middlename"]), "", 0, "L", false, 0, "")
 
-	_, err = os.Stat(fontPathBold)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.Printf("Bold font file not found: %v", err)
-			http.Error(w, "Шрифт (Bold) не найден", http.StatusInternalServerError)
-			return
-		}
-		log.Printf("Error checking bold font file: %v", err)
-		http.Error(w, "Ошибка при проверке шрифта (Bold)", http.StatusInternalServerError)
-		return
-	}
+	pdf.SetXY(50, 60) // Координаты для Email
+	pdf.CellFormat(80, 10, fmt.Sprintf("%v", user["email"]), "", 0, "L", false, 0, "")
 
-	pdf.AddUTF8Font("TimesNewRoman", "", fontPathRegular)
-	pdf.AddUTF8Font("TimesNewRoman", "B", fontPathBold)
+	pdf.SetXY(50, 70) // Координаты для Телефона
+	pdf.CellFormat(80, 10, fmt.Sprintf("%v", user["phone"]), "", 0, "L", false, 0, "")
 
-	// Настройка отступов и шрифтов
-	topMargin := 20.0
-	leftMargin := 20.0
-	rightMargin := 20.0
-	lineHeight := 7.0
+	pdf.SetXY(50, 80) // Координаты для Курса
+	pdf.CellFormat(80, 10, fmt.Sprintf("%v", course["title"]), "", 0, "L", false, 0, "")
 
-	pdf.SetMargins(leftMargin, topMargin, rightMargin)
-	pdf.SetAutoPageBreak(true, 20)
+	pdf.SetXY(50, 90) // Координаты для Продолжительности
+	pdf.CellFormat(80, 10, fmt.Sprintf("%v часов", course["duration"]), "", 0, "L", false, 0, "")
 
-	// Заголовок
-	pdf.SetFont("TimesNewRoman", "B", 14)
-	pdf.CellFormat(0, 10, "ДОГОВОР № _______", "", 0, "C", false, 0, "")
-	pdf.Ln(10)
-	pdf.SetFont("TimesNewRoman", "", 12)
-	pdf.CellFormat(0, 10, "об образовании на обучение по дополнительным образовательным программам", "", 0, "C", false, 0, "")
-	pdf.Ln(10)
-	pdf.CellFormat(0, 10, "г. Альметьевск                                  «___» ____________ 20__ г.", "", 0, "L", false, 0, "")
-	pdf.Ln(20)
-
-	// Раздел I. Предмет Договора
-	pdf.SetFont("TimesNewRoman", "B", 12)
-	pdf.CellFormat(0, 10, "I. Предмет Договора", "", 0, "L", false, 0, "")
-	pdf.Ln(10)
-	pdf.SetFont("TimesNewRoman", "", 12)
-	pdf.MultiCell(0, lineHeight, "1.1. Исполнитель обязуется предоставить образовательную услугу по обучению по программе, указанной в п.1.2. настоящего договора, в пределах федерального государственного образовательного стандарта и (или) профессиональных стандартов в соответствии с учебным планом, в том числе индивидуальным, и образовательной программой Исполнителя, а Обучающийся обязуется оплатить указанную образовательную услугу.", "", "L", false)
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, fmt.Sprintf("1.2. Наименование дополнительной образовательной программы: %s", course["title"]), "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, fmt.Sprintf("1.3. Срок обучения составляет %d часов.", course["duration"]), "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, "1.4. Форма обучения – очно-заочная.", "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.MultiCell(0, lineHeight, "1.5. После освоения Обучающимся образовательной программы, успешного прохождения итоговой аттестации и полностью оплатившему за обучение, в соответствии с условиями договора выдается документ установленного образца - диплом о профессиональной переподготовке.", "", "L", false)
-	pdf.Ln(20)
-
-	// Раздел IX. Адреса и реквизиты сторон
-	pdf.SetFont("TimesNewRoman", "B", 12)
-	pdf.CellFormat(0, 10, "IX. Адреса и реквизиты сторон", "", 0, "L", false, 0, "")
-	pdf.Ln(10)
-	pdf.SetFont("TimesNewRoman", "", 12)
-	pdf.CellFormat(0, 10, "Исполнитель:", "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, "ГАПОУ «Альметьевский политехнический техникум»", "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, "423457, РТ, г. Альметьевск, ул. Мира д.10.", "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, "ИНН/КПП 1644005722/164401001", "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, "ОГРН 1021601625352", "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, "Тел.8(8553)33-48-60", "", 0, "L", false, 0, "")
-	pdf.Ln(10)
-	pdf.CellFormat(0, 10, "Обучающийся:", "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, fmt.Sprintf("ФИО: %s %s %s", user["lastname"], user["firstname"], user["middlename"]), "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, fmt.Sprintf("Адрес: %s", user["homeAddress"]), "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, fmt.Sprintf("Паспорт: %s", user["passportData"]), "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, fmt.Sprintf("Телефон: %s", user["phone"]), "", 0, "L", false, 0, "")
-	pdf.Ln(5)
-	pdf.CellFormat(0, 10, fmt.Sprintf("E-mail: %s", user["email"]), "", 0, "L", false, 0, "")
+	pdf.SetXY(50, 100) // Координаты для Цены
+	pdf.CellFormat(80, 10, fmt.Sprintf("%v рублей", course["price"]), "", 0, "L", false, 0, "")
 
 	// Отправка PDF-файла клиенту
 	w.Header().Set("Content-Type", "application/pdf")
