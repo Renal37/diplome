@@ -21,8 +21,12 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
         const handleScroll = () => {
             if (window.scrollY > 350) {
                 setIsScrolled(true);
+                // Добавляем отступ для контента под header_bottom
+                document.querySelector('.main_top').style.paddingTop = '170px'; // Замените на актуальную высоту
             } else {
                 setIsScrolled(false);
+                // Убираем отступ, если header_bottom не фиксированный
+                document.querySelector('.main_top').style.paddingTop = '0';
             }
         };
 
@@ -34,23 +38,12 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
             window.removeEventListener('scroll', handleScroll);
         };
     }, [isAuthenticated]);
+
     useEffect(() => {
-        const handleScroll = () => {
-            if (window.scrollY > 350) {
-                setIsScrolled(true);
-                document.querySelector('.main_top').style.paddingTop = '170px'; // Замените на актуальную высоту
-            } else {
-                setIsScrolled(false);
-                document.querySelector('.main_top').style.paddingTop = '0';
-            }
-        };
+        // Устанавливаем атрибут data-path для body
+        document.body.setAttribute('data-path', location.pathname);
+    }, [location.pathname]);
 
-        window.addEventListener('scroll', handleScroll);
-
-        return () => {
-            window.removeEventListener('scroll', handleScroll);
-        };
-    }, []);
     const handleLogout = async () => {
         try {
             const response = await fetch('http://localhost:5000/logout', {
@@ -101,8 +94,7 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
                 </nav>
             </div>
 
-
-            {/* Проверяем, чтобы путь не начинался с /admin */}
+            {/* Проверяем, чтобы путь не начинался с /admin или /auth */}
             {!(location.pathname.startsWith('/admin') || location.pathname.startsWith('/auth')) && (
                 <div className='request_course'>
                     <div className="request_card">

@@ -1,6 +1,6 @@
 import React from "react";
 import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";    
+import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import "./main_top_center.component.css";
 import apt from "../../../../../assets/apt.png";
@@ -38,11 +38,26 @@ const Main_top_center = () => {
                     <div className="slider-content">
                         <h3>Почему именно у нас?</h3>
                         <p>
+                            По завершению обучения выдается диплом о профессиональной переподготовке.
+                        </p>
+                    </div>
+                </div>
+                <div className="slider-item">
+                    <div className="slider-content">
+                        <h3>Почему именно у нас?</h3>
+                        <p>
                             Наши курсы помогут вам получить актуальные знания и навыки, необходимые для успешной карьеры.
                         </p>
                     </div>
                 </div>
-
+                <div className="slider-item">
+                    <div className="slider-content">
+                        <h3>Почему наш мы?</h3>
+                        <p>
+                        Доставка документов по всей России.
+                        </p>
+                    </div>
+                </div>
                 {/* Слайд 3 */}
                 <div className="slider-item">
                     <div className="slider-content">
