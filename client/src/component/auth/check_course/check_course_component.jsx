@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import "./check_course_component.css";
+import { PDFDocument } from "pdf-lib";
 
 const CheckCourse = () => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedStatus, setSelectedStatus] = useState("all");
+    const [userData, setUserData] = useState({}); // Добавляем состояние для данных пользователя
 
     const fetchCourses = async (status) => {
         try {
@@ -39,18 +41,55 @@ const CheckCourse = () => {
         fetchCourses(selectedStatus);
     }, [selectedStatus]);
 
+
     const handleDownloadContract = async (courseId) => {
         try {
+            // Загружаем PDF-шаблон и данные с сервера
             const response = await fetch(`http://localhost:5000/user/download-contract/${courseId}`, {
                 method: "GET",
                 credentials: "include",
             });
-    
+
             if (!response.ok) {
                 throw new Error("Ошибка при скачивании договора");
             }
-    
-            const blob = await response.blob();
+
+            // Получаем данные пользователя из заголовка ответа
+            const userDataJson = response.headers.get("X-UserData");
+
+            if (!userDataJson) {
+                throw new Error("Отсутствуют данные пользователя в ответе сервера");
+            }
+
+            let userData;
+            try {
+                userData = JSON.parse(userDataJson);
+            } catch (e) {
+                throw new Error("Ошибка при парсинге данных пользователя");
+            }
+
+            // Получаем байты PDF
+            const pdfBytes = await response.arrayBuffer();
+            const pdfDoc = await PDFDocument.load(pdfBytes);
+
+            // Получаем форму из PDF
+            const form = pdfDoc.getForm();
+
+            // Заполняем поля формы
+            for (const [fieldName, fieldValue] of Object.entries(userData)) {
+                const field = form.getField(fieldName);
+                if (field && field.getType() === "Text") { // Проверяем тип поля
+                    field.setText(fieldValue);
+                } else {
+                    console.warn(`Поле '${fieldName}' не является текстовым.`);
+                }
+            }
+
+            // Сохраняем изменения
+            const updatedPdfBytes = await pdfDoc.save();
+
+            // Создаем ссылку для скачивания
+            const blob = new Blob([updatedPdfBytes], { type: "application/pdf" });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.style.display = "none";
@@ -69,6 +108,7 @@ const CheckCourse = () => {
 
     return (
         <div className="check-course-container">
+            {/* Навигация по статусам курсов */}
             <div className="profile_course_nav">
                 <button
                     onClick={() => setSelectedStatus("all")}
@@ -95,6 +135,8 @@ const CheckCourse = () => {
                     Ожидают одобрения
                 </button>
             </div>
+
+            {/* Список курсов */}
             <div className="course-list-container">
                 <h2 className="course-list-title">Список курсов:</h2>
                 {courses.length === 0 ? (

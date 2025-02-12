@@ -2,16 +2,16 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
+
 	"github.com/gorilla/mux"
-	"github.com/unidoc/unipdf/v3/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
-	"net/http"
-	"os"
 )
 
 func DownloadContract(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +33,6 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	defer client.Disconnect(context.Background())
 
 	collection := client.Database("diplome").Collection("course_registrations")
-
 	pipeline := bson.A{
 		bson.M{"$match": bson.M{"_id": courseId}},
 		bson.M{"$lookup": bson.M{
@@ -77,7 +76,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Данные пользователя не найдены", http.StatusNotFound)
 		return
 	}
-	user := userArray[0].(primitive.M)
+	user := userArray[0].(bson.M)
 
 	// Обработка данных курса
 	courseArray, ok := result[0]["course"].(primitive.A)
@@ -86,115 +85,36 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Данные курса не найдены", http.StatusNotFound)
 		return
 	}
-	course := courseArray[0].(primitive.M)
+	course := courseArray[0].(bson.M)
+
+	// Формируем JSON с данными пользователя и курса
+	data := map[string]interface{}{
+		"Text1":          fmt.Sprintf("%s %s %s", user["lastname"], user["firstname"], user["middlename"]),
+		"Address":        fmt.Sprintf("%s", user["homeAddress"]),
+		"Passport":       fmt.Sprintf("%s", user["passportData"]),
+		"Phone":          fmt.Sprintf("%s", user["phone"]),
+		"Email":          fmt.Sprintf("%s", user["email"]),
+		"CourseName":     fmt.Sprintf("%s", course["title"]),
+		"CourseDuration": fmt.Sprintf("%d часов", course["duration"]),
+		"CoursePrice":    fmt.Sprintf("%d рублей", course["price"]),
+	}
+
+	// Преобразуем данные в JSON
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Error marshaling JSON: %v", err)
+		http.Error(w, "Ошибка при подготовке данных", http.StatusInternalServerError)
+		return
+	}
 
 	// Путь к шаблону PDF
 	templatePath := "../server/handlers/ДОГОВОР_fix.pdf"
-	outputPath := "../server/contract_output.pdf"
 
-	// Проверка наличия интерактивных форм
-	hasForms, err := checkInteractiveForms(templatePath)
-	if err != nil {
-		log.Printf("Error checking interactive forms: %v", err)
-		http.Error(w, "Ошибка при проверке интерактивных форм", http.StatusInternalServerError)
-		return
-	}
-
-	if hasForms {
-		log.Println("Интерактивные формы найдены. Заполняем их.")
-		err = fillInteractivePDF(templatePath, outputPath, map[string]string{
-			"FullName":       fmt.Sprintf("%s %s %s", user["lastname"], user["firstname"], user["middlename"]),
-			"Address":        fmt.Sprintf("%s", user["homeAddress"]),
-			"Passport":       fmt.Sprintf("%s", user["passportData"]),
-			"Phone":          fmt.Sprintf("%s", user["phone"]),
-			"Email":          fmt.Sprintf("%s", user["email"]),
-			"CourseName":     fmt.Sprintf("%s", course["title"]),
-			"CourseDuration": fmt.Sprintf("%d часов", course["duration"]),
-			"CoursePrice":    fmt.Sprintf("%d рублей", course["price"]),
-		})
-	} else {
-		log.Println("Интерактивные формы отсутствуют. Добавляем текст поверх PDF.")
-		// Здесь можно добавить альтернативную логику для добавления текста поверх PDF.
-	}
-
-	if err != nil {
-		log.Printf("Error filling template: %v", err)
-		http.Error(w, "Ошибка при заполнении шаблона", http.StatusInternalServerError)
-		return
-	}
-
-	// Отправка PDF-файла клиенту
+	// Отправляем PDF-шаблон как attachment
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", "attachment; filename=contract.pdf")
-	http.ServeFile(w, r, outputPath)
-}
+	w.Header().Set("Content-Disposition", "attachment; filename=contract_template.pdf")
+	http.ServeFile(w, r, templatePath)
 
-// checkInteractiveForms проверяет наличие интерактивных форм в PDF
-func checkInteractiveForms(filePath string) (bool, error) {
-	// Загружаем PDF
-	pdfReader, pdfErr, err := model.NewPdfReaderFromFile(filePath, nil)
-	if err != nil {
-		return false, fmt.Errorf("failed to load PDF: %w", err)
-	}
-	if pdfErr != nil {
-		return false, fmt.Errorf("PDF read error: %v", pdfErr)
-	}
-
-	// Получаем AcroForm (интерактивные формы)
-	form := pdfReader.AcroForm
-	if form == nil {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-// fillInteractivePDF заполняет интерактивные формы в PDF
-func fillInteractivePDF(inputPath, outputPath string, userData map[string]string) error {
-	// Загружаем PDF
-	pdfReader, pdfErr, err := model.NewPdfReaderFromFile(inputPath, nil)
-	if err != nil {
-		return fmt.Errorf("failed to load PDF: %w", err)
-	}
-	if pdfErr != nil {
-		return fmt.Errorf("PDF read error: %v", pdfErr)
-	}
-
-	// Получаем AcroForm (интерактивные формы)
-	form := pdfReader.AcroForm
-	if form == nil {
-		return fmt.Errorf("interactive forms not found in the PDF")
-	}
-
-	// Заполняем значения полей данными из userData
-	for _, field := range *form.Fields {
-		fieldName := field.T.String() // Получаем имя поля
-		if fieldValue, exists := userData[fieldName]; exists {
-			// Устанавливаем значение поля
-			if field, ok := field.GetContext().(*model.PdfFieldText); ok {
-				// Используем SetValue для установки значения
-				field.V = model.MakeString(fieldValue)
-			} else {
-				log.Printf("Field '%s' is not a text field and cannot be set", fieldName)
-			}
-		}
-	}
-
-	// Создаем новый PDF с заполненными данными
-	pdfWriter := model.NewPdfWriter()
-	pdfWriter.SetForms(form)
-
-	// Сохраняем результат
-	outputFile, err := os.Create(outputPath)
-	if err != nil {
-		return fmt.Errorf("failed to create output file: %w", err)
-	}
-	defer outputFile.Close()
-
-	err = pdfWriter.Write(outputFile)
-	if err != nil {
-		return fmt.Errorf("failed to write PDF: %w", err)
-	}
-
-	return nil
+	// Отправляем данные в заголовке ответа
+	w.Header().Set("X-UserData", string(jsonData))
 }
