@@ -7,7 +7,6 @@ const CheckCourse = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedStatus, setSelectedStatus] = useState("all");
-    const [userData, setUserData] = useState({}); // Добавляем состояние для данных пользователя
 
     const fetchCourses = async (status) => {
         try {
@@ -98,36 +97,30 @@ const CheckCourse = () => {
     if (loading) return <p className="loading">Загрузка...</p>;
     if (error) return <p className="error">{error}</p>;
 
+    const handleUploadContract = async (courseId, file) => {
+        const formData = new FormData();
+        formData.append("contract", file);
+
+        try {
+            const response = await fetch(`http://localhost:5000/user/upload-contract/${courseId}`, {
+                method: "POST",
+                credentials: "include",
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error("Ошибка при загрузке договора");
+            }
+
+            const data = await response.json();
+            alert(data.message || "Договор успешно загружен!");
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
     return (
         <div className="check-course-container">
-            {/* Навигация по статусам курсов */}
-            <div className="profile_course_nav">
-                <button
-                    onClick={() => setSelectedStatus("all")}
-                    className={`prifle_nav_button ${selectedStatus === "all" ? "active" : ""}`}
-                >
-                    Все курсы
-                </button>
-                <button
-                    onClick={() => setSelectedStatus("Одобренный")}
-                    className={`prifle_nav_button ${selectedStatus === "Одобренный" ? "active" : ""}`}
-                >
-                    Одобренные
-                </button>
-                <button
-                    onClick={() => setSelectedStatus("Отклоненный")}
-                    className={`prifle_nav_button ${selectedStatus === "Отклоненный" ? "active" : ""}`}
-                >
-                    Отклоненные
-                </button>
-                <button
-                    onClick={() => setSelectedStatus("Ожидание")}
-                    className={`prifle_nav_button ${selectedStatus === "Ожидание" ? "active" : ""}`}
-                >
-                    Ожидают одобрения
-                </button>
-            </div>
-
             {/* Список курсов */}
             <div className="course-list-container">
                 <h2 className="course-list-title">Список курсов:</h2>
@@ -145,21 +138,30 @@ const CheckCourse = () => {
                                     </span>
                                 )}
                                 {course.status === "Одобренный" && (
-                                    <button
-                                        className="download-contract-button"
-                                        onClick={() => handleDownloadContract(course._id)}
-                                    >
-                                        Скачать договор
-                                    </button>
+                                    <>
+                                        <button
+                                            className="download-contract-button"
+                                            onClick={() => handleDownloadContract(course._id)}
+                                        >
+                                            Скачать договор
+                                        </button>
+                                        <input
+                                            type="file"
+                                            accept=".pdf"
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    handleUploadContract(course._id, file);
+                                                }
+                                            }}
+                                        />
+                                    </>
                                 )}
                             </li>
                         ))}
                     </ul>
                 )}
             </div>
-
-            {/* Форма для ввода данных пользователя */}
-            
         </div>
     );
 };

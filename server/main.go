@@ -52,7 +52,10 @@ func main() {
 	r.HandleFunc("/courses/register", handlers.RegisterForCourse).Methods("POST", "OPTIONS")
 	r.HandleFunc("/user/courses", handlers.GetCoursesForUser).Methods("GET")
 	r.HandleFunc("/user/courses/status", handlers.GetCoursesByStatus).Methods("GET")
+
 	r.HandleFunc("/user/download-contract/{courseId}", handlers.DownloadContract).Methods("GET")
+	r.HandleFunc("/user/upload-contract/{courseId}", handlers.UploadContract).Methods("POST")
+
 	r.HandleFunc("/admin/expel-registration/{id}", handlers.ExpelRegistration).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/issue-document/{id}", handlers.IssueDocument).Methods("POST", "OPTIONS")
 
