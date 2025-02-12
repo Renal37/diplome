@@ -2,8 +2,7 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
+
 	"log"
 	"net/http"
 
@@ -76,7 +75,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Данные пользователя не найдены", http.StatusNotFound)
 		return
 	}
-	user := userArray[0].(bson.M)
+	user := userArray[0].(primitive.M)
 
 	// Обработка данных курса
 	courseArray, ok := result[0]["course"].(primitive.A)
@@ -85,36 +84,13 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Данные курса не найдены", http.StatusNotFound)
 		return
 	}
-	course := courseArray[0].(bson.M)
-
-	// Формируем JSON с данными пользователя и курса
-	data := map[string]interface{}{
-		"Text1":          fmt.Sprintf("%s %s %s", user["lastname"], user["firstname"], user["middlename"]),
-		"Address":        fmt.Sprintf("%s", user["homeAddress"]),
-		"Passport":       fmt.Sprintf("%s", user["passportData"]),
-		"Phone":          fmt.Sprintf("%s", user["phone"]),
-		"Email":          fmt.Sprintf("%s", user["email"]),
-		"CourseName":     fmt.Sprintf("%s", course["title"]),
-		"CourseDuration": fmt.Sprintf("%d часов", course["duration"]),
-		"CoursePrice":    fmt.Sprintf("%d рублей", course["price"]),
-	}
-
-	// Преобразуем данные в JSON
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		log.Printf("Error marshaling JSON: %v", err)
-		http.Error(w, "Ошибка при подготовке данных", http.StatusInternalServerError)
-		return
-	}
+	course := courseArray[0].(primitive.M)
 
 	// Путь к шаблону PDF
 	templatePath := "../server/handlers/ДОГОВОР_fix.pdf"
 
-	// Отправляем PDF-шаблон как attachment
+	// Отправка PDF-шаблона клиенту
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "attachment; filename=contract_template.pdf")
 	http.ServeFile(w, r, templatePath)
-
-	// Отправляем данные в заголовке ответа
-	w.Header().Set("X-UserData", string(jsonData))
 }

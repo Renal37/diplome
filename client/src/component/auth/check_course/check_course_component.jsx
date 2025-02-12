@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import "./check_course_component.css";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument } from "pdf-lib"; // Импортируем PDF-Lib
 
 const CheckCourse = () => {
     const [courses, setCourses] = useState([]);
@@ -41,10 +41,10 @@ const CheckCourse = () => {
         fetchCourses(selectedStatus);
     }, [selectedStatus]);
 
-
+    // Функция для заполнения и скачивания PDF-договора
     const handleDownloadContract = async (courseId) => {
         try {
-            // Загружаем PDF-шаблон и данные с сервера
+            // Загружаем PDF-шаблон с сервера
             const response = await fetch(`http://localhost:5000/user/download-contract/${courseId}`, {
                 method: "GET",
                 credentials: "include",
@@ -54,31 +54,25 @@ const CheckCourse = () => {
                 throw new Error("Ошибка при скачивании договора");
             }
 
-            // Получаем данные пользователя из заголовка ответа
-            const userDataJson = response.headers.get("X-UserData");
-
-            if (!userDataJson) {
-                throw new Error("Отсутствуют данные пользователя в ответе сервера");
-            }
-
-            let userData;
-            try {
-                userData = JSON.parse(userDataJson);
-            } catch (e) {
-                throw new Error("Ошибка при парсинге данных пользователя");
-            }
-
-            // Получаем байты PDF
-            const pdfBytes = await response.arrayBuffer();
-            const pdfDoc = await PDFDocument.load(pdfBytes);
+            const pdfBytes = await response.arrayBuffer(); // Получаем байты PDF
+            const pdfDoc = await PDFDocument.load(pdfBytes); // Загружаем PDF в PDF-Lib
 
             // Получаем форму из PDF
             const form = pdfDoc.getForm();
 
+            // Пример данных для заполнения полей (замените на реальные данные пользователя)
+            const dataToFill = {
+                FullName: userData.fullName || "Иванов Иван Иванович",
+                Address: userData.address || "г. Москва, ул. Ленина, д. 1",
+                Phone: userData.phone || "+7 (999) 123-45-67",
+                Email: userData.email || "example@example.com",
+                CourseName: courses.find((course) => course._id === courseId)?.courseTitle || "Название курса",
+            };
+
             // Заполняем поля формы
-            for (const [fieldName, fieldValue] of Object.entries(userData)) {
+            for (const [fieldName, fieldValue] of Object.entries(dataToFill)) {
                 const field = form.getField(fieldName);
-                if (field && field.getType() === "Text") { // Проверяем тип поля
+                if (field instanceof TextField) {
                     field.setText(fieldValue);
                 } else {
                     console.warn(`Поле '${fieldName}' не является текстовым.`);
@@ -165,6 +159,9 @@ const CheckCourse = () => {
                     </ul>
                 )}
             </div>
+
+            {/* Форма для ввода данных пользователя */}
+            
         </div>
     );
 };
