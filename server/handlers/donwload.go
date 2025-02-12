@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-
 	"log"
 	"net/http"
 
@@ -75,7 +74,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Данные пользователя не найдены", http.StatusNotFound)
 		return
 	}
-	user := userArray[0].(primitive.M)
+	// user := userArray[0].(primitive.M)
 
 	// Обработка данных курса
 	courseArray, ok := result[0]["course"].(primitive.A)
@@ -84,7 +83,16 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Данные курса не найдены", http.StatusNotFound)
 		return
 	}
-	course := courseArray[0].(primitive.M)
+	// course := courseArray[0].(primitive.M)
+
+	
+	var usercourse []bson.M
+	if err = cursor.All(context.Background(), &usercourse); err != nil {
+		http.Error(w, "Ошибка при обработке данных заявок", http.StatusInternalServerError)
+		return
+	}
+
+
 
 	// Путь к шаблону PDF
 	templatePath := "../server/handlers/ДОГОВОР_fix.pdf"
@@ -92,5 +100,6 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	// Отправка PDF-шаблона клиенту
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "attachment; filename=contract_template.pdf")
+	w.Header().Set("Content-Type", "application/json")
 	http.ServeFile(w, r, templatePath)
 }

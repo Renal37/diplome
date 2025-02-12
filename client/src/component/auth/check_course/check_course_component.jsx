@@ -57,16 +57,13 @@ const CheckCourse = () => {
             const pdfBytes = await response.arrayBuffer(); // Получаем байты PDF
             const pdfDoc = await PDFDocument.load(pdfBytes); // Загружаем PDF в PDF-Lib
 
-            // Получаем форму из PDF
-            const form = pdfDoc.getForm();
-
             // Пример данных для заполнения полей (замените на реальные данные пользователя)
             const dataToFill = {
-                FullName: userData.fullName || "Иванов Иван Иванович",
-                Address: userData.address || "г. Москва, ул. Ленина, д. 1",
-                Phone: userData.phone || "+7 (999) 123-45-67",
-                Email: userData.email || "example@example.com",
-                CourseName: courses.find((course) => course._id === courseId)?.courseTitle || "Название курса",
+                // Text1:  "Иванов Иван Иванович",
+                // Address: userData.address || "г. Москва, ул. Ленина, д. 1",
+                // Phone: userData.phone || "+7 (999) 123-45-67",
+                // Email: userData.email || "example@example.com",
+                // CourseName: courses.find((course) => course._id === courseId)?.courseTitle || "Название курса",
             };
 
             // Заполняем поля формы
@@ -92,6 +89,7 @@ const CheckCourse = () => {
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
+            alert("Вы скачали договор, теперь заполните его и отправте нам!");
         } catch (err) {
             alert(err.message);
         }
