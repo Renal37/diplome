@@ -4,6 +4,7 @@ import Organization_top_center from "../main_class/organization/main_top_center/
 import Professional_top_center from "../main_class/professional/main_top_center/main_top_center.component";
 import Promotion_top_center from "../main_class/promotion/main_top_center/main_top_center.component";
 import { Routes, Route } from 'react-router-dom';
+import Sveden from "../../sveden/sveden_component";
 import './main_top_bg.component.css';
 
 const Main_top_bg = () => {

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './registration_component.css';
+import privates from "../../../assets/private.svg";
+import look from "../../../assets/eye-look-icon.svg";
 
-const Registration = () => {
-  const [fullName, setFullName] = useState('');
+const Registration = ({ setIsAuthenticated }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,8 +14,15 @@ const Registration = () => {
   const [agree, setAgree] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate('/auth/profile');
+    }
+  }, [navigate]);
+
   const validatePassword = (password) => {
-    const minLength = 8;
+    const minLength = 6;
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
@@ -56,22 +64,21 @@ const Registration = () => {
 
     const response = await fetch('http://localhost:5000/register', {
       method: 'POST',
+      credentials: "include",
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        fullName,
         username,
         email,
         password,
+        agreeToProcessing: agree,
       }),
     });
 
     if (response.ok) {
-      const data = await response.json();
-      localStorage.setItem('token', data.token);
       alert('Регистрация успешна!');
-      navigate('/profile');
+      navigate('/auth/profile');
     } else {
       const errorData = await response.json();
       setError(errorData.message || 'Ошибка при регистрации');
@@ -80,54 +87,59 @@ const Registration = () => {
 
   return (
     <div className="registration-component">
-      <h1>Регистрация</h1> 
-      <Link to="/authorization">Авторизация</Link>
-      {error && <p className="error">{error}</p>}
+      <h1>Регистрация</h1>
+
       <form onSubmit={handleSubmit} className="registration-form">
-        <input
-          type="text"
-          placeholder="Полное имя"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Логин"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <div className="password-input">
+        <div className='input'>
           <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Пароль"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            type="text"
+            placeholder="Логин"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
-          <button type="button" onClick={() => setShowPassword(!showPassword)}>
-            {showPassword ? "Скрыть" : "Показать"}
-          </button>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <div className="password-input">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Пароль"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Повторите пароль"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+            <button type="button" onClick={() => setShowPassword(!showPassword)}>
+              {showPassword ? (
+                <img src={privates} alt="Скрыть" />
+              ) : (
+                <img src={look} alt="Показать" />
+              )}
+            </button>
+          </div>
         </div>
-        <input
-          type={showPassword ? "text" : "password"}
-          placeholder="Повторите пароль"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
+        {error && <p className="error">{error}</p>}
+
         <div className="agreement">
           <input
             type="checkbox"
             checked={agree}
             onChange={(e) => setAgree(e.target.checked)}
+            className="agree"
           />
           <label>Согласен с обработкой данных</label>
         </div>
-        <button type="submit">Зарегистрироваться</button>
+        <div className='buttons'>
+          <Link to="authorization" className='btn'>Авторизация</Link>
+          <button type="submit" className='btn'>Зарегистрироваться</button>
+        </div>
       </form>
     </div>
   );

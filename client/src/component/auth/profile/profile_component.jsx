@@ -1,82 +1,71 @@
-import React, { useState } from 'react';
-import './profile_component.css';
+import { useState, useEffect } from "react";
+import "./profile_component.css";
+import CheckCourse from "../check_course/check_course_component";
+import { Link } from "react-router-dom";
+
 
 const Profile = () => {
-  const [residence, setResidence] = useState('');
-  const [education, setEducation] = useState('');
-  const [birthPlace, setBirthPlace] = useState('');
-  const [homeAddress, setHomeAddress] = useState('');
-  const [passportData, setPassportData] = useState('');
-  const [snils, setSnils] = useState('');
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const userId = 'user-id'; // Замените на реальный идентификатор пользователя
-    const response = await fetch(`http://localhost:5000/update-profile/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        residence,
-        education,
-        birthPlace,
-        homeAddress,
-        passportData,
-        snils,
-      }),
-    });
 
-    if (response.ok) {
-      alert('Профиль успешно обновлен!');
-    } else {
-      alert('Ошибка при обновлении профиля');
-    }
-  };
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/profile", {
+          method: "GET",
+          credentials: "include",
+        });
 
-  return (
-    <div className="profile-component">
-      <h1>Профиль</h1>
-      <form onSubmit={handleSubmit} className="profile-form">
-        <input
-          type="text"
-          placeholder="Место жительства"
-          value={residence}
-          onChange={(e) => setResidence(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Образование"
-          value={education}
-          onChange={(e) => setEducation(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Место рождения"
-          value={birthPlace}
-          onChange={(e) => setBirthPlace(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Домашний адрес (прописка)"
-          value={homeAddress}
-          onChange={(e) => setHomeAddress(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Данные паспорта (серия и номер)"
-          value={passportData}
-          onChange={(e) => setPassportData(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="СНИЛС"
-          value={snils}
-          onChange={(e) => setSnils(e.target.value)}
-        />
-        <button type="submit">Сохранить</button>
-      </form>
+        if (!response.ok) {
+          throw new Error("Ошибка при загрузке профиля");
+        }
+
+        const data = await response.json();
+        setProfile(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  if (loading) {
+    return <p>Загрузка...</p>;
+  }
+
+  if (error) {
+    return <p>{error}</p>;
+  }
+
+  return profile ? (
+    <div className="profile-container">
+      <h1 className="profile-header">Ваш профиль</h1>
+      <div className="profile_menu">
+        <div className="profile-avatar">
+          <h1>Ваши данные</h1>
+          <div className="profile-info">
+            <p>Ваше ФИО: {profile.lastName && profile.firstName && profile.middleName ? `${profile.lastName} ${profile.firstName} ${profile.middleName}` : "Данные отсутствуют"}</p>
+            <p>Email: {profile.email || "Данные отсутствуют"}</p>
+            <p>Дата рождения: {profile.birthDate || "Данные отсутствуют"}</p>
+            <p>Образование: {profile.education || "Данные отсутствуют"}</p>
+            <Link to="/auth/edit_profile">Заполнить профиль</Link>
+          </div>
+        </div>
+        <div className="profile_course">
+          <div className="course_end">
+            <CheckCourse />
+          </div>
+        </div>
+      </div>
     </div>
+
+  ) : (
+    <p>Загрузка...</p>
   );
 };
 

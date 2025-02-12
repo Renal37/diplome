@@ -1,0 +1,80 @@
+.main_top_center_slider {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    text-align: center;
+    padding: 0;
+    /* Удалите лишние отступы */
+}
+
+/* Статичное изображение */
+.static-image {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Слайдер */
+.main_top_slider {
+    max-height: 200px;
+    overflow: hidden;
+}
+
+.slider-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+    background-color: #76F;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 0;
+    /* Удалите отступы */
+}
+
+.slider-content h3,
+.slider-content p {
+    margin: 0;
+    /* Удалите стандартные отступы */
+    padding: 0;
+}
+
+.slider-content h3 {
+    font-size: 32px;
+    margin-bottom: 10px;
+    color: white;
+
+}
+
+.slider-content p {
+    font-size: 18px;
+    color: white;
+}
+
+/* Настройка точек навигации */
+.slick-dots {
+    bottom: -20px;
+    /* Приблизите точки к слайдеру */
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+}
+
+.slick-dots li button {
+    font-size: 0;
+    line-height: 0;
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #ccc;
+    margin: 0 5px;
+    padding: 0;
+    cursor: pointer;
+}

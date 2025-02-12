@@ -12,6 +12,10 @@ const Header_center_head = () => {
                 return 'Курсы профессиональной переподготовки';
             case '/promotion':
                 return 'Курсы повышения квалификации';
+            case '/sveden':
+                return 'Основная информация о техникуме';
+            case '/document':
+                return 'Документы';
             default:
                 return 'Общая информация';
         }

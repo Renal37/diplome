@@ -1,84 +1,75 @@
+import React from "react";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+import "./main_top_center.component.css";
 import apt from "../../../../../assets/apt.png";
 
 const Main_top_center = () => {
+    const settings = {
+        dots: true,
+        infinite: true,
+        speed: 500,
+        slidesToShow: 1,
+        slidesToScroll: 1,
+        autoplay: true,
+        autoplaySpeed: 3000,
+    };
+
     return (
-        <div className="main_top_center ">
-            <div className="main_top_left">
-                <div className="main_top_left_img"><img src={apt} alt="" /></div>
-            </div>
-            <div className="main_top_right">
-                <p>
-                    <span>ГАПОУ</span> Альметьевский политехнический техникум является многопрофильным учебным
-                    заведением.
-                    Начиная с
-                    1994
-                    года в техникуме организована служба по оказанию дополнительных образовательных услуг
-                    населению,
-                    в
-                    этой
-                    сфере на сегодняшний день занято более 50% педагогического коллектива.
-                </p>
-                <p>
-                    <span>В</span> Альметьевском политехническом техникумереализация образовательных программ
-                    ДПО осуществляется
-                    по
-                    следующим направлениям:
-                </p>
+        <div className="main_top_center_slider">
+            {/* Статичное изображение */}
+            <img src={apt} alt="Наш техникум" className="static-image" />
 
-                <ul>
-                    <li>
-                        повышение квалификации;
-                    </li>
-                    <li>
-                        профессиональная переподготовка;
-                    </li>
-                    <li>
-                        профессиональная подготовка по рабочим профессиям.
-                    </li>
-                </ul>
-
-                <div className="main_top_right_text">
-                    <div className="main_top_right_text_left">
-                        <h4>
-                            <span>Для</span> учащихся 9-х классов, подготовка к ГИА идет по программам:
-                        </h4>
-                        <ul>
-                            <li>
-                                Математика и русский язык – 96 часов;
-                            </li>
-                            <li>
-                                Математика - 56 часов;
-                            </li>
-                            <li>
-                                Русский язык - 40 часов;
-                            </li>
-                            <li>
-                                Физика - 60 часов.
-                            </li>
-                        </ul>
+            {/* Слайдер с текстовым содержимым */}
+            <Slider {...settings} className="main_top_slider">
+                {/* Слайд 1 */}
+                <div className="slider-item">
+                    <div className="slider-content">
+                        <h3>Почему наш сайт?</h3>
+                        <p>
+                            Мы предлагаем качественные образовательные программы, разработанные опытными преподавателями.
+                        </p>
                     </div>
-                    <div className="main_top_right_text_right">
-                        <h4>
-                            <span>Для</span> учащихся 11-х классов, подготовка к ЕГЭ идет по программам:
-                        </h4>
-                        <ul>
-                            <li>
-                                Русский язык - 60 часов;
-                            </li>
-                            <li>
-                                Математика - 60 часов;
-                            </li>
-                            <li>
-                                Физика – 60 часов.
-                            </li>
-                        </ul>
-                    </div>
-
                 </div>
 
-            </div>
+                {/* Слайд 2 */}
+                <div className="slider-item">
+                    <div className="slider-content">
+                        <h3>Почему именно у нас?</h3>
+                        <p>
+                            По завершению обучения выдается диплом о профессиональной переподготовке.
+                        </p>
+                    </div>
+                </div>
+                <div className="slider-item">
+                    <div className="slider-content">
+                        <h3>Почему именно у нас?</h3>
+                        <p>
+                            Наши курсы помогут вам получить актуальные знания и навыки, необходимые для успешной карьеры.
+                        </p>
+                    </div>
+                </div>
+                <div className="slider-item">
+                    <div className="slider-content">
+                        <h3>Почему наш мы?</h3>
+                        <p>
+                        Доставка документов по всей России.
+                        </p>
+                    </div>
+                </div>
+                {/* Слайд 3 */}
+                <div className="slider-item">
+                    <div className="slider-content">
+                        <h3>Преимущества наших курсов</h3>
+                        <p>
+                            Гибкий график обучения, доступные цены и поддержка на всех этапах обучения.
+                        </p>
+                    </div>
+                </div>
+            </Slider>
         </div>
-    )
-}
+    );
+};
 
 export default Main_top_center;

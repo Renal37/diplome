@@ -1,48 +1,89 @@
-.profile-component {
-    margin-top: 100px;
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    background-color: #f9f9f9;
+.profile-container {
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
 }
 
-.profile-component h1 {
-    text-align: center;
-    margin-bottom: 20px;
-    color: #76F;
+.profile-header {
+  padding-bottom: 20px;
+  border-bottom: 1px solid black;
+  text-align: center;
 }
 
-.profile-form {
-    display: flex;
-    flex-direction: column;
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.profile-form input {
-    margin-bottom: 10px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    color: #333;
-    width: 100%;
-    box-sizing: border-box;
+.profile-input {
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
-.profile-form input::placeholder {
-    color: #76F;
+.profile-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
-.profile-form button {
-    padding: 10px;
-    border: none;
-    border-radius: 4px;
-    background-color: #76F;
-    color: white;
-    cursor: pointer;
+.profile-button:hover {
+  background-color: #0056b3;
 }
 
-.profile-form button:hover {
-    background-color: #5a5aff;
+/* style for profile_menu */
+.profile_menu {
+  width: 100%;
+}
+
+/* style for profile_course */
+
+.profile_menu {
+  display: flex;
+
+}
+
+.profile-avatar {
+  gap: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid black;
+}
+
+.profile_course {
+  padding: 20px;
+}
+.profile_course_top{
+  align-items: center;
+  flex-direction: column;
+  gap: 50px;
+}
+.profile_course_nav{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.prifle_nav_a{
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.prifle_nav_a:hover{
+  background-color: #0056b3;
 }
