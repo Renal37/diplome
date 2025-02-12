@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/jung-kurt/gofpdf"
+	"github.com/unidoc/unipdf/v3/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -33,6 +33,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	defer client.Disconnect(context.Background())
 
 	collection := client.Database("diplome").Collection("course_registrations")
+
 	pipeline := bson.A{
 		bson.M{"$match": bson.M{"_id": courseId}},
 		bson.M{"$lookup": bson.M{
@@ -87,131 +88,113 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	}
 	course := courseArray[0].(primitive.M)
 
-	// Создание PDF-документа
-	pdf := gofpdf.New("P", "mm", "A4", "")
-	pdf.AddPage()
+	// Путь к шаблону PDF
+	templatePath := "../server/handlers/ДОГОВОР_fix.pdf"
+	outputPath := "../server/contract_output.pdf"
 
-	// Путь к файлам шрифтов
-	fontPathRegular := "../server/font/timesnewromanpsmt.ttf"
-	fontPathBold := "../server/font/timesnewromanbold.ttf"
-
-	// Проверка существования файлов шрифтов
-	_, err = os.Stat(fontPathRegular)
+	// Проверка наличия интерактивных форм
+	hasForms, err := checkInteractiveForms(templatePath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			log.Printf("Regular font file not found: %v", err)
-			http.Error(w, "Шрифт (Regular) не найден", http.StatusInternalServerError)
-			return
-		}
-		log.Printf("Error checking regular font file: %v", err)
-		http.Error(w, "Ошибка при проверке шрифта (Regular)", http.StatusInternalServerError)
+		log.Printf("Error checking interactive forms: %v", err)
+		http.Error(w, "Ошибка при проверке интерактивных форм", http.StatusInternalServerError)
 		return
 	}
 
-	_, err = os.Stat(fontPathBold)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.Printf("Bold font file not found: %v", err)
-			http.Error(w, "Шрифт (Bold) не найден", http.StatusInternalServerError)
-			return
-		}
-		log.Printf("Error checking bold font file: %v", err)
-		http.Error(w, "Ошибка при проверке шрифта (Bold)", http.StatusInternalServerError)
-		return
+	if hasForms {
+		log.Println("Интерактивные формы найдены. Заполняем их.")
+		err = fillInteractivePDF(templatePath, outputPath, map[string]string{
+			"FullName":       fmt.Sprintf("%s %s %s", user["lastname"], user["firstname"], user["middlename"]),
+			"Address":        fmt.Sprintf("%s", user["homeAddress"]),
+			"Passport":       fmt.Sprintf("%s", user["passportData"]),
+			"Phone":          fmt.Sprintf("%s", user["phone"]),
+			"Email":          fmt.Sprintf("%s", user["email"]),
+			"CourseName":     fmt.Sprintf("%s", course["title"]),
+			"CourseDuration": fmt.Sprintf("%d часов", course["duration"]),
+			"CoursePrice":    fmt.Sprintf("%d рублей", course["price"]),
+		})
+	} else {
+		log.Println("Интерактивные формы отсутствуют. Добавляем текст поверх PDF.")
+		// Здесь можно добавить альтернативную логику для добавления текста поверх PDF.
 	}
 
-	// Добавление шрифтов
-	pdf.AddUTF8Font("TimesNewRoman", "", fontPathRegular)
-	pdf.AddUTF8Font("TimesNewRoman", "B", fontPathBold)
-
-	// Установка шрифта (Bold) для заголовка
-	pdf.SetFont("TimesNewRoman", "B", 16)
-	pdf.Cell(0, 10, "ДОГОВОР № _______")
-	pdf.Ln(10)
-	pdf.SetFont("TimesNewRoman", "", 12)
-	pdf.Cell(0, 10, "об образовании на обучение по дополнительным образовательным программам")
-	pdf.Ln(10)
-	pdf.Cell(0, 10, "г. Альметьевск                                  «___» ____________ 20__ г.")
-	pdf.Ln(20)
-
-	// Раздел I. Предмет Договора
-	pdf.SetFont("TimesNewRoman", "B", 12)
-	pdf.Cell(0, 10, "I. Предмет Договора")
-	pdf.Ln(10)
-	pdf.SetFont("TimesNewRoman", "", 12)
-	pdf.MultiCell(0, 5, "1.1. Исполнитель обязуется предоставить образовательную услугу по обучению по программе, указанной в п.1.2. настоящего договора, в пределах федерального государственного образовательного стандарта и (или) профессиональных стандартов в соответствии с учебным планом, в том числе индивидуальным, и образовательной программой Исполнителя, а Обучающийся обязуется оплатить указанную образовательную услугу.", "0", "L", false)
-	pdf.Ln(5)
-	pdf.Cell(0, 10, fmt.Sprintf("1.2. Наименование дополнительной образовательной программы: %s", course["title"]))
-	pdf.Ln(5)
-	pdf.Cell(0, 10, fmt.Sprintf("1.3. Срок обучения составляет %d часов.", course["duration"]))
-	pdf.Ln(5)
-	pdf.Cell(0, 10, "1.4. Форма обучения – очно-заочная.")
-	pdf.Ln(5)
-	pdf.MultiCell(0, 5, "1.5. После освоения Обучающимся образовательной программы, успешного прохождения итоговой аттестации и полностью оплатившему за обучение, в соответствии с условиями договора выдается документ установленного образца - диплом о профессиональной переподготовке.", "0", "L", false)
-	pdf.Ln(20)
-
-	// Раздел II. Права Исполнителя и Обучающегося
-	pdf.SetFont("TimesNewRoman", "B", 12)
-	pdf.Cell(0, 10, "II. Права Исполнителя и Обучающегося")
-	pdf.Ln(10)
-	pdf.SetFont("TimesNewRoman", "", 12)
-	pdf.MultiCell(0, 5, "2.1. Исполнитель вправе:", "0", "L", false)
-	pdf.Ln(5)
-	pdf.MultiCell(0, 5, "2.1.1. Самостоятельно осуществлять образовательный процесс, устанавливать системы оценок, формы, порядок и периодичность проведения промежуточной аттестации Обучающегося.", "0", "L", false)
-	pdf.Ln(5)
-	pdf.MultiCell(0, 5, "2.1.2. Применять к Обучающемуся меры поощрения и меры дисциплинарного взыскания в соответствии с законодательством Российской Федерации, учредительными документами Исполнителя, настоящим Договором и локальными нормативными актами Исполнителя.", "0", "L", false)
-	pdf.Ln(5)
-	pdf.MultiCell(0, 5, "2.2. Обучающийся вправе получать информацию от Исполнителя по вопросам организации и обеспечения надлежащего предоставления услуг, предусмотренных разделом I настоящего Договора.", "0", "L", false)
-	pdf.Ln(20)
-
-	// Раздел III. Обязанности Исполнителя и Обучающегося
-	pdf.SetFont("TimesNewRoman", "B", 12)
-	pdf.Cell(0, 10, "III. Обязанности Исполнителя и Обучающегося")
-	pdf.Ln(10)
-	pdf.SetFont("TimesNewRoman", "", 12)
-	pdf.MultiCell(0, 5, "3.1. Исполнитель обязан:", "0", "L", false)
-	pdf.Ln(5)
-	pdf.MultiCell(0, 5, "3.1.1. Зачислить Обучающегося, выполнившего установленные законодательством Российской Федерации, учредительными документами, локальными нормативными актами Исполнителя условия приема (зачисления).", "0", "L", false)
-	pdf.Ln(5)
-	pdf.MultiCell(0, 5, "3.1.2. Довести до Обучающегося информацию, содержащую сведения о предоставлении платных образовательных услуг в порядке и объеме, которые предусмотрены Законом Российской Федерации “О защите прав потребителей” и Федеральным законом “Об образовании в Российской Федерации”.", "0", "L", false)
-	pdf.Ln(5)
-	pdf.MultiCell(0, 5, "3.2. Обучающийся обязан:", "0", "L", false)
-	pdf.Ln(5)
-	pdf.MultiCell(0, 5, "3.2.1. Выполнять задания для подготовки к занятиям, предусмотренным учебным планом, в том числе индивидуальным.", "0", "L", false)
-	pdf.Ln(20)
-
-	// Раздел IX. Адреса и реквизиты сторон
-	pdf.SetFont("TimesNewRoman", "B", 12)
-	pdf.Cell(0, 10, "IX. Адреса и реквизиты сторон")
-	pdf.Ln(10)
-	pdf.SetFont("TimesNewRoman", "", 12)
-	pdf.Cell(0, 10, "Исполнитель:")
-	pdf.Ln(5)
-	pdf.Cell(0, 10, "ГАПОУ «Альметьевский политехнический техникум»")
-	pdf.Ln(5)
-	pdf.Cell(0, 10, "423457, РТ, г. Альметьевск, ул. Мира д.10.")
-	pdf.Ln(5)
-	pdf.Cell(0, 10, "ИНН/КПП 1644005722/164401001")
-	pdf.Ln(5)
-	pdf.Cell(0, 10, "ОГРН 1021601625352")
-	pdf.Ln(10)
-	pdf.Cell(0, 10, "Обучающийся:")
-	pdf.Ln(5)
-	pdf.Cell(0, 10, fmt.Sprintf("ФИО: %s %s %s", user["lastname"], user["firstname"], user["middlename"]))
-	pdf.Ln(5)
-	pdf.Cell(0, 10, fmt.Sprintf("Адрес: %s", user["homeAddress"]))
-	pdf.Ln(5)
-	pdf.Cell(0, 10, fmt.Sprintf("Паспорт: %s", user["passportData"]))
-	pdf.Ln(5)
-	pdf.Cell(0, 10, fmt.Sprintf("Телефон: %s", user["phone"]))
-	pdf.Ln(5)
-	pdf.Cell(0, 10, fmt.Sprintf("E-mail: %s", user["email"]))
+	if err != nil {
+		log.Printf("Error filling template: %v", err)
+		http.Error(w, "Ошибка при заполнении шаблона", http.StatusInternalServerError)
+		return
+	}
 
 	// Отправка PDF-файла клиенту
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "attachment; filename=contract.pdf")
-	if err := pdf.Output(w); err != nil {
-		log.Printf("PDF generation error: %v", err)
-		http.Error(w, "Ошибка при генерации PDF", http.StatusInternalServerError)
+	http.ServeFile(w, r, outputPath)
+}
+
+// checkInteractiveForms проверяет наличие интерактивных форм в PDF
+func checkInteractiveForms(filePath string) (bool, error) {
+	// Загружаем PDF
+	pdfReader, pdfErr, err := model.NewPdfReaderFromFile(filePath, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to load PDF: %w", err)
 	}
+	if pdfErr != nil {
+		return false, fmt.Errorf("PDF read error: %v", pdfErr)
+	}
+
+	// Получаем AcroForm (интерактивные формы)
+	form := pdfReader.AcroForm
+	if form == nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// fillInteractivePDF заполняет интерактивные формы в PDF
+func fillInteractivePDF(inputPath, outputPath string, userData map[string]string) error {
+	// Загружаем PDF
+	pdfReader, pdfErr, err := model.NewPdfReaderFromFile(inputPath, nil)
+	if err != nil {
+		return fmt.Errorf("failed to load PDF: %w", err)
+	}
+	if pdfErr != nil {
+		return fmt.Errorf("PDF read error: %v", pdfErr)
+	}
+
+	// Получаем AcroForm (интерактивные формы)
+	form := pdfReader.AcroForm
+	if form == nil {
+		return fmt.Errorf("interactive forms not found in the PDF")
+	}
+
+	// Заполняем значения полей данными из userData
+	for _, field := range *form.Fields {
+		fieldName := field.T.String() // Получаем имя поля
+		if fieldValue, exists := userData[fieldName]; exists {
+			// Устанавливаем значение поля
+			if field, ok := field.GetContext().(*model.PdfFieldText); ok {
+				// Используем SetValue для установки значения
+				field.V = model.MakeString(fieldValue)
+			} else {
+				log.Printf("Field '%s' is not a text field and cannot be set", fieldName)
+			}
+		}
+	}
+
+	// Создаем новый PDF с заполненными данными
+	pdfWriter := model.NewPdfWriter()
+	pdfWriter.SetForms(form)
+
+	// Сохраняем результат
+	outputFile, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer outputFile.Close()
+
+	err = pdfWriter.Write(outputFile)
+	if err != nil {
+		return fmt.Errorf("failed to write PDF: %w", err)
+	}
+
+	return nil
 }
