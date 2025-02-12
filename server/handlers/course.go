@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
 	"github.com/Renal37/models"
 	"github.com/Renal37/utils"
 	"github.com/dgrijalva/jwt-go"
@@ -277,7 +278,8 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 						"Unknown User", // Значение по умолчанию, если пользователь не найден
 					},
 				},
-				"status": 1,
+				"status":           1,
+				"contractFilePath": 1,
 				"userEmail": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$user.email", 0}},
@@ -434,8 +436,9 @@ func RejectRegistration(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
 		"$set": bson.M{
-			"status":       "Отклоненный",
-			"rejectReason": requestBody.Reason, // Сохраняем причину отклонения
+			"status":           "Отклоненный",
+			"rejectReason":     requestBody.Reason, // Сохраняем причину отклонения
+			"contractFilePath": bson.TypeNull,
 		},
 	}
 

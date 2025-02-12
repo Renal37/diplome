@@ -34,30 +34,36 @@ func main() {
 	// Создание маршрутов
 	r := mux.NewRouter()
 	r.Use(middleware.CorsMiddleware)
-	r.HandleFunc("/add-course", handlers.AddCourse).Methods("POST", "OPTIONS")
-	r.HandleFunc("/courses", handlers.GetCourses).Methods("GET")
+
 	r.HandleFunc("/users", handlers.GetUser).Methods("GET")
-	r.HandleFunc("/update-course/{id}", handlers.UpdateCourse).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/delete-course/{id}", handlers.DeleteCourse).Methods("DELETE", "OPTIONS")
+
 	r.HandleFunc("/register", handlers.RegisterUser).Methods("POST", "OPTIONS")
-	r.HandleFunc("/check-token", handlers.CheckToken).Methods("POST", "OPTIONS")
 	r.HandleFunc("/login", handlers.LoginUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/profile", handlers.GetProfile).Methods("GET")
 	r.HandleFunc("/logout", handlers.LogoutUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/update-profile", handlers.UpdateProfile).Methods("PUT", "OPTIONS")
+
 	r.HandleFunc("/admin/course-registrations", handlers.GetCourseRegistrations).Methods("GET")
 	r.HandleFunc("/admin/approve-registration/{id}", handlers.ApproveRegistration).Methods("POST")
 	r.HandleFunc("/admin/reject-registration/{id}", handlers.RejectRegistration).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/expel-registration/{id}", handlers.ExpelRegistration).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/issue-document/{id}", handlers.IssueDocument).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/approve-contract/{id}", handlers.ApproveContract).Methods("POST")
+
+	r.HandleFunc("/update-course/{id}", handlers.UpdateCourse).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/delete-course/{id}", handlers.DeleteCourse).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/add-course", handlers.AddCourse).Methods("POST", "OPTIONS")
+	r.HandleFunc("/courses", handlers.GetCourses).Methods("GET")
 	r.HandleFunc("/courses/{id}", handlers.GetCourseByID).Methods("GET")
 	r.HandleFunc("/courses/register", handlers.RegisterForCourse).Methods("POST", "OPTIONS")
+
 	r.HandleFunc("/user/courses", handlers.GetCoursesForUser).Methods("GET")
 	r.HandleFunc("/user/courses/status", handlers.GetCoursesByStatus).Methods("GET")
 
 	r.HandleFunc("/user/download-contract/{courseId}", handlers.DownloadContract).Methods("GET")
 	r.HandleFunc("/user/upload-contract/{courseId}", handlers.UploadContract).Methods("POST")
 
-	r.HandleFunc("/admin/expel-registration/{id}", handlers.ExpelRegistration).Methods("POST", "OPTIONS")
-	r.HandleFunc("/admin/issue-document/{id}", handlers.IssueDocument).Methods("POST", "OPTIONS")
+	r.HandleFunc("/check-token", handlers.CheckToken).Methods("POST", "OPTIONS")
 
 	fmt.Println("Server is running on port 5000")
 	log.Fatal(http.ListenAndServe(":5000", r))

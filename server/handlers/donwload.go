@@ -185,3 +185,36 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `{"message": "Договор успешно загружен!"}`)
 }
+
+func ApproveContract(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	contractId, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		log.Printf("Invalid contractId: %v", err)
+		http.Error(w, "Неверный формат идентификатора договора", http.StatusBadRequest)
+		return
+	}
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		log.Printf("Database connection error: %v", err)
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	defer client.Disconnect(context.Background())
+
+	collection := client.Database("diplome").Collection("course_registrations")
+	filter := bson.M{"_id": contractId}
+	update := bson.M{"$set": bson.M{"status": "Принят"}}
+	_, err = collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		log.Printf("Error updating contract status: %v", err)
+		http.Error(w, "Ошибка при обновлении статуса договора", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"message": "Договор успешно принят!"}`)
+}
