@@ -65,8 +65,14 @@ func main() {
 	r.HandleFunc("/user/download-contract/{courseId}", handlers.DownloadContract).Methods("GET")
 	r.HandleFunc("/user/upload-contract/{courseId}", handlers.UploadContract).Methods("POST")
 
+	r.HandleFunc("/groups", handlers.GetGroups).Methods("GET")
+	r.HandleFunc("/admin/create-group", handlers.CreateGroup).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/update-group/{id}", handlers.UpdateGroup).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/admin/delete-group/{id}", handlers.DeleteGroup).Methods("DELETE", "OPTIONS")
+
 	r.HandleFunc("/check-token", handlers.CheckToken).Methods("POST", "OPTIONS")
 
 	fmt.Println("Server is running on port 5000")
 	log.Fatal(http.ListenAndServe(":5000", r))
+
 }

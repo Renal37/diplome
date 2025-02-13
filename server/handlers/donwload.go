@@ -206,16 +206,22 @@ func ApproveContract(w http.ResponseWriter, r *http.Request) {
 	collection := client.Database("diplome").Collection("course_registrations")
 	filter := bson.M{"_id": contractId}
 	update := bson.M{"$set": bson.M{"status": "Принят"}}
-	_, err = collection.UpdateOne(context.Background(), filter, update)
+	result, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		log.Printf("Error updating contract status: %v", err)
 		http.Error(w, "Ошибка при обновлении статуса договора", http.StatusInternalServerError)
 		return
 	}
 
+	if result.ModifiedCount == 0 {
+		http.Error(w, "Договор не найден или статус уже обновлен", http.StatusNotFound)
+		return
+	}
+
+	// Возвращаем успешный ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"message": "Договор успешно принят!"}`)
+	fmt.Fprintf(w, `{"success": true}`)
 }
 
 func ViewContract(w http.ResponseWriter, r *http.Request) {

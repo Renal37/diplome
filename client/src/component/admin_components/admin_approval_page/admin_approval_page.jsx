@@ -41,6 +41,10 @@ const AdminApprovalPage = () => {
             document.removeEventListener("keydown", handleKeyDown);
         };
     }, [selectedRegistrationId, selectedPdfRegistrationId, selectedUser]);
+    useEffect(() => {
+        // Этот эффект будет срабатывать при изменении registrations
+        console.log("Registrations updated:", registrations);
+    }, [registrations]);
     // Загрузка данных при монтировании
     useEffect(() => {
         fetch("http://localhost:5000/admin/course-registrations", {
@@ -196,19 +200,23 @@ const AdminApprovalPage = () => {
             .then((response) => response.json())
             .then((data) => {
                 if (data.success) {
-                    setRegistrations(
-                        registrations.map((reg) =>
+                    // Обновляем статус заявки в локальном состоянии
+                    setRegistrations((prevRegistrations) =>
+                        prevRegistrations.map((reg) =>
                             reg._id === registrationId ? { ...reg, status: "Принят" } : reg
                         )
                     );
+                    // Закрываем модальное окно PDF
                     setSelectedPdfRegistrationId(null);
                 } else {
-                    setError(data.message || "Ошибка при принятии заявки");
+                    // Показываем alert с сообщением об ошибке
+                    window.alert(data.message || "Ошибка при принятии заявки");
                 }
             })
             .catch((error) => {
                 console.error("Error approving contract:", error);
-                setError("Ошибка при принятии заявки");
+                // Показываем alert с сообщением об ошибке
+                window.alert("Произошла ошибка при принятии заявки. Пожалуйста, попробуйте снова.");
             });
     };
 
