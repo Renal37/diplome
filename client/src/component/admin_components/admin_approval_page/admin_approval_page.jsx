@@ -369,10 +369,11 @@ const AdminApprovalPage = () => {
                 <div className="modal">
                     <div className="modal-content_for_view">
                         <h3>Проверка договора</h3>
-                        <embed  
+                        <iframe
                             src={pdfUrl}
-                            type="application/pdf"
-                            style={{ width: "100%", height: "100%", border: "none" }}
+                            width="100%"
+                            height="100%"
+                            style={{ border: "none" }}
                         />
                         <div className="btns">
                             <button className="reject-btn" onClick={() => setSelectedPdfRegistrationId(null)}>Закрыть</button>
