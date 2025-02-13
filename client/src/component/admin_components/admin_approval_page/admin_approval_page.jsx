@@ -8,6 +8,14 @@ const AdminApprovalPage = () => {
     const [rejectReason, setRejectReason] = useState(""); // Состояние для причины отклонения
     const [selectedRegistrationId, setSelectedRegistrationId] = useState(null); // ID выбранной заявки
     const [selectedUser, setSelectedUser] = useState(null); // Выбранный пользователь
+    const [filterStatus, setFilterStatus] = useState("all"); // Состояние для фильтрации по статусу
+
+    const filteredRegistrations = registrations.filter((registration) => {
+        if (filterStatus === "all") {
+            return true;
+        }
+        return registration.status === filterStatus;
+    });
 
     useEffect(() => {
         fetch("http://localhost:5000/admin/course-registrations", {
@@ -93,6 +101,24 @@ const AdminApprovalPage = () => {
                 setError("Ошибка при отклонении заявки");
             });
     };
+    const handleDelete = (registrationId) => {
+        fetch(`http://localhost:5000/admin/delete-registration/${registrationId}`, {
+            method: "POST",
+            credentials: "include",
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    setRegistrations(registrations.filter((reg) => reg._id !== registrationId));
+                } else {
+                    setError(data.message || "Ошибка при удалении заявки");
+                }
+            })
+            .catch((error) => {
+                console.error("Error deleting registration:", error);
+                setError("Ошибка при удалении заявки");
+            });
+    };
 
     const handleViewUser = (user) => {
         setSelectedUser(user);
@@ -113,6 +139,18 @@ const AdminApprovalPage = () => {
     return (
         <div className="admin-approval-page">
             <h1>Заявки на курсы</h1>
+            <div className="filters">
+                <label>
+                    Фильтр по статусу:
+                    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                        <option value="all">Все</option>
+                        <option value="Ожидание">Ожидание</option>
+                        <option value="Одобренный">Одобренный</option>
+                        <option value="Отклоненный">Отклоненный</option>
+                        <option value="Отчисленный">Отчисленный</option>
+                    </select>
+                </label>
+            </div>
             <table>
                 <thead>
                     <tr>
@@ -123,11 +161,11 @@ const AdminApprovalPage = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {registrations.map((registration) => (
+                    {filteredRegistrations.map((registration) => (
                         <tr key={registration._id}>
                             <td>{registration.courseTitle}</td>
                             <td>
-                            <button onClick={() => handleViewUser({
+                                <button onClick={() => handleViewUser({
                                     username: registration.userName,
                                     email: registration.userEmail,
                                     fullname: registration.userFullname,
@@ -155,6 +193,11 @@ const AdminApprovalPage = () => {
                                             Отклонить
                                         </button>
                                     </>
+                                )}
+                                {(registration.status === "Отклоненный" || registration.status === "Отчисленный") && (
+                                    <button className="delete-btn" onClick={() => handleDelete(registration._id)}>
+                                        Удалить
+                                    </button>
                                 )}
                             </td>
                         </tr>

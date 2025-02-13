@@ -528,8 +528,10 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 						"Unknown Course",
 					},
 				},
-				"status":       1,
-				"rejectReason": 1,
+				"status":           1,
+				"rejectReason":     1,
+				"contractFilePath": 1,
+				"contractUploaded": 1,
 			},
 		},
 	}
@@ -617,8 +619,10 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 						"Unknown Course",
 					},
 				},
-				"status":       1,
-				"rejectReason": 1,
+				"status":           1,
+				"rejectReason":     1,
+				"contractFilePath": 1,
+				"contractUploaded": 1,
 			},
 		},
 	}
@@ -730,6 +734,33 @@ func IssueDocument(w http.ResponseWriter, r *http.Request) {
 	_, err = collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		http.Error(w, "Ошибка при выдаче документа", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+func DeleteRegistration(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		return
+	}
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	collection := client.Database("diplome").Collection("course_registrations")
+
+	filter := bson.M{"_id": registrationID}
+	_, err = collection.DeleteOne(context.Background(), filter)
+	if err != nil {
+		http.Error(w, "Ошибка при удалении заявки", http.StatusInternalServerError)
 		return
 	}
 

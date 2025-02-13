@@ -56,6 +56,7 @@ func main() {
 	r.HandleFunc("/courses", handlers.GetCourses).Methods("GET")
 	r.HandleFunc("/courses/{id}", handlers.GetCourseByID).Methods("GET")
 	r.HandleFunc("/courses/register", handlers.RegisterForCourse).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/delete-registration/{id}", handlers.DeleteRegistration).Methods("POST")
 
 	r.HandleFunc("/user/courses", handlers.GetCoursesForUser).Methods("GET")
 	r.HandleFunc("/user/courses/status", handlers.GetCoursesByStatus).Methods("GET")
