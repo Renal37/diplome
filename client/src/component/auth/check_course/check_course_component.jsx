@@ -7,6 +7,7 @@ const CheckCourse = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedStatus, setSelectedStatus] = useState("all");
+    const [userData, setUserData] = useState({}); // Добавляем состояние для данных пользователя
 
     const fetchCourses = async (status) => {
         try {
@@ -121,6 +122,34 @@ const CheckCourse = () => {
 
     return (
         <div className="check-course-container">
+            {/* Навигация по статусам курсов */}
+            <div className="profile_course_nav">
+                <button
+                    onClick={() => setSelectedStatus("all")}
+                    className={`prifle_nav_button ${selectedStatus === "all" ? "active" : ""}`}
+                >
+                    Все курсы
+                </button>
+                <button
+                    onClick={() => setSelectedStatus("Одобренный")}
+                    className={`prifle_nav_button ${selectedStatus === "Одобренный" ? "active" : ""}`}
+                >
+                    Одобренные
+                </button>
+                <button
+                    onClick={() => setSelectedStatus("Отклоненный")}
+                    className={`prifle_nav_button ${selectedStatus === "Отклоненный" ? "active" : ""}`}
+                >
+                    Отклоненные
+                </button>
+                <button
+                    onClick={() => setSelectedStatus("Ожидание")}
+                    className={`prifle_nav_button ${selectedStatus === "Ожидание" ? "active" : ""}`}
+                >
+                    Ожидают одобрения
+                </button>
+            </div>
+
             {/* Список курсов */}
             <div className="course-list-container">
                 <h2 className="course-list-title">Список курсов:</h2>
@@ -162,6 +191,9 @@ const CheckCourse = () => {
                     </ul>
                 )}
             </div>
+
+            {/* Форма для ввода данных пользователя */}
+
         </div>
     );
 };
