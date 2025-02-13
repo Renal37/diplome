@@ -13,8 +13,9 @@ import (
 )
 
 type Group struct {
-	GroupName string `bson:"groupName" json:"groupName"`
-	CourseID  string `bson:"courseId" json:"courseId"`
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	GroupName string             `bson:"groupName" json:"groupName"`
+	CourseID  string             `bson:"courseId" json:"courseId"`
 }
 
 func CreateGroup(w http.ResponseWriter, r *http.Request) {
@@ -53,34 +54,34 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 func GetGroups(w http.ResponseWriter, r *http.Request) {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		log.Printf("Database connection error: %v", err)
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
+    clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+    client, err := mongo.Connect(context.Background(), clientOptions)
+    if err != nil {
+        log.Printf("Database connection error: %v", err)
+        http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+        return
+    }
+    defer client.Disconnect(context.Background())
 
-	collection := client.Database("diplome").Collection("groups")
+    collection := client.Database("diplome").Collection("groups")
 
-	cursor, err := collection.Find(context.Background(), bson.M{})
-	if err != nil {
-		log.Printf("Error fetching groups: %v", err)
-		http.Error(w, "Ошибка при получении групп", http.StatusInternalServerError)
-		return
-	}
+    cursor, err := collection.Find(context.Background(), bson.M{})
+    if err != nil {
+        log.Printf("Error fetching groups: %v", err)
+        http.Error(w, "Ошибка при получении групп", http.StatusInternalServerError)
+        return
+    }
 
-	var groups []Group
-	if err := cursor.All(context.Background(), &groups); err != nil {
-		log.Printf("Error decoding groups: %v", err)
-		http.Error(w, "Ошибка при декодировании групп", http.StatusInternalServerError)
-		return
-	}
+    var groups []Group
+    if err := cursor.All(context.Background(), &groups); err != nil {
+        log.Printf("Error decoding groups: %v", err)
+        http.Error(w, "Ошибка при декодировании групп", http.StatusInternalServerError)
+        return
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{"groups": groups})
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]interface{}{"groups": groups})
 }
 func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	var updatedGroup Group

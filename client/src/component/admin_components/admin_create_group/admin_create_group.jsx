@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import "./admin_groups_page.css";
+import "./admin_create_group.css";
 
-const AdminGroupsPage = () => {
+const AdminCreateGroup = () => {
     const [groupName, setGroupName] = useState("");
     const [courseId, setCourseId] = useState("");
     const [error, setError] = useState("");
@@ -71,4 +71,4 @@ const AdminGroupsPage = () => {
     );
 };
 
-export default AdminGroupsPage;
+export default AdminCreateGroup;

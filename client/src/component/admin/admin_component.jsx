@@ -6,7 +6,8 @@ import './admin_component.css';
 import AdminApprovalPage from '../admin_components/admin_approval_page/admin_approval_page';
 import AdminCheckProfile from '../admin_components/admin_check_profile/admin_check_profile';
 import AdminAcceptPage from '../admin_components/admin_accept_page/admin_accept_page';
-import AdminGroupsPage from '../admin_components/admin_group/admin_groups_page';
+import AdminEditGroup from '../admin_components/admin_edit_group/admin_edit_group';
+import AdminCreateGroup from '../admin_components/admin_create_group/admin_create_group';
 
 const AdminComponent = () => {
   return (
@@ -33,11 +34,14 @@ const AdminComponent = () => {
             <Link to="/admin/approval" className="nav-link">Проверка заявок на курсы</Link>
           </li>
 
-          <li>
+          {/* <li>
             <Link to="/admin/accept" className="nav-link">Выдача докумета</Link>
+          </li> */}
+          <li>
+            <Link to="/admin/creategroups" className="nav-link">Создание группы</Link>
           </li>
           <li>
-            <Link to="/admin/groups" className="nav-link">Группы</Link>
+            <Link to="/admin/editgroups" className="nav-link">Редакторивание группы</Link>
           </li>
         </ul>
       </nav>
@@ -49,7 +53,8 @@ const AdminComponent = () => {
           <Route path="profile" element={<AdminCheckProfile />} />
           <Route path="approval" element={<AdminApprovalPage />} />
           <Route path="accept" element={<AdminAcceptPage />} />
-          <Route path="groups" element={<AdminGroupsPage />} />
+          <Route path="creategroups" element={<AdminCreateGroup />} />
+          <Route path="editgroups" element={<AdminEditGroup />} />
         </Routes>
       </div>
 
