@@ -5,25 +5,49 @@ const AdminApprovalPage = () => {
     const [registrations, setRegistrations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
-    const [rejectReason, setRejectReason] = useState(""); // Состояние для причины отклонения
+    const [rejectReason, setRejectReason] = useState(""); // Причина отклонения/отчисления
     const [selectedRegistrationId, setSelectedRegistrationId] = useState(null); // ID выбранной заявки
+    const [selectedPdfRegistrationId, setSelectedPdfRegistrationId] = useState(null); // ID заявки с PDF
+    const [pdfUrl, setPdfUrl] = useState(""); // URL для просмотра PDF
+    const [rejectReasonPdf, setRejectReasonPdf] = useState(""); // Причина отклонения для PDF
     const [selectedUser, setSelectedUser] = useState(null); // Выбранный пользователь
-    const [filterStatus, setFilterStatus] = useState("all"); // Состояние для фильтрации по статусу
+    const [filterStatus, setFilterStatus] = useState("all"); // Фильтр по статусу
 
+    // Фильтрация заявок по статусу
     const filteredRegistrations = registrations.filter((registration) => {
-        if (filterStatus === "all") {
-            return true;
-        }
+        if (filterStatus === "all") return true;
         return registration.status === filterStatus;
     });
 
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape") {
+                if (selectedRegistrationId) {
+                    setSelectedRegistrationId(null);
+                    setRejectReason("");
+                }
+                if (selectedPdfRegistrationId) {
+                    setSelectedPdfRegistrationId(null);
+                }
+                if (selectedUser) {
+                    setSelectedUser(null);
+                }
+            }
+        };
+
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [selectedRegistrationId, selectedPdfRegistrationId, selectedUser]);
+    // Загрузка данных при монтировании
     useEffect(() => {
         fetch("http://localhost:5000/admin/course-registrations", {
             credentials: "include",
         })
             .then((response) => response.json())
             .then((data) => {
-                console.log("Data from backend:", data); // Проверьте структуру данных
                 if (data.error) {
                     setError(data.error);
                 } else {
@@ -38,6 +62,7 @@ const AdminApprovalPage = () => {
             });
     }, []);
 
+    // Одобрение заявки
     const handleApprove = (registrationId) => {
         fetch(`http://localhost:5000/admin/approve-registration/${registrationId}`, {
             method: "POST",
@@ -48,9 +73,7 @@ const AdminApprovalPage = () => {
                 if (data.success) {
                     setRegistrations(
                         registrations.map((reg) =>
-                            reg._id === registrationId
-                                ? { ...reg, status: "Одобренный" }
-                                : reg
+                            reg._id === registrationId ? { ...reg, status: "Одобренный" } : reg
                         )
                     );
                 } else {
@@ -63,6 +86,7 @@ const AdminApprovalPage = () => {
             });
     };
 
+    // Отклонение заявки
     const handleReject = (registrationId) => {
         setSelectedRegistrationId(registrationId);
     };
@@ -74,11 +98,9 @@ const AdminApprovalPage = () => {
         }
         fetch(`http://localhost:5000/admin/reject-registration/${selectedRegistrationId}`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ reason: rejectReason }), // Отправляем причину отклонения
+            body: JSON.stringify({ reason: rejectReason }),
         })
             .then((response) => response.json())
             .then((data) => {
@@ -86,12 +108,12 @@ const AdminApprovalPage = () => {
                     setRegistrations(
                         registrations.map((reg) =>
                             reg._id === selectedRegistrationId
-                                ? { ...reg, status: "Отклоненный", rejectReason: rejectReason }
+                                ? { ...reg, status: "Отклоненный", rejectReason }
                                 : reg
                         )
                     );
-                    setRejectReason(""); // Очищаем поле причины
-                    setSelectedRegistrationId(null); // Закрываем модальное окно
+                    setSelectedRegistrationId(null);
+                    setRejectReason("");
                 } else {
                     setError(data.message || "Ошибка при отклонении заявки");
                 }
@@ -101,6 +123,8 @@ const AdminApprovalPage = () => {
                 setError("Ошибка при отклонении заявки");
             });
     };
+
+    // Удаление заявки
     const handleDelete = (registrationId) => {
         fetch(`http://localhost:5000/admin/delete-registration/${registrationId}`, {
             method: "POST",
@@ -120,6 +144,108 @@ const AdminApprovalPage = () => {
             });
     };
 
+    // Отчисление пользователя
+    const handleExpel = (registrationId) => {
+        setSelectedRegistrationId(registrationId);
+    };
+
+    const confirmExpel = () => {
+        if (!rejectReason) {
+            setError("Укажите причину отчисления");
+            return;
+        }
+        fetch(`http://localhost:5000/admin/expel-registration/${selectedRegistrationId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ reason: rejectReason }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    setRegistrations(
+                        registrations.map((reg) =>
+                            reg._id === selectedRegistrationId
+                                ? { ...reg, status: "Отчисленный", rejectReason }
+                                : reg
+                        )
+                    );
+                    setSelectedRegistrationId(null);
+                    setRejectReason("");
+                } else {
+                    setError(data.message || "Ошибка при отчислении");
+                }
+            })
+            .catch((error) => {
+                console.error("Error expelling registration:", error);
+                setError("Ошибка при отчислении");
+            });
+    };
+
+    // Просмотр договора (PDF)
+    const handleViewPdf = (registrationId) => {
+        setSelectedPdfRegistrationId(registrationId);
+        setPdfUrl(`http://localhost:5000/user/view-contract/${registrationId}`);
+    };
+
+    const handleApprovePdf = (registrationId) => {
+        fetch(`http://localhost:5000/admin/approve-contract/${registrationId}`, {
+            method: "POST",
+            credentials: "include",
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    setRegistrations(
+                        registrations.map((reg) =>
+                            reg._id === registrationId ? { ...reg, status: "Принят" } : reg
+                        )
+                    );
+                    setSelectedPdfRegistrationId(null);
+                } else {
+                    setError(data.message || "Ошибка при принятии заявки");
+                }
+            })
+            .catch((error) => {
+                console.error("Error approving contract:", error);
+                setError("Ошибка при принятии заявки");
+            });
+    };
+
+    const handleRejectPdf = (registrationId) => {
+        if (!rejectReasonPdf) {
+            setError("Укажите причину отклонения");
+            return;
+        }
+        fetch(`http://localhost:5000/admin/reject-registration/${registrationId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ reason: rejectReasonPdf }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    setRegistrations(
+                        registrations.map((reg) =>
+                            reg._id === registrationId
+                                ? { ...reg, status: "Отклоненный", rejectReason: rejectReasonPdf }
+                                : reg
+                        )
+                    );
+                    setSelectedPdfRegistrationId(null);
+                    setRejectReasonPdf("");
+                } else {
+                    setError(data.message || "Ошибка при отклонении заявки");
+                }
+            })
+            .catch((error) => {
+                console.error("Error rejecting registration:", error);
+                setError("Ошибка при отклонении заявки");
+            });
+    };
+
+    // Просмотр информации о пользователе
     const handleViewUser = (user) => {
         setSelectedUser(user);
     };
@@ -128,29 +254,26 @@ const AdminApprovalPage = () => {
         setSelectedUser(null);
     };
 
-    if (isLoading) {
-        return <div>Загрузка...</div>;
-    }
-
-    if (error) {
-        return <div>{error}</div>;
-    }
+    if (isLoading) return <div>Загрузка...</div>;
+    if (error) return <div>{error}</div>;
 
     return (
         <div className="admin-approval-page">
-            <h1>Заявки на курсы</h1>
-            <div className="filters">
-                <label>
-                    Фильтр по статусу:
-                    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                        <option value="all">Все</option>
-                        <option value="Ожидание">Ожидание</option>
-                        <option value="Одобренный">Одобренный</option>
-                        <option value="Отклоненный">Отклоненный</option>
-                        <option value="Отчисленный">Отчисленный</option>
-                    </select>
-                </label>
+            <h1>Администрирование заявок</h1>
+
+            {/* Фильтр по статусу */}
+            <div>
+                <label>Фильтр по статусу:</label>
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                    <option value="all">Все</option>
+                    <option value="Ожидание">Ожидание</option>
+                    <option value="Одобренный">Одобренный</option>
+                    <option value="Отклоненный">Отклоненный</option>
+                    <option value="Отчисленный">Отчисленный</option>
+                </select>
             </div>
+
+            {/* Таблица заявок */}
             <table>
                 <thead>
                     <tr>
@@ -183,21 +306,23 @@ const AdminApprovalPage = () => {
                                 </button>
                             </td>
                             <td>{registration.status}</td>
-                            <td>
+                            <td className="admin_btns">
                                 {registration.status === "Ожидание" && (
                                     <>
-                                        <button className="approve-btn" onClick={() => handleApprove(registration._id)}>
-                                            Одобрить
-                                        </button>
-                                        <button className="reject-btn" onClick={() => handleReject(registration._id)}>
-                                            Отклонить
-                                        </button>
+                                        <button className="approve-btn" onClick={() => handleApprove(registration._id)}>Одобрить</button>
+                                        <button className="reject-btn" onClick={() => handleReject(registration._id)}>Отклонить</button>
                                     </>
                                 )}
                                 {(registration.status === "Отклоненный" || registration.status === "Отчисленный") && (
-                                    <button className="delete-btn" onClick={() => handleDelete(registration._id)}>
-                                        Удалить
-                                    </button>
+                                    <button className="reject-btn" onClick={() => handleDelete(registration._id)}>Удалить</button>
+                                )}
+                                {registration.status === "Одобренный" && registration.contractFilePath && (
+                                    <button className="approve-btn" onClick={() => handleViewPdf(registration._id)}>Проверить договор</button>
+
+                                )}
+                                {!(registration.status == "Ожидание") && !(registration.status === "Отклоненный" || registration.status === "Отчисленный") && (
+
+                                    <button className="reject-btn" onClick={() => handleExpel(registration._id)}>Отчислить</button>
                                 )}
                             </td>
                         </tr>
@@ -205,18 +330,55 @@ const AdminApprovalPage = () => {
                 </tbody>
             </table>
 
-            {/* Модальное окно для ввода причины отклонения */}
+            {/* Модальное окно для отклонения заявки */}
             {selectedRegistrationId && (
                 <div className="modal">
                     <div className="modal-content">
-                        <h2>Укажите причину отклонения</h2>
+                        <h3>Укажите причину отклонения</h3>
                         <textarea
+                            type="text"
                             value={rejectReason}
                             onChange={(e) => setRejectReason(e.target.value)}
                             placeholder="Причина отклонения"
                         />
                         <button onClick={confirmReject}>Подтвердить</button>
                         <button onClick={() => setSelectedRegistrationId(null)}>Отмена</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Модальное окно для отчисления */}
+            {selectedRegistrationId && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <h3>Укажите причину отчисления</h3>
+                        <textarea
+                            type="text"
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            placeholder="Причина отчисления"
+                        />
+                        <button className="approve-btn" onClick={confirmExpel}>Подтвердить</button>
+                        <button className="reject-btn" onClick={() => setSelectedRegistrationId(null)}>Отмена</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Модальное окно для просмотра PDF */}
+            {selectedPdfRegistrationId && (
+                <div className="modal">
+                    <div className="modal-content_for_view">
+                        <h3>Проверка договора</h3>
+                        <embed  
+                            src={pdfUrl}
+                            type="application/pdf"
+                            style={{ width: "100%", height: "100%", border: "none" }}
+                        />
+                        <div className="btns">
+                            <button className="reject-btn" onClick={() => setSelectedPdfRegistrationId(null)}>Закрыть</button>
+                            <button className="approve-btn" onClick={() => handleApprovePdf(selectedPdfRegistrationId)}>Принять</button>
+                        </div>
+
                     </div>
                 </div>
             )}
@@ -278,7 +440,7 @@ const AdminApprovalPage = () => {
                                 </tr>
                             </tbody>
                         </table>
-                        <button onClick={handleCloseUserInfo}>Закрыть</button>
+                        <button className="reject-btn" onClick={handleCloseUserInfo}>Закрыть</button>
                     </div>
                 </div>
             )}

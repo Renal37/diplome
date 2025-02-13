@@ -36,44 +36,74 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	defer client.Disconnect(context.Background())
 
 	collection := client.Database("diplome").Collection("course_registrations")
+	pipeline := bson.A{
+		bson.M{"$match": bson.M{"_id": courseId}},
+		bson.M{"$lookup": bson.M{
+			"from":         "users",
+			"localField":   "userId",
+			"foreignField": "_id",
+			"as":           "user",
+		}},
+		bson.M{"$lookup": bson.M{
+			"from":         "courses",
+			"localField":   "courseId",
+			"foreignField": "_id",
+			"as":           "course",
+		}},
+		bson.M{"$project": bson.M{
+			"user":   1,
+			"course": 1,
+			"status": 1,
+		}},
+	}
 
-	// Находим запись о регистрации курса
-	var registration bson.M
-	err = collection.FindOne(context.Background(), bson.M{"_id": courseId}).Decode(&registration)
+	cursor, err := collection.Aggregate(context.Background(), pipeline)
 	if err != nil {
-		log.Printf("Registration not found: %v", err)
-		http.Error(w, "Запись о регистрации не найдена", http.StatusNotFound)
+		log.Printf("Aggregation error: %v", err)
+		http.Error(w, "Ошибка при получении данных", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var result []bson.M
+	if err = cursor.All(context.Background(), &result); err != nil || len(result) == 0 {
+		log.Println("No data found")
+		http.Error(w, "Данные не найдены", http.StatusNotFound)
 		return
 	}
 
-	// Получаем путь к файлу договора
-	filePath, ok := registration["contractFilePath"].(string)
-	if !ok || filePath == "" {
-		log.Println("Contract file path not found")
-		http.Error(w, "Файл договора не найден", http.StatusNotFound)
+	// Обработка данных пользователя
+	userArray, ok := result[0]["user"].(primitive.A)
+	if !ok || len(userArray) == 0 {
+		log.Println("User data not found or invalid format")
+		http.Error(w, "Данные пользователя не найдены", http.StatusNotFound)
+		return
+	}
+	// user := userArray[0].(primitive.M)
+
+	// Обработка данных курса
+	courseArray, ok := result[0]["course"].(primitive.A)
+	if !ok || len(courseArray) == 0 {
+		log.Println("Course data not found or invalid format")
+		http.Error(w, "Данные курса не найдены", http.StatusNotFound)
+		return
+	}
+	// course := courseArray[0].(primitive.M)
+
+	var usercourse []bson.M
+	if err = cursor.All(context.Background(), &usercourse); err != nil {
+		http.Error(w, "Ошибка при обработке данных заявок", http.StatusInternalServerError)
 		return
 	}
 
-	// Проверяем, существует ли файл на диске
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		log.Printf("File does not exist: %v", err)
-		http.Error(w, "Файл договора не найден на сервере", http.StatusNotFound)
-		return
-	}
+	// Путь к шаблону PDF
+	templatePath := "../server/handlers/ДОГОВОР_fix.pdf"
 
-	// Определяем режим отображения файла (просмотр или скачивание)
-	displayMode := r.URL.Query().Get("mode") // mode=inline для просмотра, mode=attachment для скачивания
-
-	// Устанавливаем заголовки ответа
+	// Отправка PDF-шаблона клиенту
 	w.Header().Set("Content-Type", "application/pdf")
-	if displayMode == "inline" {
-		w.Header().Set("Content-Disposition", "inline; filename=contract.pdf")
-	} else {
-		w.Header().Set("Content-Disposition", "attachment; filename=contract.pdf")
-	}
-
-	// Отправляем файл клиенту
-	http.ServeFile(w, r, filePath)
+	w.Header().Set("Content-Disposition", "attachment; filename=contract_template.pdf")
+	w.Header().Set("Content-Type", "application/json")
+	http.ServeFile(w, r, templatePath)
 }
 func UploadContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -186,4 +216,56 @@ func ApproveContract(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `{"message": "Договор успешно принят!"}`)
+}
+
+func ViewContract(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		log.Printf("Invalid registration ID: %v", err)
+		http.Error(w, "Неверный формат идентификатора заявки", http.StatusBadRequest)
+		return
+	}
+
+	// Подключение к MongoDB
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		log.Printf("Database connection error: %v", err)
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	defer client.Disconnect(context.Background())
+
+	collection := client.Database("diplome").Collection("course_registrations")
+
+	// Получаем путь к файлу договора
+	var registration bson.M
+	err = collection.FindOne(context.Background(), bson.M{"_id": registrationID}).Decode(&registration)
+	if err != nil {
+		log.Printf("Registration not found: %v", err)
+		http.Error(w, "Запись о регистрации не найдена", http.StatusNotFound)
+		return
+	}
+
+	filePath, ok := registration["contractFilePath"].(string)
+	if !ok || filePath == "" {
+		log.Println("Contract file path not found")
+		http.Error(w, "Файл договора не найден", http.StatusNotFound)
+		return
+	}
+
+	// Проверяем, существует ли файл на диске
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		log.Printf("File does not exist: %v", err)
+		http.Error(w, "Файл договора не найден на сервере", http.StatusNotFound)
+		return
+	}
+
+	// Устанавливаем заголовки для просмотра PDF
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", "inline; filename=contract.pdf")
+
+	// Отправляем файл клиенту
+	http.ServeFile(w, r, filePath)
 }

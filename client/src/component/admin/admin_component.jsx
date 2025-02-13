@@ -6,7 +6,6 @@ import './admin_component.css';
 import AdminApprovalPage from '../admin_components/admin_approval_page/admin_approval_page';
 import AdminCheckProfile from '../admin_components/admin_check_profile/admin_check_profile';
 import AdminAcceptPage from '../admin_components/admin_accept_page/admin_accept_page';
-import AdminCheckDocument from '../admin_components/admin_check_document/admin_check_document';
 
 const AdminComponent = () => {
   return (
@@ -32,9 +31,7 @@ const AdminComponent = () => {
           <li>
             <Link to="/admin/approval" className="nav-link">Проверка заявок на курсы</Link>
           </li>
-          <li>
-            <Link to="/admin/document" className="nav-link">Одобрение документа</Link>
-          </li>
+  
           <li>
             <Link to="/admin/accept" className="nav-link">Выдача докумета</Link>
           </li>
@@ -47,7 +44,6 @@ const AdminComponent = () => {
           <Route path="delete" element={<AdminDeleteComponent />} />
           <Route path="profile" element={<AdminCheckProfile />} />
           <Route path="approval" element={<AdminApprovalPage />} />
-          <Route path="document" element={<AdminCheckDocument />} />
           <Route path="accept" element={<AdminAcceptPage />} />
         </Routes>
       </div>
