@@ -33,10 +33,10 @@ const AdminComponent = () => {
             <Link to="/admin/approval" className="nav-link">Проверка заявок на курсы</Link>
           </li>
           <li>
-            <Link to="/admin/accept" className="nav-link">Одобренный курсы</Link>
+            <Link to="/admin/document" className="nav-link">Одобрение документа</Link>
           </li>
           <li>
-            <Link to="/admin/document" className="nav-link">Одобрение документа</Link>
+            <Link to="/admin/accept" className="nav-link">Выдача докумета</Link>
           </li>
         </ul>
       </nav>
@@ -47,8 +47,8 @@ const AdminComponent = () => {
           <Route path="delete" element={<AdminDeleteComponent />} />
           <Route path="profile" element={<AdminCheckProfile />} />
           <Route path="approval" element={<AdminApprovalPage />} />
-          <Route path="accept" element={<AdminAcceptPage />} />
           <Route path="document" element={<AdminCheckDocument />} />
+          <Route path="accept" element={<AdminAcceptPage />} />
         </Routes>
       </div>
 

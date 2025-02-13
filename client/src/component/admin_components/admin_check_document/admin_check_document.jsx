@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
-import "./admin_accept_page.css";
 
-const AdminAcceptPage = () => {
+const AdminCheckDocument = () => {
     const [registrations, setRegistrations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
@@ -20,7 +19,11 @@ const AdminAcceptPage = () => {
                 if (data.error) {
                     setError(data.error);
                 } else {
-                    setRegistrations(data);
+                    const approvedRegistrations = data.filter(
+                        (reg) => reg.status === "Одобренный" && reg.contractFilePath && reg.contractFilePath.trim() !== null
+                    );
+                    setRegistrations(approvedRegistrations);
+                    console.log(approvedRegistrations); 
                 }
                 setIsLoading(false);
             })
@@ -64,32 +67,6 @@ const AdminAcceptPage = () => {
             .catch((error) => {
                 console.error("Error expelling registration:", error);
                 setError("Ошибка при отчислении");
-            });
-    };
-
-    const handleAccept = (registrationId) => {
-        fetch(`http://localhost:5000/admin/accept-registration/${registrationId}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.success) {
-                    setRegistrations(
-                        registrations.map((reg) =>
-                            reg._id === registrationId
-                                ? { ...reg, status: "Принят" }
-                                : reg
-                        )
-                    );
-                } else {
-                    setError(data.message || "Ошибка при принятии заявки");
-                }
-            })
-            .catch((error) => {
-                console.error("Error accepting registration:", error);
-                setError("Ошибка при принятии заявки");
             });
     };
 
@@ -161,7 +138,7 @@ const AdminAcceptPage = () => {
 
     return (
         <div className="admin-approval-page">
-            <h1>Заявки на курсы</h1>
+            <h1>Проверка договора</h1>
             <table>
                 <thead>
                     <tr>
@@ -195,9 +172,6 @@ const AdminAcceptPage = () => {
                             </td>
                             <td>{registration.status}</td>
                             <td>
-                                {registration.status === "Ожидание" && (
-                                    <button className="accept-btn" onClick={() => handleAccept(registration._id)}>Принять</button>
-                                )}
                                 <button className="reject-btn" onClick={() => handleExpel(registration._id)}>Отчислить</button>
                                 <button className="approve-btn" onClick={() => handleIssueDocument(registration._id)}>Выдать документ</button>
                             </td>
@@ -222,23 +196,6 @@ const AdminAcceptPage = () => {
                     </div>
                 </div>
             )}
-
-            {/* Модальное окно для выбора типа документа */}
-            {selectedDocumentId && (
-                <div className="modal">
-                    <div className="modal-content">
-                        <h3>Выберите тип документа</h3>
-                        <select value={documentType} onChange={(e) => setDocumentType(e.target.value)}>
-                            <option value="">Выберите тип</option>
-                            <option value="Сертификат">Сертификат</option>
-                            <option value="Диплом">Диплом</option>
-                        </select>
-                        <button onClick={confirmIssueDocument}>Подтвердить</button>
-                        <button onClick={clearModalState}>Отмена</button>
-                    </div>
-                </div>
-            )}
-
             {/* Модальное окно для просмотра информации о пользователе */}
             {selectedUser && (
                 <div className="user-info-modal">
@@ -304,4 +261,4 @@ const AdminAcceptPage = () => {
     );
 };
 
-export default AdminAcceptPage;
+export default AdminCheckDocument;
