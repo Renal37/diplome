@@ -84,7 +84,7 @@ const CheckCourse = () => {
             // Обновляем состояние курсов после успешной загрузки
             setCourses((prevCourses) =>
                 prevCourses.map((course) =>
-                    course._id === courseId ? { ...course, contractUploaded: true } : course
+                    course._id === courseId ? { ...course, contractUploaded: false } : course
                 )
             );
         } catch (err) {
@@ -143,19 +143,16 @@ const CheckCourse = () => {
                                 )}
                                 {course.status === "Одобренный" && (
                                     <>
-                                        <button
-                                            className="download-contract-button"
-                                            onClick={() => handleDownloadContract(course._id)}
-                                        >
-                                            Скачать договор
-                                        </button>
-                                        <span className="file-status">
-                                            {course.contractUploaded
-                                                ? "Файл успешно загружен."
-                                                : "Файла на проверку нет."}
-                                        </span>
+
+
                                         {!course.contractUploaded && (
                                             <>
+                                                <button
+                                                    className="download-contract-button"
+                                                    onClick={() => handleDownloadContract(course._id)}
+                                                >
+                                                    Скачать договор
+                                                </button>
                                                 <label htmlFor={`upload-${course._id}`} className="upload-label">
                                                     Загрузить файл
                                                 </label>
@@ -171,8 +168,14 @@ const CheckCourse = () => {
                                                         }
                                                     }}
                                                 />
+
                                             </>
                                         )}
+                                        <span className="file-status">
+                                            {course.contractUploaded
+                                                ? "Файл успешно загружен."
+                                                : "Файла на проверку нет."}
+                                        </span>
                                     </>
                                 )}
                             </li>

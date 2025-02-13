@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import "./admin_check_document.css";
 
 const AdminCheckDocument = () => {
     const [registrations, setRegistrations] = useState([]);
@@ -6,9 +7,10 @@ const AdminCheckDocument = () => {
     const [error, setError] = useState("");
     const [rejectReason, setRejectReason] = useState(""); // Причина отчисления
     const [selectedRegistrationId, setSelectedRegistrationId] = useState(null);
-    const [selectedDocumentId, setSelectedDocumentId] = useState(null); // ID выбранной заявки
     const [selectedUser, setSelectedUser] = useState(null); // Выбранный пользователь
-    const [documentType, setDocumentType] = useState(""); // Тип документа (сертификат/диплом)
+    const [selectedPdfRegistrationId, setSelectedPdfRegistrationId] = useState(null); // ID заявки с PDF
+    const [pdfUrl, setPdfUrl] = useState(""); // URL для просмотра PDF
+    const [rejectReasonPdf, setRejectReasonPdf] = useState(""); // Причина отклонения для PDF
 
     useEffect(() => {
         fetch("http://localhost:5000/admin/course-registrations", {
@@ -23,7 +25,7 @@ const AdminCheckDocument = () => {
                         (reg) => reg.status === "Одобренный" && reg.contractFilePath && reg.contractFilePath.trim() !== null
                     );
                     setRegistrations(approvedRegistrations);
-                    console.log(approvedRegistrations); 
+                    console.log(approvedRegistrations);
                 }
                 setIsLoading(false);
             })
@@ -70,41 +72,9 @@ const AdminCheckDocument = () => {
             });
     };
 
-    const handleIssueDocument = (registrationId) => {
-        setSelectedDocumentId(registrationId);
-    };
 
-    const confirmIssueDocument = () => {
-        if (!documentType) {
-            setError("Выберите тип документа");
-            return;
-        }
-        fetch(`http://localhost:5000/admin/issue-document/${selectedDocumentId}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ documentType }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.success) {
-                    setRegistrations(
-                        registrations.map((reg) =>
-                            reg._id === selectedDocumentId
-                                ? { ...reg, documentType }
-                                : reg
-                        )
-                    );
-                    clearModalState();
-                } else {
-                    setError(data.message || "Ошибка при выдаче документа");
-                }
-            })
-            .catch((error) => {
-                console.error("Error issuing document:", error);
-                setError("Ошибка при выдаче документа");
-            });
-    };
+
+
 
     const handleViewUser = (user) => {
         setSelectedUser(user);
@@ -120,6 +90,8 @@ const AdminCheckDocument = () => {
         setSelectedRegistrationId(null);
         setSelectedDocumentId(null);
         setSelectedUser(null);
+        setSelectedPdfRegistrationId(null);
+        setRejectReasonPdf("");
     };
 
     const closeModalOnEscape = (e) => {
@@ -132,6 +104,67 @@ const AdminCheckDocument = () => {
         document.addEventListener("keydown", closeModalOnEscape);
         return () => document.removeEventListener("keydown", closeModalOnEscape);
     }, []);
+
+    const handleApprovePdf = (registrationId) => {
+        fetch(`http://localhost:5000/admin/approve-contract/${registrationId}`, {
+            method: "POST",
+            credentials: "include",
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    setRegistrations(
+                        registrations.map((reg) =>
+                            reg._id === registrationId
+                                ? { ...reg, status: "Принят" }
+                                : reg
+                        )
+                    );
+                    setSelectedPdfRegistrationId(null); // Закрываем модальное окно
+                } else {
+                    setError(data.message || "Ошибка при принятии заявки");
+                }
+            })
+            .catch((error) => {
+                console.error("Error approving contract:", error);
+                setError("Ошибка при принятии заявки");
+            });
+    };
+
+    const handleRejectPdf = (registrationId) => {
+        if (!rejectReasonPdf) {
+            setError("Укажите причину отклонения");
+            return;
+        }
+        fetch(`http://localhost:5000/admin/reject-registration/${registrationId}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({ reason: rejectReasonPdf }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    setRegistrations(
+                        registrations.map((reg) =>
+                            reg._id === registrationId
+                                ? { ...reg, status: "Отклоненный", rejectReason: rejectReasonPdf }
+                                : reg
+                        )
+                    );
+                    setRejectReasonPdf(""); // Очищаем поле причины
+                    setSelectedPdfRegistrationId(null); // Закрываем модальное окно
+                } else {
+                    setError(data.message || "Ошибка при отклонении заявки");
+                }
+            })
+            .catch((error) => {
+                console.error("Error rejecting registration:", error);
+                setError("Ошибка при отклонении заявки");
+            });
+    };
 
     if (isLoading) return <div>Загрузка...</div>;
     if (error) return <div>{error}</div>;
@@ -172,13 +205,40 @@ const AdminCheckDocument = () => {
                             </td>
                             <td>{registration.status}</td>
                             <td>
+                                <button className="view-pdf-btn" onClick={() => {
+                                    setSelectedPdfRegistrationId(registration._id);
+                                    setPdfUrl(`http://localhost:5000/user/download-contract/${registration._id}`);
+                                }}>
+                                    Проверить договор
+                                </button>
                                 <button className="reject-btn" onClick={() => handleExpel(registration._id)}>Отчислить</button>
-                                <button className="approve-btn" onClick={() => handleIssueDocument(registration._id)}>Выдать документ</button>
                             </td>
                         </tr>
                     ))}
                 </tbody>
             </table>
+
+            {/* Модальное окно для проверки PDF */}
+            // Модальное окно для проверки PDF
+            {selectedPdfRegistrationId && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <h2>Проверка договора</h2>
+                        {/* Используем iframe для отображения PDF */}
+                        <iframe
+                            src={pdfUrl}
+                            title="Договор"
+                            width="100%"
+                            height="500px"
+                            frameBorder="0"
+                        />
+                        <div className="modal-actions">
+                            <button onClick={() => handleApprovePdf(selectedPdfRegistrationId)}>Принять</button>
+                            <button onClick={() => setSelectedPdfRegistrationId(null)}>Закрыть</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Модальное окно для отчисления */}
             {selectedRegistrationId && (
