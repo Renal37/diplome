@@ -28,7 +28,6 @@ const CheckCourse = () => {
                 return;
             }
             setCourses(data);
-            console.log(data);
         } catch (err) {
             setError(err.message);
             setCourses([]);

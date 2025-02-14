@@ -65,6 +65,10 @@ func main() {
 	r.HandleFunc("/user/download-contract/{courseId}", handlers.DownloadContract).Methods("GET")
 	r.HandleFunc("/user/upload-contract/{courseId}", handlers.UploadContract).Methods("POST")
 
+	r.HandleFunc("/user/download-document", handlers.DownloadDocument).Methods("GET")
+	r.HandleFunc("/user/upload-document/{userId}", handlers.UploadDocument).Methods("POST")
+	r.HandleFunc("/user/view-document/{id}", handlers.ViewDocument).Methods("GET")
+
 	r.HandleFunc("/groups", handlers.GetGroups).Methods("GET")
 	r.HandleFunc("/admin/create-group", handlers.CreateGroup).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/update-group/{id}", handlers.UpdateGroup).Methods("PUT", "OPTIONS")
