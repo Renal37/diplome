@@ -335,8 +335,9 @@ const AdminApprovalPage = () => {
                     <tr>
                         <th>Курс</th>
                         <th>Пользователь</th>
-                        <th>Статус</th>
                         <th>Группа</th>
+
+                        <th>Статус</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -378,6 +379,7 @@ const AdminApprovalPage = () => {
                                 )}
                             </td>
                             <td>{registration.status}</td>
+
                             <td className="admin_btns">
                                 {registration.status === "Ожидание" && (
                                     <>

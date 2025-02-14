@@ -265,6 +265,14 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		bson.M{
+			"$lookup": bson.M{
+				"from":         "groups",
+				"localField":   "groupId",
+				"foreignField": "_id",
+				"as":           "group",
+			},
+		},
+		bson.M{
 			"$project": bson.M{
 				"courseTitle": bson.M{
 					"$ifNull": bson.A{
@@ -280,6 +288,15 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 				},
 				"status":           1,
 				"contractFilePath": 1,
+				"groupId":          1,
+
+				"groupName": bson.M{
+					"$ifNull": bson.A{
+						bson.M{"$arrayElemAt": bson.A{"$group.groupName", 0}},
+						"Unknown group",
+					},
+				},
+
 				"userEmail": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$user.email", 0}},
