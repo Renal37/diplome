@@ -69,6 +69,7 @@ func main() {
 	r.HandleFunc("/admin/create-group", handlers.CreateGroup).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/update-group/{id}", handlers.UpdateGroup).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/admin/delete-group/{id}", handlers.DeleteGroup).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/admin/assign-group/{id}", handlers.AssignGroup).Methods("POST","OPTIONS")
 
 	r.HandleFunc("/check-token", handlers.CheckToken).Methods("POST", "OPTIONS")
 

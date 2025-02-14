@@ -12,13 +12,32 @@ const AdminApprovalPage = () => {
     const [rejectReasonPdf, setRejectReasonPdf] = useState(""); // Причина отклонения для PDF
     const [selectedUser, setSelectedUser] = useState(null); // Выбранный пользователь
     const [filterStatus, setFilterStatus] = useState("all"); // Фильтр по статусу
+    const [groups, setGroups] = useState([]); // Список групп
 
     // Фильтрация заявок по статусу
     const filteredRegistrations = registrations.filter((registration) => {
         if (filterStatus === "all") return true;
         return registration.status === filterStatus;
     });
-
+    // Загрузка списка групп
+    useEffect(() => {
+        const fetchGroups = async () => {
+            try {
+                const response = await fetch("http://localhost:5000/groups", {
+                    credentials: "include",
+                });
+                if (!response.ok) {
+                    throw new Error("Ошибка при загрузке групп");
+                }
+                const data = await response.json();
+                setGroups(data.groups || []);
+            } catch (error) {
+                console.error("Error fetching groups:", error);
+                setError("Ошибка при загрузке групп");
+            }
+        };
+        fetchGroups();
+    }, []);
     useEffect(() => {
         const handleKeyDown = (event) => {
             if (event.key === "Escape") {
@@ -252,7 +271,36 @@ const AdminApprovalPage = () => {
                 setError("Ошибка при отклонении заявки");
             });
     };
+    const handleAssignGroup = async (registrationId, groupId) => {
+        if (!groupId) {
+            setError("Выберите группу");
+            return;
+        }
 
+        try {
+            const response = await fetch(`http://localhost:5000/admin/assign-group/${registrationId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ groupId }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                setRegistrations((prevRegistrations) =>
+                    prevRegistrations.map((reg) =>
+                        reg._id === registrationId ? { ...reg, groupId } : reg
+                    )
+                );
+            } else {
+                setError(data.message || "Ошибка при привязке к группе");
+            }
+        } catch (error) {
+            console.error("Error assigning group:", error);
+            setError("Ошибка при привязке к группе");
+        }
+    };
     // Просмотр информации о пользователе
     const handleViewUser = (user) => {
         setSelectedUser(user);
@@ -288,6 +336,7 @@ const AdminApprovalPage = () => {
                         <th>Курс</th>
                         <th>Пользователь</th>
                         <th>Статус</th>
+                        <th>Группа</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -312,6 +361,21 @@ const AdminApprovalPage = () => {
                                 })}>
                                     {registration.userName}
                                 </button>
+                            </td>
+                            <td>
+                                {registration.status === "Принят" && (
+                                    <select
+                                        value={registration.groupId || ""}
+                                        onChange={(e) => handleAssignGroup(registration._id, e.target.value)}
+                                    >
+                                        <option value="">Выберите группу</option>
+                                        {groups.map((group) => (
+                                            <option key={group._id} value={group._id}>
+                                                {group.groupName} ({group.courseId})
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
                             </td>
                             <td>{registration.status}</td>
                             <td className="admin_btns">
