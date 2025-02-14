@@ -315,10 +315,9 @@ const AdminCoursesManagement = () => {
 
     return (
         <div className="admin-approval-page">
-            <h1>Администрирование заявок</h1>
 
             {/* Фильтр по статусу */}
-            <div>
+            <div className="filter-section">
                 <label>Фильтр по статусу:</label>
                 <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                     <option value="all">Все</option>

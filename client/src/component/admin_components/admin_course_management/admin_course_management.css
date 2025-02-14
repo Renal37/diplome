@@ -3,10 +3,7 @@
     max-width: 100%;
     margin: 0 auto;
     padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    background-color: #f9f9f9;
+   
 }
 
 .admin-course-management h1 {
@@ -243,3 +240,19 @@ button.reject-btn {
     background-color: #dc3545;
     color: white;
 }
+
+.filter-section {
+    margin-bottom: 20px;
+  }
+  
+  .filter-section label {
+    margin-right: 10px;
+    font-weight: bold;
+  }
+  
+  .filter-section select {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }

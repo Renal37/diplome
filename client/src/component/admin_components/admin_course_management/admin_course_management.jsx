@@ -10,6 +10,7 @@ const AdminCourseManagement = () => {
   const [coursePrice, setCoursePrice] = useState('');
   const [courseType, setCourseType] = useState('Повышение квалификации');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filterType, setFilterType] = useState('Все'); // Состояние для фильтрации по типу курса
 
   const fetchCourses = async () => {
     const response = await fetch('http://localhost:5000/courses');
@@ -20,6 +21,28 @@ const AdminCourseManagement = () => {
   useEffect(() => {
     fetchCourses();
   }, []);
+
+  // Обработчик нажатия клавиши Escape
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        if (isModalOpen) {
+          setIsModalOpen(false); // Закрыть модальное окно добавления курса
+        }
+        if (selectedCourse) {
+          handleCloseUpdateForm(); // Закрыть форму обновления курса
+        }
+      }
+    };
+
+    // Добавляем обработчик события keydown
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Убираем обработчик при размонтировании компонента
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isModalOpen, selectedCourse]); // Зависимости от состояний модального окна и выбранного курса
 
   const handleCourseSelect = (course) => {
     if (!course || !course._id) {
@@ -117,14 +140,29 @@ const AdminCourseManagement = () => {
     setCourseType('');
   };
 
+  // Фильтрация курсов по типу
+  const filteredCourses = filterType === 'Все'
+    ? courses
+    : courses.filter(course => course.type === filterType);
+
   return (
     <div className="admin-course-management">
       <div className="admin-course-header">
-        <h1>Управление курсами</h1>
-        <button className='approve-btn' onClick={() => setIsModalOpen(true)}>Добавить курс</button>
+    {/* Фильтр по типу курса */}
+    <div className="filter-section">
+        <label>Фильтр по типу курса:</label>
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+        >
+          <option value="Все">Все</option>
+          <option value="Повышение квалификации">Повышение квалификации</option>
+          <option value="Профессиональная переподготовка">Профессиональная переподготовка</option>
+        </select>
       </div>
 
-
+        <button className='approve-btn' onClick={() => setIsModalOpen(true)}>Добавить курс</button>
+      </div>
       {isModalOpen && (
         <div className="modal">
           <div className="modal-content">
@@ -162,7 +200,7 @@ const AdminCourseManagement = () => {
                 <option value="Профессиональная переподготовка">Профессиональная переподготовка</option>
               </select>
               <div className="form-buttons">
-              <button className='reject-btn' type="button" onClick={() => setIsModalOpen(false)}>Закрыть</button>
+                <button className='reject-btn' type="button" onClick={() => setIsModalOpen(false)}>Закрыть</button>
                 <button className='approve-btn' type="submit">Добавить</button>
               </div>
             </form>
@@ -170,6 +208,7 @@ const AdminCourseManagement = () => {
         </div>
       )}
 
+     
       <table className="course-table">
         <thead>
           <tr>
@@ -182,7 +221,7 @@ const AdminCourseManagement = () => {
           </tr>
         </thead>
         <tbody>
-          {courses.map((course) => (
+          {filteredCourses.map((course) => (
             <React.Fragment key={course._id}>
               <tr onClick={() => handleCourseSelect(course)}>
                 <td>{course.title}</td>
@@ -191,7 +230,7 @@ const AdminCourseManagement = () => {
                 <td>{course.price}</td>
                 <td>{course.type}</td>
                 <td>
-                  <button className='reject-btn'  onClick={() => handleDeleteCourse(course._id)}>Удалить</button>
+                  <button className='reject-btn' onClick={() => handleDeleteCourse(course._id)}>Удалить</button>
                 </td>
               </tr>
               {selectedCourse && selectedCourse._id === course._id && (

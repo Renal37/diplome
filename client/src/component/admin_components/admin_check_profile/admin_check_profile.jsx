@@ -31,7 +31,6 @@ const AdminCheckProfile = () => {
 
     return (
         <div className="admin-delete-component">
-            <h1>Проверка профилей</h1>
             <div className="controls">
                 <div className="search-container">
                     {/* Ввод для поиска по ФИО */}
