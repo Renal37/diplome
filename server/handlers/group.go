@@ -161,8 +161,6 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	defer client.Disconnect(context.Background())
 
-	collection := client.Database("diplome").Collection("groups")
-
 	// Преобразуем строковый ID в ObjectID
 	objectId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -170,9 +168,10 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Удаляем группу
+	groupCollection := client.Database("diplome").Collection("groups")
 	filter := bson.M{"_id": objectId}
-
-	result, err := collection.DeleteOne(context.Background(), filter)
+	result, err := groupCollection.DeleteOne(context.Background(), filter)
 	if err != nil {
 		log.Printf("Error deleting group: %v", err)
 		http.Error(w, "Ошибка при удалении группы", http.StatusInternalServerError)
@@ -184,68 +183,77 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Удаляем все заявки, связанные с этой группой
+	registrationCollection := client.Database("diplome").Collection("course_registrations")
+	_, err = registrationCollection.DeleteMany(context.Background(), bson.M{"groupId": objectId})
+	if err != nil {
+		log.Printf("Error deleting registrations: %v", err)
+		http.Error(w, "Ошибка при удалении заявок на курс", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 func AssignGroup(w http.ResponseWriter, r *http.Request) {
-    vars := mux.Vars(r)
-    registrationId, err := primitive.ObjectIDFromHex(vars["id"])
-    if err != nil {
-        log.Printf("Invalid registration ID: %v", err)
-        http.Error(w, "Неверный формат идентификатора заявки", http.StatusBadRequest)
-        return
-    }
+	vars := mux.Vars(r)
+	registrationId, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		log.Printf("Invalid registration ID: %v", err)
+		http.Error(w, "Неверный формат идентификатора заявки", http.StatusBadRequest)
+		return
+	}
 
-    var requestBody struct {
-        GroupID string `json:"groupId"`
-    }
-    err = json.NewDecoder(r.Body).Decode(&requestBody)
-    if err != nil {
-        log.Printf("Error decoding request body: %v", err)
-        http.Error(w, "Неверный формат данных", http.StatusBadRequest)
-        return
-    }
+	var requestBody struct {
+		GroupID string `json:"groupId"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
 
-    if requestBody.GroupID == "" {
-        http.Error(w, "ID группы обязателен", http.StatusBadRequest)
-        return
-    }
+	if requestBody.GroupID == "" {
+		http.Error(w, "ID группы обязателен", http.StatusBadRequest)
+		return
+	}
 
-    groupId, err := primitive.ObjectIDFromHex(requestBody.GroupID)
-    if err != nil {
-        log.Printf("Invalid group ID: %v", err)
-        http.Error(w, "Неверный формат ID группы", http.StatusBadRequest)
-        return
-    }
+	groupId, err := primitive.ObjectIDFromHex(requestBody.GroupID)
+	if err != nil {
+		log.Printf("Invalid group ID: %v", err)
+		http.Error(w, "Неверный формат ID группы", http.StatusBadRequest)
+		return
+	}
 
-    clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-    client, err := mongo.Connect(context.Background(), clientOptions)
-    if err != nil {
-        log.Printf("Database connection error: %v", err)
-        http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-        return
-    }
-    defer client.Disconnect(context.Background())
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		log.Printf("Database connection error: %v", err)
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
+	}
+	defer client.Disconnect(context.Background())
 
-    collection := client.Database("diplome").Collection("course_registrations")
-    filter := bson.M{"_id": registrationId}
-    update := bson.M{"$set": bson.M{"groupId": groupId}}
+	collection := client.Database("diplome").Collection("course_registrations")
+	filter := bson.M{"_id": registrationId}
+	update := bson.M{"$set": bson.M{"groupId": groupId}}
 
-    result, err := collection.UpdateOne(context.Background(), filter, update)
-    if err != nil {
-        log.Printf("Error updating registration: %v", err)
-        http.Error(w, "Ошибка при обновлении заявки", http.StatusInternalServerError)
-        return
-    }
+	result, err := collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		log.Printf("Error updating registration: %v", err)
+		http.Error(w, "Ошибка при обновлении заявки", http.StatusInternalServerError)
+		return
+	}
 
-    if result.MatchedCount == 0 {
-        http.Error(w, "Заявка не найдена", http.StatusNotFound)
-        return
-    }
+	if result.MatchedCount == 0 {
+		http.Error(w, "Заявка не найдена", http.StatusNotFound)
+		return
+	}
 
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }

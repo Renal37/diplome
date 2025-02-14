@@ -8,7 +8,30 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
     const location = useLocation(); // Получаем текущий путь
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false); // Новое состояние для отслеживания скролла
+    const [profile, setProfile] = useState(null);
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await fetch("http://localhost:5000/profile", {
+                    method: "GET",
+                    credentials: "include",
+                });
 
+                if (!response.ok) {
+                    throw new Error("Ошибка при загрузке профиля");
+                }
+
+                const data = await response.json();
+                setProfile(data);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProfile();
+    }, []);
     useEffect(() => {
         if (isAuthenticated) {
             const storedUsername = localStorage.getItem('username');
@@ -88,7 +111,12 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
                                     <div className="dropdown-menu">
                                         <Link to="/auth/profile" className="dropdown-item">Профиль</Link>
                                         <Link to="/auth/edit_profile" className="dropdown-item">Редактировать профиль</Link>
+                                        {profile.username === 'admin'
+                                            && (
+                                                <Link to="/admin" className="dropdown-item">Админ панель</Link>
+                                            )}
                                         <button onClick={handleLogout} className="dropdown-item">Выйти</button>
+
                                     </div>
                                 )}
                             </li>

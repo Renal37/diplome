@@ -19,7 +19,8 @@ const Main_top_center = () => {
     return (
         <div className="main_top_center_slider">
             {/* Статичное изображение */}
-            <img src={apt} alt="Наш техникум" className="static-image" />
+
+
 
             {/* Слайдер с текстовым содержимым */}
             <Slider {...settings} className="main_top_slider">
@@ -54,7 +55,7 @@ const Main_top_center = () => {
                     <div className="slider-content">
                         <h3>Почему наш мы?</h3>
                         <p>
-                        Доставка документов по всей России.
+                            Доставка документов по всей России.
                         </p>
                     </div>
                 </div>
@@ -68,6 +69,19 @@ const Main_top_center = () => {
                     </div>
                 </div>
             </Slider>
+            <img src={apt} alt="Наш техникум" className="static-image" />
+            <div className="under_img">
+                <p>
+                    К освоению дополнительных профессиональных образовательных программ допускаются:
+                </p>
+                <p>
+                    1. лица, имеющие среднее профессиональное и (или) высшее образование;
+                </p>
+                <p>
+                    2. лица, получающие среднее профессиональное и (или) высшее образование.
+                </p>
+            </div>
+
         </div>
     );
 };

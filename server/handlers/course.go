@@ -128,16 +128,26 @@ func DeleteCourse(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
 		return
 	}
-	collection := client.Database("diplome").Collection("courses")
+	defer client.Disconnect(context.Background())
 
+	// Удаляем курс
+	courseCollection := client.Database("diplome").Collection("courses")
 	filter := bson.M{"_id": id}
-	_, err = collection.DeleteOne(context.Background(), filter)
+	_, err = courseCollection.DeleteOne(context.Background(), filter)
 	if err != nil {
 		http.Error(w, "Ошибка при удалении курса из базы данных", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Fprintf(w, "Курс успешно удален!")
+	// Удаляем все заявки, связанные с этим курсом
+	registrationCollection := client.Database("diplome").Collection("course_registrations")
+	_, err = registrationCollection.DeleteMany(context.Background(), bson.M{"courseId": id})
+	if err != nil {
+		http.Error(w, "Ошибка при удалении заявок на курс", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "Курс и все связанные заявки успешно удалены!")
 }
 func GetCourseByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -538,6 +548,14 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		bson.M{
+			"$lookup": bson.M{
+				"from":         "groups",
+				"localField":   "groupId",
+				"foreignField": "_id",
+				"as":           "group",
+			},
+		},
+		bson.M{
 			"$project": bson.M{
 				"courseTitle": bson.M{
 					"$ifNull": bson.A{
@@ -545,6 +563,15 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 						"Unknown Course",
 					},
 				},
+				"groupId": 1,
+
+				"groupName": bson.M{
+					"$ifNull": bson.A{
+						bson.M{"$arrayElemAt": bson.A{"$group.groupName", 0}},
+						"Unknown group",
+					},
+				},
+
 				"status":           1,
 				"rejectReason":     1,
 				"contractFilePath": 1,
@@ -629,6 +656,14 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		bson.M{
+			"$lookup": bson.M{
+				"from":         "groups",
+				"localField":   "groupId",
+				"foreignField": "_id",
+				"as":           "group",
+			},
+		},
+		bson.M{
 			"$project": bson.M{
 				"courseTitle": bson.M{
 					"$ifNull": bson.A{
@@ -636,6 +671,15 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 						"Unknown Course",
 					},
 				},
+				"groupId": 1,
+
+				"groupName": bson.M{
+					"$ifNull": bson.A{
+						bson.M{"$arrayElemAt": bson.A{"$group.groupName", 0}},
+						"Unknown group",
+					},
+				},
+
 				"status":           1,
 				"rejectReason":     1,
 				"contractFilePath": 1,

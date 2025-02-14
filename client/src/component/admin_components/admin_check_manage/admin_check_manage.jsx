@@ -364,17 +364,20 @@ const AdminCoursesManagement = () => {
                             </td>
                             <td>
                                 {registration.status === "Принят" && (
-                                    <select
-                                        value={registration.groupId || ""}
-                                        onChange={(e) => handleAssignGroup(registration._id, e.target.value)}
-                                    >
-                                        <option value="">Выберите группу</option>
-                                        {groups.map((group) => (
-                                            <option key={group._id} value={group._id}>
-                                                {group.groupName} ({group.courseId})
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <div className="filter-group">
+                                        <select
+                                            value={registration.groupId || ""}
+                                            onChange={(e) => handleAssignGroup(registration._id, e.target.value)}
+                                        >
+                                            <option value="">Выберите группу</option>
+                                            {groups.map((group) => (
+                                                <option key={group._id} value={group._id}>
+                                                    {group.groupName}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
                                 )}
                             </td>
                             <td>{registration.status}</td>

@@ -28,6 +28,7 @@ const CheckCourse = () => {
                 return;
             }
             setCourses(data);
+            console.log(data);
         } catch (err) {
             setError(err.message);
             setCourses([]);
@@ -103,22 +104,30 @@ const CheckCourse = () => {
                     Все курсы
                 </button>
                 <button
+                    onClick={() => setSelectedStatus("Ожидание")}
+                    className={`prifle_nav_button ${selectedStatus === "Ожидание" ? "active" : ""}`}
+                >
+                    Ожидают одобрения
+                </button>
+                <button
                     onClick={() => setSelectedStatus("Одобренный")}
                     className={`prifle_nav_button ${selectedStatus === "Одобренный" ? "active" : ""}`}
                 >
                     Одобренные
+                </button>
+
+
+                <button
+                    onClick={() => setSelectedStatus("Принят")}
+                    className={`prifle_nav_button ${selectedStatus === "Принят" ? "active" : ""}`}
+                >
+                    Принят курысы
                 </button>
                 <button
                     onClick={() => setSelectedStatus("Отклоненный")}
                     className={`prifle_nav_button ${selectedStatus === "Отклоненный" ? "active" : ""}`}
                 >
                     Отклоненные
-                </button>
-                <button
-                    onClick={() => setSelectedStatus("Ожидание")}
-                    className={`prifle_nav_button ${selectedStatus === "Ожидание" ? "active" : ""}`}
-                >
-                    Ожидают одобрения
                 </button>
             </div>
 
@@ -136,6 +145,12 @@ const CheckCourse = () => {
                             <li key={index} className="course-item">
                                 <span className="course-title">Название: {course.courseTitle}</span>
                                 <span className="course-status">Статус: {course.status}</span>
+                                {/* Отображение группы, если она есть */}
+                                {course.groupId && (
+                                    <span className="course-group">
+                                        Группа: {course.groupName}
+                                    </span>
+                                )}
                                 {course.status === "Отклоненный" && course.rejectReason && (
                                     <span className="reject-reason">
                                         Причина отказа: {course.rejectReason}
@@ -168,7 +183,6 @@ const CheckCourse = () => {
                                                         }
                                                     }}
                                                 />
-
                                             </>
                                         )}
                                         <span className="file-status">
