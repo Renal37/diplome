@@ -1,17 +1,15 @@
 import { Route, Routes, Link } from 'react-router-dom';
-import AdminDeleteComponent from '../admin_components/admin_delete/admin_delete_component';
-import AdminUpdateComponent from '../admin_components/admin_update/admin_update_component';
-import AdminAddComponent from '../admin_components/admin_add/admin_add_component';
 import './admin_component.css';
-import AdminApprovalPage from '../admin_components/admin_approval_page/admin_approval_page';
 import AdminCheckProfile from '../admin_components/admin_check_profile/admin_check_profile';
 import AdminAcceptPage from '../admin_components/admin_accept_page/admin_accept_page';
 import AdminEditGroup from '../admin_components/admin_edit_group/admin_edit_group';
 import AdminCreateGroup from '../admin_components/admin_create_group/admin_create_group';
+import AdminCourseManagement from '../admin_components/admin_course_management/admin_course_management';
+import AdminCoursesManagement from '../admin_components/admin_course_courses/admin_check_manage';
 
 const AdminComponent = () => {
   return (
-    <div className="admin-component">
+    <div className="admin-component container">
       <div>
         <h1 className="admin-title">Административная панель</h1>
 
@@ -19,19 +17,14 @@ const AdminComponent = () => {
       <nav>
         <ul className="nav-links">
           <li>
-            <Link to="/admin" className="nav-link">Добавить курс</Link>
+            <Link to="/admin" className="nav-link">Управление курс</Link>
           </li>
-          <li>
-            <Link to="/admin/update" className="nav-link">Обновить курс</Link>
-          </li>
-          <li>
-            <Link to="/admin/delete" className="nav-link">Удалить курс</Link>
-          </li>
+       
           <li>
             <Link to="/admin/profile" className="nav-link">Просмотр всех профилей</Link>
           </li>
           <li>
-            <Link to="/admin/approval" className="nav-link">Проверка заявок на курсы</Link>
+            <Link to="/admin/courses" className="nav-link">Управление заявками</Link>
           </li>
 
           {/* <li>
@@ -47,11 +40,9 @@ const AdminComponent = () => {
       </nav>
       <div className="admin_components">
         <Routes>
-          <Route index element={<AdminAddComponent />} />
-          <Route path="update" element={<AdminUpdateComponent />} />
-          <Route path="delete" element={<AdminDeleteComponent />} />
+          <Route index element={<AdminCourseManagement />} />
           <Route path="profile" element={<AdminCheckProfile />} />
-          <Route path="approval" element={<AdminApprovalPage />} />
+          <Route path="courses" element={<AdminCoursesManagement />} />
           <Route path="accept" element={<AdminAcceptPage />} />
           <Route path="creategroups" element={<AdminCreateGroup />} />
           <Route path="editgroups" element={<AdminEditGroup />} />

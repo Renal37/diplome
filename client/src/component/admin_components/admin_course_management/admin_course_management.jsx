@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import './admin_update_component.css';
+import './admin_course_management.css';
 
-const AdminUpdateComponent = () => {
+const AdminCourseManagement = () => {
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courseTitle, setCourseTitle] = useState('');
   const [courseDescription, setCourseDescription] = useState('');
   const [courseDuration, setCourseDuration] = useState('');
   const [coursePrice, setCoursePrice] = useState('');
-  const [courseType, setCourseType] = useState('');
+  const [courseType, setCourseType] = useState('Повышение квалификации');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchCourses = async () => {
     const response = await fetch('http://localhost:5000/courses');
@@ -33,7 +34,36 @@ const AdminUpdateComponent = () => {
     setCourseType(course.type);
   };
 
-  const handleUpdate = async (e) => {
+  const handleAddCourse = async (e) => {
+    e.preventDefault();
+    const response = await fetch('http://localhost:5000/add-course', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: courseTitle,
+        description: courseDescription,
+        duration: parseInt(courseDuration, 10),
+        price: parseInt(coursePrice, 10),
+        type: courseType,
+      }),
+    });
+    if (response.ok) {
+      alert('Course added successfully');
+      setIsModalOpen(false);
+      setCourseTitle('');
+      setCourseDescription('');
+      setCourseDuration('');
+      setCoursePrice('');
+      setCourseType('Повышение квалификации');
+      fetchCourses();
+    } else {
+      alert('Failed to add course');
+    }
+  };
+
+  const handleUpdateCourse = async (e) => {
     e.preventDefault();
     if (!selectedCourse) {
       alert('Пожалуйста, выберите курс для обновления');
@@ -66,7 +96,19 @@ const AdminUpdateComponent = () => {
     }
   };
 
-  const handleClose = () => {
+  const handleDeleteCourse = async (courseId) => {
+    const response = await fetch(`http://localhost:5000/delete-course/${courseId}`, {
+      method: 'DELETE',
+    });
+    if (response.ok) {
+      alert('Курс успешно удален!');
+      fetchCourses();
+    } else {
+      alert('Ошибка при удалении курса');
+    }
+  };
+
+  const handleCloseUpdateForm = () => {
     setSelectedCourse(null);
     setCourseTitle('');
     setCourseDescription('');
@@ -76,8 +118,58 @@ const AdminUpdateComponent = () => {
   };
 
   return (
-    <div className="admin-update-component">
-      <h1>Обновление курсов</h1>
+    <div className="admin-course-management">
+      <div className="admin-course-header">
+        <h1>Управление курсами</h1>
+        <button className='approve-btn' onClick={() => setIsModalOpen(true)}>Добавить курс</button>
+      </div>
+
+
+      {isModalOpen && (
+        <div className="modal">
+          <div className="modal-content">
+            <h2>Добавить курс</h2>
+            <form onSubmit={handleAddCourse}>
+              <input
+                type="text"
+                placeholder="Заголовок"
+                value={courseTitle}
+                onChange={(e) => setCourseTitle(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Описание"
+                value={courseDescription}
+                onChange={(e) => setCourseDescription(e.target.value)}
+              />
+              <input
+                type="number"
+                placeholder="Продолжительность (часы)"
+                value={courseDuration}
+                onChange={(e) => setCourseDuration(e.target.value)}
+              />
+              <input
+                type="number"
+                placeholder="Стоимость"
+                value={coursePrice}
+                onChange={(e) => setCoursePrice(e.target.value)}
+              />
+              <select
+                value={courseType}
+                onChange={(e) => setCourseType(e.target.value)}
+              >
+                <option value="Повышение квалификации">Повышение квалификации</option>
+                <option value="Профессиональная переподготовка">Профессиональная переподготовка</option>
+              </select>
+              <div className="form-buttons">
+              <button className='reject-btn' type="button" onClick={() => setIsModalOpen(false)}>Закрыть</button>
+                <button className='approve-btn' type="submit">Добавить</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <table className="course-table">
         <thead>
           <tr>
@@ -86,6 +178,7 @@ const AdminUpdateComponent = () => {
             <th>Продолжительность (часы)</th>
             <th>Стоимость (руб.)</th>
             <th>Тип</th>
+            <th>Действия</th>
           </tr>
         </thead>
         <tbody>
@@ -97,11 +190,14 @@ const AdminUpdateComponent = () => {
                 <td>{course.duration}</td>
                 <td>{course.price}</td>
                 <td>{course.type}</td>
+                <td>
+                  <button className='reject-btn'  onClick={() => handleDeleteCourse(course._id)}>Удалить</button>
+                </td>
               </tr>
               {selectedCourse && selectedCourse._id === course._id && (
                 <tr>
-                  <td colSpan="5">
-                    <form onSubmit={handleUpdate} className="update-form">
+                  <td colSpan="6">
+                    <form onSubmit={handleUpdateCourse} className="update-form">
                       <input
                         type="text"
                         placeholder="Заголовок"
@@ -133,8 +229,8 @@ const AdminUpdateComponent = () => {
                         <option value="Профессиональная переподготовка">Профессиональная переподготовка</option>
                       </select>
                       <div className="form-buttons">
-                        <button type="submit">Обновить курс</button>
-                        <button type="button" onClick={handleClose}>Закрыть</button>
+                        <button className='approve-btn' type="submit">Обновить курс</button>
+                        <button className='reject-btn' type="button" onClick={handleCloseUpdateForm}>Закрыть</button>
                       </div>
                     </form>
                   </td>
@@ -148,4 +244,4 @@ const AdminUpdateComponent = () => {
   );
 };
 
-export default AdminUpdateComponent;
+export default AdminCourseManagement;

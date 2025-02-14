@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import "./admin_approval_page.css";
+import "./admin_check_manage.css";
 
-const AdminApprovalPage = () => {
+const AdminCoursesManagement = () => {
     const [registrations, setRegistrations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
@@ -523,4 +523,4 @@ const AdminApprovalPage = () => {
     );
 };
 
-export default AdminApprovalPage;
+export default AdminCoursesManagement;
