@@ -39,7 +39,7 @@ const CourseRegistration = () => {
             })
             .catch(error => {
                 console.error('Error fetching user data:', error);
-                // navigate('/auth/login'); // Используем navigate вместо history.push
+                // navigate('/auth/login'); 
             });
     }, [courseId, navigate]);
 
@@ -49,7 +49,7 @@ const CourseRegistration = () => {
             return;
         }
         if (!user.lastName || !user.firstName || !user.middleName) {
-            navigate('/auth/edit_profile'); // Используем navigate вместо history.push
+            navigate('/auth/edit_profile'); 
             return;
         }
 

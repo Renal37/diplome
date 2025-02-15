@@ -112,8 +112,7 @@ func UploadDocument(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `{"message": "Договор успешно загружен!"}`)
 }
-
-func ViewDocument(w http.ResponseWriter, r *http.Request) {
+func ViewConsent(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userId, err := primitive.ObjectIDFromHex(vars["userId"])
 	if err != nil {
@@ -134,7 +133,7 @@ func ViewDocument(w http.ResponseWriter, r *http.Request) {
 
 	collection := client.Database("diplome").Collection("users")
 
-	// Получаем путь к файлу договора
+	// Получаем путь к файлу согласия
 	var user bson.M
 	err = collection.FindOne(context.Background(), bson.M{"_id": userId}).Decode(&user)
 	if err != nil {

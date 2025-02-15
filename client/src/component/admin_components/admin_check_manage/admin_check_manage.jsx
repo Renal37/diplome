@@ -146,7 +146,9 @@ const AdminCoursesManagement = () => {
                 setError("Ошибка при отклонении заявки");
             });
     };
-
+    const handleViewConsent = (userId) => {
+        window.open(`http://localhost:5000/user/view-consent/${userId}`, '_blank');
+    };
     // Удаление заявки
     const handleDelete = (registrationId) => {
         fetch(`http://localhost:5000/admin/delete-registration/${registrationId}`, {
@@ -397,8 +399,10 @@ const AdminCoursesManagement = () => {
 
                                 )}
                                 {!(registration.status == "Ожидание") && !(registration.status === "Отклоненный" || registration.status === "Отчисленный") && (
-
-                                    <button className="reject-btn" onClick={() => handleExpel(registration._id)}>Отчислить</button>
+                                    <>
+                                        <button className="reject-btn" onClick={() => handleExpel(registration._id)}>Отчислить</button>
+                                        <button onClick={() => handleViewConsent(registration.userId)}>Просмотр согласия</button>
+                                    </>
                                 )}
                             </td>
                         </tr>

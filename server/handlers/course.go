@@ -299,6 +299,7 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 				"status":           1,
 				"contractFilePath": 1,
 				"groupId":          1,
+				"userId":           1,
 
 				"groupName": bson.M{
 					"$ifNull": bson.A{
@@ -374,6 +375,12 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$user.snils", 0}},
 						"Unknown Snils",
+					},
+				},
+				"usercontractFilePath": bson.M{
+					"$ifNull": bson.A{
+						bson.M{"$arrayElemAt": bson.A{"$user.contractFilePath", 0}},
+						"Unknown contractFilePath",
 					},
 				},
 			},
