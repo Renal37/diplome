@@ -41,7 +41,7 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated, checkToken }) => {
             if (window.scrollY > 350) {
                 setIsScrolled(true);
                 // Добавляем отступ для контента под header_bottom
-                document.querySelector('.main_top').style.paddingTop = '170px'; // Замените на актуальную высоту
+                document.querySelector('.main_top').style.paddingTop = '0px'; // Замените на актуальную высоту
             } else {
                 setIsScrolled(false);
                 // Убираем отступ, если header_bottom не фиксированный

@@ -58,9 +58,10 @@
   border-right: 1px solid black;
 }
 
-.profile_course {
-  padding: 20px;
+.profile_course_navs {
+width: 1200px;
 }
+
 .profile_course_top{
   align-items: center;
   flex-direction: column;

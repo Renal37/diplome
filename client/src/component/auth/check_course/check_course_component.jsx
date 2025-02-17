@@ -128,6 +128,12 @@ const CheckCourse = () => {
                 >
                     Отклоненные
                 </button>
+                <button
+                    onClick={() => setSelectedStatus("Отчисленный")}
+                    className={`prifle_nav_button ${selectedStatus === "Отчисленный" ? "active" : ""}`}
+                >
+                    Отчисленный
+                </button>
             </div>
 
             {/* Список курсов */}
@@ -150,7 +156,7 @@ const CheckCourse = () => {
                                         Группа: {course.groupName}
                                     </span>
                                 )}
-                                {course.status === "Отклоненный" && course.rejectReason && (
+                                {course.rejectReason && (
                                     <span className="reject-reason">
                                         Причина отказа: {course.rejectReason}
                                     </span>

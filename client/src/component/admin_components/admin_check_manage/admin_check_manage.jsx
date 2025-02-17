@@ -5,11 +5,12 @@ const AdminCoursesManagement = () => {
     const [registrations, setRegistrations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
-    const [rejectReason, setRejectReason] = useState(""); // Причина отклонения/отчисления
-    const [selectedRegistrationId, setSelectedRegistrationId] = useState(null); // ID выбранной заявки
+    const [rejectReason, setRejectReason] = useState(""); // Причина отклонения
+    const [expelReason, setExpelReason] = useState(""); // Причина отчисления
+    const [selectedRejectRegistrationId, setSelectedRejectRegistrationId] = useState(null); // ID выбранной заявки для отклонения
+    const [selectedExpelRegistrationId, setSelectedExpelRegistrationId] = useState(null); // ID выбранной заявки для отчисления
     const [selectedPdfRegistrationId, setSelectedPdfRegistrationId] = useState(null); // ID заявки с PDF
     const [pdfUrl, setPdfUrl] = useState(""); // URL для просмотра PDF
-    const [rejectReasonPdf, setRejectReasonPdf] = useState(""); // Причина отклонения для PDF
     const [selectedUser, setSelectedUser] = useState(null); // Выбранный пользователь
     const [filterStatus, setFilterStatus] = useState("all"); // Фильтр по статусу
     const [groups, setGroups] = useState([]); // Список групп
@@ -43,12 +44,19 @@ const AdminCoursesManagement = () => {
         };
         fetchGroups();
     }, []);
-
     useEffect(() => {
         const handleKeyDown = (event) => {
             if (event.key === "Escape") {
-                if (selectedRegistrationId) {
-                    setSelectedRegistrationId(null);
+                if (selectedRejectRegistrationId) {
+                    setSelectedRejectRegistrationId(null);
+                    setRejectReason("");
+                }
+                if (selectedExpelRegistrationId) {
+                    setSelectedExpelRegistrationId(null);
+                    setRejectReason("");
+                }
+                if (selectedExpelRegistrationId) {
+                    setSelectedExpelRegistrationId(null);
                     setRejectReason("");
                 }
                 if (selectedPdfRegistrationId) {
@@ -65,7 +73,7 @@ const AdminCoursesManagement = () => {
         return () => {
             document.removeEventListener("keydown", handleKeyDown);
         };
-    }, [selectedRegistrationId, selectedPdfRegistrationId, selectedUser]);
+    }, [selectedRejectRegistrationId, selectedExpelRegistrationId, selectedPdfRegistrationId, selectedUser]);
 
     useEffect(() => {
         console.log("Registrations updated:", registrations);
@@ -118,7 +126,7 @@ const AdminCoursesManagement = () => {
 
     // Отклонение заявки
     const handleReject = (registrationId) => {
-        setSelectedRegistrationId(registrationId);
+        setSelectedRejectRegistrationId(registrationId);
     };
 
     const confirmReject = () => {
@@ -126,7 +134,7 @@ const AdminCoursesManagement = () => {
             setError("Укажите причину отклонения");
             return;
         }
-        fetch(`http://localhost:5000/admin/reject-registration/${selectedRegistrationId}`, {
+        fetch(`http://localhost:5000/admin/reject-registration/${selectedRejectRegistrationId}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -137,12 +145,12 @@ const AdminCoursesManagement = () => {
                 if (data.success) {
                     setRegistrations(
                         registrations.map((reg) =>
-                            reg._id === selectedRegistrationId
+                            reg._id === selectedRejectRegistrationId
                                 ? { ...reg, status: "Отклоненный", rejectReason }
                                 : reg
                         )
                     );
-                    setSelectedRegistrationId(null);
+                    setSelectedRejectRegistrationId(null);
                     setRejectReason("");
                 } else {
                     setError(data.message || "Ошибка при отклонении заявки");
@@ -180,32 +188,32 @@ const AdminCoursesManagement = () => {
 
     // Отчисление пользователя
     const handleExpel = (registrationId) => {
-        setSelectedRegistrationId(registrationId);
+        setSelectedExpelRegistrationId(registrationId);
     };
 
     const confirmExpel = () => {
-        if (!rejectReason) {
+        if (!expelReason) {
             setError("Укажите причину отчисления");
             return;
         }
-        fetch(`http://localhost:5000/admin/expel-registration/${selectedRegistrationId}`, {
+        fetch(`http://localhost:5000/admin/expel-registration/${selectedExpelRegistrationId}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ reason: rejectReason }),
+            body: JSON.stringify({ reason: expelReason }),
         })
             .then((response) => response.json())
             .then((data) => {
                 if (data.success) {
                     setRegistrations(
                         registrations.map((reg) =>
-                            reg._id === selectedRegistrationId
-                                ? { ...reg, status: "Отчисленный", rejectReason }
+                            reg._id === selectedExpelRegistrationId
+                                ? { ...reg, status: "Отчисленный", rejectReason: expelReason }
                                 : reg
                         )
                     );
-                    setSelectedRegistrationId(null);
-                    setRejectReason("");
+                    setSelectedExpelRegistrationId(null);
+                    setExpelReason("");
                 } else {
                     setError(data.message || "Ошибка при отчислении");
                 }
@@ -221,7 +229,6 @@ const AdminCoursesManagement = () => {
         setSelectedPdfRegistrationId(registrationId);
         setPdfUrl(`http://localhost:5000/user/view-contract/${registrationId}`);
     };
-
     const handleApprovePdf = (registrationId) => {
         fetch(`http://localhost:5000/admin/approve-contract/${registrationId}`, {
             method: "POST",
@@ -246,38 +253,6 @@ const AdminCoursesManagement = () => {
             });
     };
 
-    const handleRejectPdf = (registrationId) => {
-        if (!rejectReasonPdf) {
-            setError("Укажите причину отклонения");
-            return;
-        }
-        fetch(`http://localhost:5000/admin/reject-registration/${registrationId}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ reason: rejectReasonPdf }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.success) {
-                    setRegistrations(
-                        registrations.map((reg) =>
-                            reg._id === registrationId
-                                ? { ...reg, status: "Отклоненный", rejectReason: rejectReasonPdf }
-                                : reg
-                        )
-                    );
-                    setSelectedPdfRegistrationId(null);
-                    setRejectReasonPdf("");
-                } else {
-                    setError(data.message || "Ошибка при отклонении заявки");
-                }
-            })
-            .catch((error) => {
-                console.error("Error rejecting registration:", error);
-                setError("Ошибка при отклонении заявки");
-            });
-    };
 
     const handleAssignGroup = async (registrationId, groupId) => {
         if (!groupId) {
@@ -319,7 +294,7 @@ const AdminCoursesManagement = () => {
         setSelectedUser(null);
     };
 
-    if (isLoading) return
+    if (isLoading) return <div>Loading...</div>;
 
     return (
         <div className="admin-approval-page">
@@ -327,7 +302,6 @@ const AdminCoursesManagement = () => {
             {/* Фильтр по статусу и поиск */}
             <div className="controls">
                 <div className="search-container">
-
                     <input
                         type="text"
                         value={searchUserName}
@@ -335,8 +309,6 @@ const AdminCoursesManagement = () => {
                         placeholder="Поиск по имени пользователя"
                         className="search-input"
                     />
-
-                    <label></label>
                     <input
                         type="text"
                         value={searchCourseTitle}
@@ -345,7 +317,6 @@ const AdminCoursesManagement = () => {
                         className="search-input"
                     />
                     <div className="filter-section">
-
                         <label>Фильтр по статусу:</label>
                         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                             <option value="all">Все</option>
@@ -357,8 +328,8 @@ const AdminCoursesManagement = () => {
                         </select>
                     </div>
                 </div>
-
             </div>
+
             {/* Таблица заявок */}
             <table>
                 <thead>
@@ -410,7 +381,6 @@ const AdminCoursesManagement = () => {
                                 )}
                             </td>
                             <td>{registration.status}</td>
-
                             <td className="admin_btns">
                                 {registration.status === "Ожидание" && (
                                     <>
@@ -423,14 +393,20 @@ const AdminCoursesManagement = () => {
                                 )}
                                 {registration.status === "Одобренный" && registration.contractFilePath && (
                                     <>
-                                      {/* <button className="reject-btn" onClick={() => handleReject(registration._id)}>Отклонить</button> */}
-                                    <button className="approve-btn" onClick={() => handleViewPdf(registration._id)}>Проверить договор</button>
-
+                                        <button className="reject-btn" onClick={() => handleReject(registration._id)}>Отклонить</button>
+                                        <button className="approve-btn" onClick={() => handleViewPdf(registration._id)}>Проверить договор</button>
                                     </>
+                                )}
+                                {registration.status === "Одобренный" && !(registration.contractFilePath) && (
+                                    <>
+                                        <button className="reject-btn" onClick={() => handleReject(registration._id)}>Отклонить</button>
+                                    </>
+                                )}
+                                {registration.status === "Принят" && registration.contractFilePath && (
+                                    <button className="reject-btn" onClick={() => handleExpel(registration._id)}>Отчислить</button>
                                 )}
                                 {!(registration.status == "Ожидание") && !(registration.status === "Отклоненный" || registration.status === "Отчисленный") && (
                                     <>
-                                        <button className="reject-btn" onClick={() => handleExpel(registration._id)}>Отчислить</button>
                                         <button onClick={() => handleViewConsent(registration.userId)}>Просмотр согласия</button>
                                     </>
                                 )}
@@ -441,7 +417,7 @@ const AdminCoursesManagement = () => {
             </table>
 
             {/* Модальное окно для отклонения заявки */}
-            {selectedRegistrationId && (
+            {selectedRejectRegistrationId && (
                 <div className="modal">
                     <div className="modal-content">
                         <h3>Укажите причину отклонения</h3>
@@ -451,25 +427,25 @@ const AdminCoursesManagement = () => {
                             onChange={(e) => setRejectReason(e.target.value)}
                             placeholder="Причина отклонения"
                         />
-                        <button onClick={confirmReject}>Подтвердить</button>
-                        <button onClick={() => setSelectedRegistrationId(null)}>Отмена</button>
+                        <button className="approve-btn" onClick={confirmReject}>Подтвердить</button>
+                        <button className="reject-btn" onClick={() => setSelectedRejectRegistrationId(null)}>Отмена</button>
                     </div>
                 </div>
             )}
 
             {/* Модальное окно для отчисления */}
-            {selectedRegistrationId && (
+            {selectedExpelRegistrationId && (
                 <div className="modal">
                     <div className="modal-content">
                         <h3>Укажите причину отчисления</h3>
                         <textarea
                             type="text"
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
+                            value={expelReason}
+                            onChange={(e) => setExpelReason(e.target.value)}
                             placeholder="Причина отчисления"
                         />
                         <button className="approve-btn" onClick={confirmExpel}>Подтвердить</button>
-                        <button className="reject-btn" onClick={() => setSelectedRegistrationId(null)}>Отмена</button>
+                        <button className="reject-btn" onClick={() => setSelectedExpelRegistrationId(null)}>Отмена</button>
                     </div>
                 </div>
             )}
@@ -493,6 +469,7 @@ const AdminCoursesManagement = () => {
                 </div>
             )}
 
+            {/* Модальное окно для просмотра информации о пользователе */}
             {selectedUser && (
                 <div className="user-info-modal">
                     <div className="user-info-container">
