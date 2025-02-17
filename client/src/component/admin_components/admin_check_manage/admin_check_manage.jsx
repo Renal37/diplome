@@ -344,18 +344,19 @@ const AdminCoursesManagement = () => {
                         placeholder="Поиск по названию курса"
                         className="search-input"
                     />
-                </div>
-                <div className="filter-section">
+                    <div className="filter-section">
 
-                    <label>Фильтр по статусу:</label>
-                    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                        <option value="all">Все</option>
-                        <option value="Ожидание">Ожидание</option>
-                        <option value="Одобренный">Одобренный</option>
-                        <option value="Отклоненный">Отклоненный</option>
-                        <option value="Отчисленный">Отчисленный</option>
-                    </select>
+                        <label>Фильтр по статусу:</label>
+                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                            <option value="all">Все</option>
+                            <option value="Ожидание">Ожидание</option>
+                            <option value="Одобренный">Одобренный</option>
+                            <option value="Отклоненный">Отклоненный</option>
+                            <option value="Отчисленный">Отчисленный</option>
+                        </select>
+                    </div>
                 </div>
+
             </div>
             {/* Таблица заявок */}
             <table>

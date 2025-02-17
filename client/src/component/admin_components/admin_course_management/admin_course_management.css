@@ -242,7 +242,9 @@ button.reject-btn {
 }
 
 .filter-section {
-    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+        margin-bottom: 20px;
   }
   
   .filter-section label {
