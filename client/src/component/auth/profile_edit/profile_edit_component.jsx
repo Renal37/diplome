@@ -87,31 +87,6 @@ const Profile_Edit = () => {
           <Route path="document" element={<ProfileEditDocument />} />
         </Routes>
       </div>
-      {profile && (
-        <>
-          <button
-            className="download-contract-button"
-            onClick={() => handleDownloadContract(profile.ID)}
-          >
-            Скачать договор
-          </button>
-          <label htmlFor="upload-contract" className="upload-label">
-            Загрузить файл
-          </label>
-          <input
-            id="upload-contract"
-            type="file"
-            accept=".pdf"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const file = e.target.files[0];
-              if (file) {
-                handleUploadContract(profile.ID, file);
-              }
-            }}
-          />
-        </>
-      )}
     </div>
   );
 };

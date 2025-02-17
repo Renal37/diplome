@@ -20,6 +20,74 @@ const ProfileEditDocument = () => {
         snils: "",
         agreeToProcessing: false,
     });
+    const [profile, setProfile] = useState(null);
+
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await fetch("http://localhost:5000/profile", {
+                    method: "GET",
+                    credentials: "include",
+                });
+
+                if (!response.ok) {
+                    throw new Error("Ошибка при загрузке профиля");
+                }
+
+                const data = await response.json();
+                setProfile(data);
+            } catch (err) {
+                setError(err.message);
+            }
+        };
+
+        fetchProfile();
+    }, []);
+
+    const handleDownloadContract = async () => {
+        try {
+            const response = await fetch(`http://localhost:5000/user/download-document`, {
+                method: "GET",
+                credentials: "include",
+            });
+            if (!response.ok) {
+                throw new Error("Ошибка при скачивании договора");
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = "согласние.pdf";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            alert("Вы скачали соглашение, теперь заполните его и отправьте нам!");
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    const handleUploadContract = async (userId, file) => {
+        const formData = new FormData();
+        formData.append("contract", file);
+
+        try {
+            const response = await fetch(`http://localhost:5000/user/upload-document/${userId}`, {
+                method: "POST",
+                body: formData,
+                credentials: "include",
+            });
+            if (!response.ok) {
+                throw new Error("Ошибка при загрузке договора");
+            }
+            alert("Договор успешно загружен!");
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
 
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
@@ -121,7 +189,7 @@ const ProfileEditDocument = () => {
         }
     };
 
-    
+
     return (
         <div className="profile-edit-container">
             <form onSubmit={handleSubmit}>
@@ -186,6 +254,31 @@ const ProfileEditDocument = () => {
                     </button>
                 </div>
             </form>
+            {profile && (
+                <div className="download-cont">
+                    <button
+                        className="download-contract-button"
+                        onClick={() => handleDownloadContract(profile.ID)}
+                    >
+                        Скачать согласие
+                    </button>
+                    <label htmlFor="upload-contract" className="upload-label">
+                        Загрузить файл
+                    </label>
+                    <input
+                        id="upload-contract"
+                        type="file"
+                        accept=".pdf"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                                handleUploadContract(profile.ID, file);
+                            }
+                        }}
+                    />
+                </div>
+            )}
         </div>
     );
 };

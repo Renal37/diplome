@@ -84,7 +84,7 @@ const CheckCourse = () => {
             // Обновляем состояние курсов после успешной загрузки
             setCourses((prevCourses) =>
                 prevCourses.map((course) =>
-                    course._id === courseId ? { ...course, contractUploaded: false } : course
+                    course._id === courseId ? { ...course, contractUploaded: true } : course
                 )
             );
         } catch (err) {
@@ -160,7 +160,7 @@ const CheckCourse = () => {
 
 
                                         {!course.contractUploaded && (
-                                            <>
+                                            <div className="download-buttons">
                                                 <button
                                                     className="download-contract-button"
                                                     onClick={() => handleDownloadContract(course._id)}
@@ -182,7 +182,7 @@ const CheckCourse = () => {
                                                         }
                                                     }}
                                                 />
-                                            </>
+                                            </div>
                                         )}
                                         <span className="file-status">
                                             {course.contractUploaded

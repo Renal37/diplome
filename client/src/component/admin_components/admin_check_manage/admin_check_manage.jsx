@@ -372,7 +372,7 @@ const AdminCoursesManagement = () => {
                 <tbody>
                     {filteredRegistrations.map((registration) => (
                         <tr key={registration._id}>
-                            <td className="course-title">{registration.courseTitle}</td>
+                            <td className="course-titles">{registration.courseTitle}</td>
                             <td>
                                 <button onClick={() => handleViewUser({
                                     username: registration.userName,

@@ -10,6 +10,10 @@
     text-align: center;
     margin-bottom: 20px;
 }
+.admin-course-header{
+    display: flex;
+    gap: 20px;
+}
 
 .admin-groups-management-page table {
     width: 100%;
