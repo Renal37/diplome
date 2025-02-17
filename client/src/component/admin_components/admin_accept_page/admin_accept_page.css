@@ -27,11 +27,6 @@ td {
     text-align: left;
 }
 
-th {
-    background-color: #f4f4f4;
-    font-weight: bold;
-    color: #555;
-}
 
 button {
     margin-right: 5px;
@@ -41,15 +36,11 @@ button {
     cursor: pointer;
     font-size: 14px;
     transition: background-color 0.3s ease;
+    max-width: 100%;
 }
 
 button:hover {
     opacity: 0.9;
-}
-
-button.approve-btn {
-    background-color: #28a745;
-    color: white;
 }
 
 button.reject-btn {
@@ -139,7 +130,7 @@ textarea {
     text-align: left;
 }
 
-.user-info-table th {
+.user-info th {
     background-color: #f4f4f4;
     font-weight: bold;
 }

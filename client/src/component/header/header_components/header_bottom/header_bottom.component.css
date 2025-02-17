@@ -84,10 +84,15 @@ body[data-path^="/admin"] .request_course {
     padding: 20px 0 20px 0px;
 }
 
+.header_bottom_bg nav {
+    margin: 0 auto;
+    max-width: 1680px;
+}
+
 .header_bottom nav ul {
     display: flex;
     align-items: center;
-    justify-content: space-around;
+    justify-content: space-between;
 }
 
 .header_bottom nav ul li {

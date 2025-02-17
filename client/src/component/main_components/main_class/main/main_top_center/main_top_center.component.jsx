@@ -18,10 +18,6 @@ const Main_top_center = () => {
 
     return (
         <div className="main_top_center_slider">
-            {/* Статичное изображение */}
-
-
-
             {/* Слайдер с текстовым содержимым */}
             <Slider {...settings} className="main_top_slider">
                 {/* Слайд 1 */}
@@ -81,7 +77,6 @@ const Main_top_center = () => {
                     2. лица, получающие среднее профессиональное и (или) высшее образование.
                 </p>
             </div>
-
         </div>
     );
 };
