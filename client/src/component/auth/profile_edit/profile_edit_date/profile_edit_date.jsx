@@ -66,6 +66,14 @@ const ProfileEditDate = () => {
         return cyrillicRegex.test(text);
     };
 
+    // Функция для форматирования первой буквы в заглавную
+    const capitalizeFirstLetter = (text) => {
+        return text
+            .split(' ') // Разделяем строку на слова
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Каждое слово начинаем с заглавной буквы
+            .join(' '); // Соединяем слова обратно в строку
+    };
+
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
 
@@ -77,9 +85,15 @@ const ProfileEditDate = () => {
             }
         }
 
+        // Форматирование первой буквы в заглавную для ФИО
+        let formattedValue = value;
+        if (name === 'lastName' || name === 'firstName' || name === 'middleName') {
+            formattedValue = capitalizeFirstLetter(value);
+        }
+
         setUserData((prevState) => ({
             ...prevState,
-            [name]: type === 'checkbox' ? checked : value,
+            [name]: type === 'checkbox' ? checked : formattedValue,
         }));
         setError(''); // Сбрасываем ошибку при успешном вводе
     };
@@ -301,7 +315,7 @@ const ProfileEditDate = () => {
                                 Согласен на обработку персональных данных
                             </label>
                         </div>
-                         {/* )} */}
+                        {/* )} */}
                         {/* <div className="form-group">
                             <label>Старый пароль (для изменения пароля):</label>
                             <input
