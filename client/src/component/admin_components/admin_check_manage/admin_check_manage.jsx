@@ -13,12 +13,17 @@ const AdminCoursesManagement = () => {
     const [selectedUser, setSelectedUser] = useState(null); // Выбранный пользователь
     const [filterStatus, setFilterStatus] = useState("all"); // Фильтр по статусу
     const [groups, setGroups] = useState([]); // Список групп
+    const [searchUserName, setSearchUserName] = useState(""); // Поиск по имени пользователя
+    const [searchCourseTitle, setSearchCourseTitle] = useState(""); // Поиск по названию курса
 
-    // Фильтрация заявок по статусу
+    // Фильтрация заявок по статусу, имени пользователя и названию курса
     const filteredRegistrations = registrations.filter((registration) => {
-        if (filterStatus === "all") return true;
-        return registration.status === filterStatus;
+        const matchesStatus = filterStatus === "all" || registration.status === filterStatus;
+        const matchesUserName = registration.userName.toLowerCase().includes(searchUserName.toLowerCase());
+        const matchesCourseTitle = registration.courseTitle.toLowerCase().includes(searchCourseTitle.toLowerCase());
+        return matchesStatus && matchesUserName && matchesCourseTitle;
     });
+
     // Загрузка списка групп
     useEffect(() => {
         const fetchGroups = async () => {
@@ -38,6 +43,7 @@ const AdminCoursesManagement = () => {
         };
         fetchGroups();
     }, []);
+
     useEffect(() => {
         const handleKeyDown = (event) => {
             if (event.key === "Escape") {
@@ -60,10 +66,11 @@ const AdminCoursesManagement = () => {
             document.removeEventListener("keydown", handleKeyDown);
         };
     }, [selectedRegistrationId, selectedPdfRegistrationId, selectedUser]);
+
     useEffect(() => {
-        // Этот эффект будет срабатывать при изменении registrations
         console.log("Registrations updated:", registrations);
     }, [registrations]);
+
     // Загрузка данных при монтировании
     useEffect(() => {
         fetch("http://localhost:5000/admin/course-registrations", {
@@ -146,9 +153,11 @@ const AdminCoursesManagement = () => {
                 setError("Ошибка при отклонении заявки");
             });
     };
+
     const handleViewConsent = (userId) => {
         window.open(`http://localhost:5000/user/view-consent/${userId}`, '_blank');
     };
+
     // Удаление заявки
     const handleDelete = (registrationId) => {
         fetch(`http://localhost:5000/admin/delete-registration/${registrationId}`, {
@@ -221,22 +230,18 @@ const AdminCoursesManagement = () => {
             .then((response) => response.json())
             .then((data) => {
                 if (data.success) {
-                    // Обновляем статус заявки в локальном состоянии
                     setRegistrations((prevRegistrations) =>
                         prevRegistrations.map((reg) =>
                             reg._id === registrationId ? { ...reg, status: "Принят" } : reg
                         )
                     );
-                    // Закрываем модальное окно PDF
                     setSelectedPdfRegistrationId(null);
                 } else {
-                    // Показываем alert с сообщением об ошибке
                     window.alert(data.message || "Ошибка при принятии заявки");
                 }
             })
             .catch((error) => {
                 console.error("Error approving contract:", error);
-                // Показываем alert с сообщением об ошибке
                 window.alert("Произошла ошибка при принятии заявки. Пожалуйста, попробуйте снова.");
             });
     };
@@ -273,6 +278,7 @@ const AdminCoursesManagement = () => {
                 setError("Ошибка при отклонении заявки");
             });
     };
+
     const handleAssignGroup = async (registrationId, groupId) => {
         if (!groupId) {
             setError("Выберите группу");
@@ -303,6 +309,7 @@ const AdminCoursesManagement = () => {
             setError("Ошибка при привязке к группе");
         }
     };
+
     // Просмотр информации о пользователе
     const handleViewUser = (user) => {
         setSelectedUser(user);
@@ -312,24 +319,44 @@ const AdminCoursesManagement = () => {
         setSelectedUser(null);
     };
 
-    if (isLoading) return <div>Загрузка...</div>;
-    if (error) return <div>{error}</div>;
+    if (isLoading) return
 
     return (
         <div className="admin-approval-page">
+            {error && <p className="error">{error}</p>}
+            {/* Фильтр по статусу и поиск */}
+            <div className="controls">
+                <div className="search-container">
 
-            {/* Фильтр по статусу */}
-            <div className="filter-section">
-                <label>Фильтр по статусу:</label>
-                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                    <option value="all">Все</option>
-                    <option value="Ожидание">Ожидание</option>
-                    <option value="Одобренный">Одобренный</option>
-                    <option value="Отклоненный">Отклоненный</option>
-                    <option value="Отчисленный">Отчисленный</option>
-                </select>
+                    <input
+                        type="text"
+                        value={searchUserName}
+                        onChange={(e) => setSearchUserName(e.target.value)}
+                        placeholder="Поиск по имени пользователя"
+                        className="search-input"
+                    />
+
+                    <label></label>
+                    <input
+                        type="text"
+                        value={searchCourseTitle}
+                        onChange={(e) => setSearchCourseTitle(e.target.value)}
+                        placeholder="Поиск по названию курса"
+                        className="search-input"
+                    />
+                </div>
+                <div className="filter-section">
+
+                    <label>Фильтр по статусу:</label>
+                    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                        <option value="all">Все</option>
+                        <option value="Ожидание">Ожидание</option>
+                        <option value="Одобренный">Одобренный</option>
+                        <option value="Отклоненный">Отклоненный</option>
+                        <option value="Отчисленный">Отчисленный</option>
+                    </select>
+                </div>
             </div>
-
             {/* Таблица заявок */}
             <table>
                 <thead>
@@ -378,7 +405,6 @@ const AdminCoursesManagement = () => {
                                             ))}
                                         </select>
                                     </div>
-
                                 )}
                             </td>
                             <td>{registration.status}</td>
@@ -395,7 +421,6 @@ const AdminCoursesManagement = () => {
                                 )}
                                 {registration.status === "Одобренный" && registration.contractFilePath && (
                                     <button className="approve-btn" onClick={() => handleViewPdf(registration._id)}>Проверить договор</button>
-
                                 )}
                                 {!(registration.status == "Ожидание") && !(registration.status === "Отклоненный" || registration.status === "Отчисленный") && (
                                     <>
@@ -458,12 +483,10 @@ const AdminCoursesManagement = () => {
                             <button className="reject-btn" onClick={() => setSelectedPdfRegistrationId(null)}>Закрыть</button>
                             <button className="approve-btn" onClick={() => handleApprovePdf(selectedPdfRegistrationId)}>Принять</button>
                         </div>
-
                     </div>
                 </div>
             )}
 
-            {/* Модальное окно для просмотра информации о пользователе */}
             {selectedUser && (
                 <div className="user-info-modal">
                     <div className="user-info-container">
