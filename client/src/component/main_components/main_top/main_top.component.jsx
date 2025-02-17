@@ -13,7 +13,7 @@ const Main_top = () => {
     }, []);
 
     return (
-        <div className="main_top" style={{ paddingTop: headerHeight }}>
+        <div className="main_top" >
             <Header_center_head />
         </div>
     );

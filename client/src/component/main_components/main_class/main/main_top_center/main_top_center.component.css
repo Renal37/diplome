@@ -17,12 +17,10 @@
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-
-.main_top_img {
+.main_top_img{
     top: -400px;
     position: absolute;
 }
-
 /* Слайдер */
 
 .main_top_slider {
@@ -74,7 +72,10 @@
     margin: 0;
     padding: 0;
 }
-
+.main_img{
+    margin: 0 auto;
+    max-width: 1000px;
+}
 .slick-dots li button {
     font-size: 0;
     line-height: 0;
@@ -88,7 +89,7 @@
     cursor: pointer;
 }
 
-.under_img {
+.under_img{
     display: flex;
     align-items: center;
     justify-content: center;

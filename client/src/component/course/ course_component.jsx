@@ -35,6 +35,7 @@ const CourseRegistration = () => {
                     navigate('/auth/login');
                 } else {
                     setUser(data);
+                    console.log(data);
                 }
             })
             .catch(error => {
@@ -48,7 +49,7 @@ const CourseRegistration = () => {
             console.error("User ID is missing");
             return;
         }
-        if (!user.lastName || !user.firstName || !user.middleName || !user.birthDate || !user.birthPlace || !user.education || !user.email || !user.birthDate || !user.homeAddress || !user.jobTitle || !user.passportData || !user.phone || !user.snils || !user.workPlace || !user.workPlace) {
+        if (!user.lastName || !user.firstName || !user.middleName || !user.birthDate || !user.birthPlace || !user.education || !user.email || !user.birthDate || !user.homeAddress || !user.jobTitle || !user.passportData || !user.phone || !user.snils || !user.workPlace || !user.contractuploaded) {
             alert('Для записи на курс заполните данные профиля');
             return;
         }
