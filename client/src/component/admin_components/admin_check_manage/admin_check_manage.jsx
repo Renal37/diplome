@@ -353,6 +353,7 @@ const AdminCoursesManagement = () => {
                             <option value="Одобренный">Одобренный</option>
                             <option value="Отклоненный">Отклоненный</option>
                             <option value="Отчисленный">Отчисленный</option>
+                            <option value="Принят">Принят</option>
                         </select>
                     </div>
                 </div>
@@ -421,7 +422,11 @@ const AdminCoursesManagement = () => {
                                     <button className="reject-btn" onClick={() => handleDelete(registration._id)}>Удалить</button>
                                 )}
                                 {registration.status === "Одобренный" && registration.contractFilePath && (
+                                    <>
+                                      {/* <button className="reject-btn" onClick={() => handleReject(registration._id)}>Отклонить</button> */}
                                     <button className="approve-btn" onClick={() => handleViewPdf(registration._id)}>Проверить договор</button>
+
+                                    </>
                                 )}
                                 {!(registration.status == "Ожидание") && !(registration.status === "Отклоненный" || registration.status === "Отчисленный") && (
                                     <>

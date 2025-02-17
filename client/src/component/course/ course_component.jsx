@@ -4,7 +4,7 @@ import './course_component.css';
 
 const CourseRegistration = () => {
     const { courseId } = useParams();
-    const navigate = useNavigate(); // Используем useNavigate вместо useHistory
+    const navigate = useNavigate();
     const [course, setCourse] = useState(null);
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -48,8 +48,8 @@ const CourseRegistration = () => {
             console.error("User ID is missing");
             return;
         }
-        if (!user.lastName || !user.firstName || !user.middleName) {
-            navigate('/auth/edit_profile'); 
+        if (!user.lastName || !user.firstName || !user.middleName || !user.birthDate || !user.birthPlace || !user.education || !user.email || !user.birthDate || !user.homeAddress || !user.jobTitle || !user.passportData || !user.phone || !user.snils || !user.workPlace || !user.workPlace) {
+            alert('Для записи на курс заполните данные профиля');
             return;
         }
 
@@ -68,7 +68,7 @@ const CourseRegistration = () => {
             .then(data => {
                 if (data.success) {
                     alert('Вы успешно записаны на курс! Ожидайте одобрения администратора.');
-                    navigate('/'); // Используем navigate вместо history.push
+                    navigate('/');
                 } else {
                     setError(data.message || 'Ошибка при записи на курс');
                 }
@@ -77,6 +77,10 @@ const CourseRegistration = () => {
                 console.error('Error registering for course:', error);
                 setError('Ошибка при записи на курс');
             });
+    };
+
+    const isProfileComplete = () => {
+        return user && user.ID
     };
 
     if (isLoading) {
@@ -100,11 +104,13 @@ const CourseRegistration = () => {
                     <p><strong>Тип:</strong> {course.type}</p>
                 </div>
                 <div className='course_btn'>
-                <button className="course-registration-button" onClick={handleRegister}>
-                    Записаться на курс
-                </button>
+                    {isProfileComplete() && (
+                        <button className="course-registration-button" onClick={handleRegister}>
+                            Записаться на курс
+                        </button>
+                    )}
                 </div>
-               
+
                 {error && <p className="course-registration-error">{error}</p>}
             </div>
         </div>
