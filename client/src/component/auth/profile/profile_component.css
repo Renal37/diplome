@@ -74,6 +74,7 @@
 }
 
 .prifle_nav_a{
+  text-align: center;
   display: inline-block;
   margin-top: 10px;
   padding: 10px 20px;
@@ -87,3 +88,4 @@
 .prifle_nav_a:hover{
   background-color: #0056b3;
 }
+

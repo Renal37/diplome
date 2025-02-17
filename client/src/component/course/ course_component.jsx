@@ -4,7 +4,7 @@ import './course_component.css';
 
 const CourseRegistration = () => {
     const { courseId } = useParams();
-    const navigate = useNavigate(); // Используем useNavigate вместо useHistory
+    const navigate = useNavigate();
     const [course, setCourse] = useState(null);
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -35,11 +35,12 @@ const CourseRegistration = () => {
                     navigate('/auth/login');
                 } else {
                     setUser(data);
+                    console.log(data);
                 }
             })
             .catch(error => {
                 console.error('Error fetching user data:', error);
-                // navigate('/auth/login'); // Используем navigate вместо history.push
+                // navigate('/auth/login'); 
             });
     }, [courseId, navigate]);
 
@@ -48,11 +49,32 @@ const CourseRegistration = () => {
             console.error("User ID is missing");
             return;
         }
-        if (!user.lastName || !user.firstName || !user.middleName) {
-            navigate('/auth/edit_profile'); // Используем navigate вместо history.push
-            return;
+    
+        const requiredFields = [
+            { field: 'lastName', message: 'Фамилия не заполнена' },
+            { field: 'firstName', message: 'Имя не заполнено' },
+            { field: 'middleName', message: 'Отчество не заполнено' },
+            { field: 'birthDate', message: 'Дата рождения не указана' },
+            { field: 'birthPlace', message: 'Место рождения не указано' },
+            { field: 'education', message: 'Образование не указано' },
+            { field: 'email', message: 'Email не указан' },
+            { field: 'homeAddress', message: 'Домашний адрес не указан' },
+            { field: 'jobTitle', message: 'Должность не указана' },
+            { field: 'passportData', message: 'Паспортные данные не указаны' },
+            { field: 'phone', message: 'Телефон не указан' },
+            { field: 'snils', message: 'СНИЛС не указан' },
+            { field: 'workPlace', message: 'Место работы не указано' },
+            { field: 'contractuploaded', message: 'Соглашение не найдено' },
+        ];
+    
+        for (const { field, message } of requiredFields) {
+            if (!user[field]) {
+                alert(message);
+                navigate("/auth/edit_profile")
+                return;
+            }
         }
-
+    
         fetch('http://localhost:5000/courses/register', {
             method: 'POST',
             headers: {
@@ -68,7 +90,7 @@ const CourseRegistration = () => {
             .then(data => {
                 if (data.success) {
                     alert('Вы успешно записаны на курс! Ожидайте одобрения администратора.');
-                    navigate('/'); // Используем navigate вместо history.push
+                    navigate('/');
                 } else {
                     setError(data.message || 'Ошибка при записи на курс');
                 }
@@ -77,6 +99,10 @@ const CourseRegistration = () => {
                 console.error('Error registering for course:', error);
                 setError('Ошибка при записи на курс');
             });
+    };
+
+    const isProfileComplete = () => {
+        return user && user.ID
     };
 
     if (isLoading) {
@@ -100,11 +126,13 @@ const CourseRegistration = () => {
                     <p><strong>Тип:</strong> {course.type}</p>
                 </div>
                 <div className='course_btn'>
-                <button className="course-registration-button" onClick={handleRegister}>
-                    Записаться на курс
-                </button>
+                    {isProfileComplete() && (
+                        <button className="course-registration-button" onClick={handleRegister}>
+                            Записаться на курс
+                        </button>
+                    )}
                 </div>
-               
+
                 {error && <p className="course-registration-error">{error}</p>}
             </div>
         </div>

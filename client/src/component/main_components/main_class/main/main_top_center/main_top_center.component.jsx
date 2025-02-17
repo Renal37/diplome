@@ -17,58 +17,78 @@ const Main_top_center = () => {
     };
 
     return (
-        <div className="main_top_center_slider">
-            {/* Статичное изображение */}
-            <img src={apt} alt="Наш техникум" className="static-image" />
-
+        <div className="main_top">
+ <div className="main_top_center_slider">
             {/* Слайдер с текстовым содержимым */}
-            <Slider {...settings} className="main_top_slider">
-                {/* Слайд 1 */}
-                <div className="slider-item">
-                    <div className="slider-content">
-                        <h3>Почему наш сайт?</h3>
-                        <p>
-                            Мы предлагаем качественные образовательные программы, разработанные опытными преподавателями.
-                        </p>
+            <div className="main_top_sliders">
+                <Slider {...settings} className="main_top_slider">
+                    {/* Слайд 1 */}
+                    <div className="slider-item">
+                        <div className="slider-content">
+                            <h3>Почему наш сайт?</h3>
+                            <p>
+                                Мы предлагаем качественные образовательные программы, разработанные опытными преподавателями.
+                            </p>
+                        </div>
                     </div>
-                </div>
 
-                {/* Слайд 2 */}
-                <div className="slider-item">
-                    <div className="slider-content">
-                        <h3>Почему именно у нас?</h3>
-                        <p>
-                            По завершению обучения выдается диплом о профессиональной переподготовке.
-                        </p>
+                    {/* Слайд 2 */}
+                    <div className="slider-item">
+                        <div className="slider-content">
+                            <h3>Почему именно у нас?</h3>
+                            <p>
+                                По завершению обучения выдается диплом о профессиональной переподготовке.
+                            </p>
+                        </div>
                     </div>
-                </div>
-                <div className="slider-item">
-                    <div className="slider-content">
-                        <h3>Почему именно у нас?</h3>
-                        <p>
-                            Наши курсы помогут вам получить актуальные знания и навыки, необходимые для успешной карьеры.
-                        </p>
+                    <div className="slider-item">
+                        <div className="slider-content">
+                            <h3>Почему именно у нас?</h3>
+                            <p>
+                                Наши курсы помогут вам получить актуальные знания и навыки, необходимые для успешной карьеры.
+                            </p>
+                        </div>
                     </div>
-                </div>
-                <div className="slider-item">
-                    <div className="slider-content">
-                        <h3>Почему наш мы?</h3>
-                        <p>
-                        Доставка документов по всей России.
-                        </p>
+                    <div className="slider-item">
+                        <div className="slider-content">
+                            <h3>Почему наш мы?</h3>
+                            <p>
+                                Доставка документов по всей России.
+                            </p>
+                        </div>
                     </div>
-                </div>
-                {/* Слайд 3 */}
-                <div className="slider-item">
-                    <div className="slider-content">
-                        <h3>Преимущества наших курсов</h3>
-                        <p>
-                            Гибкий график обучения, доступные цены и поддержка на всех этапах обучения.
-                        </p>
+                    {/* Слайд 3 */}
+                    <div className="slider-item">
+                        <div className="slider-content">
+                            <h3>Преимущества наших курсов</h3>
+                            <p>
+                                Гибкий график обучения, доступные цены и поддержка на всех этапах обучения.
+                            </p>
+                        </div>
                     </div>
+                </Slider>
+            </div>
+            <div className="main_top_img">
+                <div className="main_img">
+                <img src={apt} alt="Наш техникум" className="static-image" />
+
                 </div>
-            </Slider>
+                <div className="under_img">
+                    <p>
+                        К освоению дополнительных профессиональных образовательных программ допускаются:
+                    </p>
+                    <p>
+                        1. лица, имеющие среднее профессиональное и (или) высшее образование;
+                    </p>
+                    <p>
+                        2. лица, получающие среднее профессиональное и (или) высшее образование.
+                    </p>
+                </div>
+            </div>
+
         </div>
+        </div>
+       
     );
 };
 
