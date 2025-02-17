@@ -120,7 +120,7 @@ const CheckCourse = () => {
                     onClick={() => setSelectedStatus("Принят")}
                     className={`prifle_nav_button ${selectedStatus === "Принят" ? "active" : ""}`}
                 >
-                    Принят курысы
+                    Принятые
                 </button>
                 <button
                     onClick={() => setSelectedStatus("Отклоненный")}

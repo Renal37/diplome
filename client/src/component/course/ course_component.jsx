@@ -49,11 +49,32 @@ const CourseRegistration = () => {
             console.error("User ID is missing");
             return;
         }
-        if (!user.lastName || !user.firstName || !user.middleName || !user.birthDate || !user.birthPlace || !user.education || !user.email || !user.birthDate || !user.homeAddress || !user.jobTitle || !user.passportData || !user.phone || !user.snils || !user.workPlace || !user.contractuploaded) {
-            alert('Для записи на курс заполните данные профиля');
-            return;
+    
+        const requiredFields = [
+            { field: 'lastName', message: 'Фамилия не заполнена' },
+            { field: 'firstName', message: 'Имя не заполнено' },
+            { field: 'middleName', message: 'Отчество не заполнено' },
+            { field: 'birthDate', message: 'Дата рождения не указана' },
+            { field: 'birthPlace', message: 'Место рождения не указано' },
+            { field: 'education', message: 'Образование не указано' },
+            { field: 'email', message: 'Email не указан' },
+            { field: 'homeAddress', message: 'Домашний адрес не указан' },
+            { field: 'jobTitle', message: 'Должность не указана' },
+            { field: 'passportData', message: 'Паспортные данные не указаны' },
+            { field: 'phone', message: 'Телефон не указан' },
+            { field: 'snils', message: 'СНИЛС не указан' },
+            { field: 'workPlace', message: 'Место работы не указано' },
+            { field: 'contractuploaded', message: 'Соглашение не найдено' },
+        ];
+    
+        for (const { field, message } of requiredFields) {
+            if (!user[field]) {
+                alert(message);
+                navigate("/auth/edit_profile")
+                return;
+            }
         }
-
+    
         fetch('http://localhost:5000/courses/register', {
             method: 'POST',
             headers: {

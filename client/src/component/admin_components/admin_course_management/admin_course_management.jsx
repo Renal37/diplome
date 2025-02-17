@@ -78,7 +78,7 @@ const AdminCourseManagement = () => {
       }),
     });
     if (response.ok) {
-      alert('Course added successfully');
+      alert('Курс был успешно добавлен');
       setIsModalOpen(false);
       setCourseTitle('');
       setCourseDescription('');
@@ -111,7 +111,7 @@ const AdminCourseManagement = () => {
       }),
     });
     if (response.ok) {
-      alert('Course updated successfully');
+      alert('Курс был успешно изменен');
       fetchCourses();
       setSelectedCourse(null);
       setCourseTitle('');
@@ -120,7 +120,7 @@ const AdminCourseManagement = () => {
       setCoursePrice('');
       setCourseType('');
     } else {
-      alert('Failed to update course');
+      alert('Не удалось обновить курс');
     }
   };
 
