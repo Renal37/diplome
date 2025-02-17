@@ -49,7 +49,16 @@ const CourseRegistration = () => {
             console.error("User ID is missing");
             return;
         }
-    
+
+        // Проверка уровня образования для курсов типа "Профессиональная переподготовка"
+        if (course.type === "Профессиональная переподготовка") {
+            const allowedEducations = ["Среднее профессиональное", "Высшее"];
+            if (!allowedEducations.includes(user.education)) {
+                alert("Для записи на этот курс требуется среднее профессиональное или высшее образование.");
+                return;
+            }
+        }
+
         const requiredFields = [
             { field: 'lastName', message: 'Фамилия не заполнена' },
             { field: 'firstName', message: 'Имя не заполнено' },
@@ -66,15 +75,15 @@ const CourseRegistration = () => {
             { field: 'workPlace', message: 'Место работы не указано' },
             { field: 'contractuploaded', message: 'Соглашение не найдено' },
         ];
-    
+
         for (const { field, message } of requiredFields) {
             if (!user[field]) {
                 alert(message);
-                navigate("/auth/edit_profile")
+                navigate("/auth/edit_profile");
                 return;
             }
         }
-    
+
         fetch('http://localhost:5000/courses/register', {
             method: 'POST',
             headers: {
@@ -102,7 +111,7 @@ const CourseRegistration = () => {
     };
 
     const isProfileComplete = () => {
-        return user && user.ID
+        return user && user.ID;
     };
 
     if (isLoading) {

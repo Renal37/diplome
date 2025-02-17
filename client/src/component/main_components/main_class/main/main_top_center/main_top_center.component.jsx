@@ -21,6 +21,8 @@ const Main_top_center = () => {
     };
 
     return (
+        <>
+
         <div className="main_top_for_slider">
             <div className="main_top_center_slider">
                 {/* Картинка как фон */}
@@ -84,7 +86,11 @@ const Main_top_center = () => {
                 </div>
 
                 {/* Текст под слайдером */}
-                <div className="under_img">
+                
+            </div>
+           
+        </div>
+         <div className="under_img">
                     <p>
                         К освоению дополнительных профессиональных образовательных программ допускаются:
                     </p>
@@ -95,8 +101,7 @@ const Main_top_center = () => {
                         2. лица, получающие среднее профессиональное и (или) высшее образование.
                     </p>
                 </div>
-            </div>
-        </div>
+        </>
     );
 };
 
