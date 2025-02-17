@@ -87,7 +87,7 @@ const AdminCoursesManagement = () => {
             })
             .catch((error) => {
                 console.error("Error fetching registrations:", error);
-                setError("Ошибка при загрузке заявок");
+                setError("Ошибка при загрузке ");
                 setIsLoading(false);
             });
     }, []);

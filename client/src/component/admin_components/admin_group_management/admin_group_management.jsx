@@ -13,21 +13,25 @@ const AdminGroupManagement = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Загрузка списка групп
-    useEffect(() => {
-        const fetchGroups = async () => {
-            try {
-                const response = await fetch("http://localhost:5000/groups");
-                if (!response.ok) {
-                    throw new Error("Ошибка при загрузке групп");
-                }
-                const data = await response.json();
-                setGroups(data.groups);
-                setFilteredGroups(data.groups); // Инициализируем filteredGroups всеми группами
-            } catch (error) {
-                console.error("Error fetching groups:", error);
-                setError("Ошибка при загрузке групп");
+    const fetchGroups = async () => {
+        try {
+            const response = await fetch("http://localhost:5000/groups");
+            if (!response.ok) {
+                throw new Error("Ошибка при загрузке групп");
             }
-        };
+            const data = await response.json();
+            if (!data || !data.groups) {
+                throw new Error("Данные не получены или пусты");
+            }
+            setGroups(data.groups);
+            setFilteredGroups(data.groups); // Инициализируем filteredGroups всеми группами
+        } catch (error) {
+            console.error("Error fetching groups:", error);
+            setError("Ошибка при загрузке групп");
+        }
+    };
+
+    useEffect(() => {
         fetchGroups();
     }, []);
 

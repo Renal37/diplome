@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './admin_course_management.css';
 
 const AdminCourseManagement = () => {
-  const [courses, setCourses] = useState([]);
+  const [courses, setCourses] = useState([]); // Инициализируем как пустой массив
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courseTitle, setCourseTitle] = useState('');
   const [courseDescription, setCourseDescription] = useState('');
@@ -13,9 +13,14 @@ const AdminCourseManagement = () => {
   const [filterType, setFilterType] = useState('Все'); // Состояние для фильтрации по типу курса
 
   const fetchCourses = async () => {
-    const response = await fetch('http://localhost:5000/courses');
-    const data = await response.json();
-    setCourses(data);
+    try {
+      const response = await fetch('http://localhost:5000/courses');
+      const data = await response.json();
+      setCourses(data || []); // Убедимся, что data не null или undefined
+    } catch (error) {
+      console.error('Ошибка при загрузке курсов:', error);
+      setCourses([]); // В случае ошибки устанавливаем пустой массив
+    }
   };
 
   useEffect(() => {
@@ -148,18 +153,18 @@ const AdminCourseManagement = () => {
   return (
     <div className="admin-course-management">
       <div className="admin-course-header">
-    {/* Фильтр по типу курса */}
-    <div className="filter-section">
-        <label>Фильтр по типу курса:</label>
-        <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-        >
-          <option value="Все">Все</option>
-          <option value="Повышение квалификации">Повышение квалификации</option>
-          <option value="Профессиональная переподготовка">Профессиональная переподготовка</option>
-        </select>
-      </div>
+        {/* Фильтр по типу курса */}
+        <div className="filter-section">
+          <label>Фильтр по типу курса:</label>
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+          >
+            <option value="Все">Все</option>
+            <option value="Повышение квалификации">Повышение квалификации</option>
+            <option value="Профессиональная переподготовка">Профессиональная переподготовка</option>
+          </select>
+        </div>
 
         <button className='approve-btn' onClick={() => setIsModalOpen(true)}>Добавить курс</button>
       </div>
@@ -208,7 +213,6 @@ const AdminCourseManagement = () => {
         </div>
       )}
 
-     
       <table className="course-table">
         <thead>
           <tr>
