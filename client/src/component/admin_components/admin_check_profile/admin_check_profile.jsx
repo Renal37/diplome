@@ -3,7 +3,8 @@ import "./admin_check_profile.css";
 
 const AdminCheckProfile = () => {
     const [users, setUsers] = useState([]);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [fioSearchQuery, setFioSearchQuery] = useState(""); // Поиск по ФИО
+    const [loginSearchQuery, setLoginSearchQuery] = useState(""); // Поиск по логину
     const [showFullInfo, setShowFullInfo] = useState(false);
 
     useEffect(() => {
@@ -12,23 +13,46 @@ const AdminCheckProfile = () => {
             .then((data) => setUsers(data));
     }, []);
 
-    const filteredUsers = users.filter((user) =>
-        user.username?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Фильтрация пользователей по ФИО и логину
+    const filteredUsers = users.filter((user) => {
+        const fullName = [
+            user.lastname || "",
+            user.firstname || "",
+            user.middlename || ""
+        ].join(" ").toLowerCase(); // Собираем ФИО в одну строку
+        const login = user.username?.toLowerCase() || ""; // Логин пользователя
+
+        // Проверяем, соответствует ли пользователь хотя бы одному из условий
+        return (
+            (!fioSearchQuery || fullName.includes(fioSearchQuery.toLowerCase())) && // Поиск по ФИО
+            (!loginSearchQuery || login.includes(loginSearchQuery.toLowerCase())) // Поиск по логину
+        );
+    });
 
     return (
         <div className="admin-delete-component">
-            <h1>Проверка профилей</h1>
             <div className="controls">
                 <div className="search-container">
+                    {/* Ввод для поиска по ФИО */}
                     <input
                         type="text"
-                        placeholder="Поиск по имени пользователя"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Поиск по ФИО"
+                        value={fioSearchQuery}
+                        onChange={(e) => setFioSearchQuery(e.target.value)}
                         className="search-input"
                     />
-                    <button className="toggle-info-button" onClick={() => setShowFullInfo(!showFullInfo)}>
+                    {/* Ввод для поиска по логину */}
+                    <input
+                        type="text"
+                        placeholder="Поиск по логину"
+                        value={loginSearchQuery}
+                        onChange={(e) => setLoginSearchQuery(e.target.value)}
+                        className="search-input"
+                    />
+                    <button
+                        className="toggle-info-button"
+                        onClick={() => setShowFullInfo(!showFullInfo)}
+                    >
                         {showFullInfo ? "Скрыть детали" : "Показать детали"}
                     </button>
                 </div>
