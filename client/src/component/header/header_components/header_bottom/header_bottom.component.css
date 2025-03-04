@@ -33,7 +33,7 @@
     border-radius: 4px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     z-index: 1000;
-    min-width: 333px;
+    min-width: 317px;
 }
 
 .dropdown-item {
@@ -84,10 +84,15 @@ body[data-path^="/admin"] .request_course {
     padding: 20px 0 20px 0px;
 }
 
+.header_bottom_bg nav {
+    margin: 0 auto;
+    max-width: 1680px;
+}
+
 .header_bottom nav ul {
     display: flex;
     align-items: center;
-    justify-content: space-around;
+    justify-content: space-between;
 }
 
 .header_bottom nav ul li {

@@ -3,7 +3,6 @@ import Header from './component/header/header.component';
 import Main from './component/main/main.component';
 import Main_top_center from './component/main_components/main_class/main/main_top_center/main_top_center.component.jsx';
 import Teacher_top_center from './component/main_components/main_class/teacher/main_top_center/main_top_center.component.jsx';
-import Organization_top_center from './component/main_components/main_class/organization/main_top_center/main_top_center.component.jsx';
 import Professional_top_center from './component/main_components/main_class/professional/main_top_center/main_top_center.component.jsx';
 import Promotion_top_center from './component/main_components/main_class/promotion/main_top_center/main_top_center.component.jsx';
 import './style.css';
@@ -17,7 +16,6 @@ import Document from './component/document/document_component.jsx';
 const routes = [
   { path: "/", element: <Main_top_center /> },
   { path: "teacher", element: <Teacher_top_center /> },
-  { path: "organization", element: <Organization_top_center /> },
   { path: "professional", element: <Professional_top_center /> },
   { path: "promotion", element: <Promotion_top_center /> },
   { path: "sveden", element: <Sveden /> },

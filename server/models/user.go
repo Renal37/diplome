@@ -20,4 +20,5 @@ type User struct {
 	PassportData      string             `json:"passportData,omitempty"`
 	SNILS             string             `json:"snils,omitempty"`
 	AgreeToProcessing bool               `json:"agreeToProcessing,omitempty"`
+	ContractUploaded  bool               `json:"contractuploaded,omitempty"`
 }

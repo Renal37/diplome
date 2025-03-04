@@ -1,3 +1,4 @@
+// registration_component.js
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './registration_component.css';
@@ -14,11 +15,24 @@ const Registration = ({ setIsAuthenticated }) => {
   const [agree, setAgree] = useState(false);
   const navigate = useNavigate();
 
+  // Проверяем авторизацию через API
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      navigate('/auth/profile');
-    }
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/check-token', {
+          method: 'POST',
+          credentials: 'include', // Куки отправляются автоматически
+      });
+
+        if (response.ok) {
+          navigate('/auth/profile'); // Если пользователь авторизован, перенаправляем на профиль
+        }
+      } catch (error) {
+        console.error('Ошибка при проверке авторизации:', error);
+      }
+    };
+
+    checkAuth();
   }, [navigate]);
 
   const validatePassword = (password) => {
@@ -45,8 +59,8 @@ const Registration = ({ setIsAuthenticated }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); // Сброс ошибки перед новым запросом
-
     const passwordError = validatePassword(password);
+
     if (passwordError) {
       setError(passwordError);
       return;
@@ -64,7 +78,7 @@ const Registration = ({ setIsAuthenticated }) => {
 
     const response = await fetch('http://localhost:5000/register', {
       method: 'POST',
-      credentials: "include",
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -88,7 +102,6 @@ const Registration = ({ setIsAuthenticated }) => {
   return (
     <div className="registration-component">
       <h1>Регистрация</h1>
-
       <form onSubmit={handleSubmit} className="registration-form">
         <div className='input'>
           <input
@@ -126,7 +139,6 @@ const Registration = ({ setIsAuthenticated }) => {
           </div>
         </div>
         {error && <p className="error">{error}</p>}
-
         <div className="agreement">
           <input
             type="checkbox"

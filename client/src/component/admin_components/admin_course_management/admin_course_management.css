@@ -1,0 +1,260 @@
+.admin-course-management {
+    margin-top: 100px;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 20px;
+   
+}
+
+.admin-course-management h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #76F;
+}
+
+.admin-course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.admin-course-header button {
+    font-size: 18px;
+}
+
+.course-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.course-table th,
+.course-table td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: left;
+}
+
+.course-table th {
+    background-color: #f0f0f0;
+}
+
+.course-table tr:hover {
+    background-color: #f0f0f0;
+}
+
+.course-description {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.update-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.update-form input,
+.update-form select,
+.update-form textarea {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    color: #333;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.update-form textarea {
+    height: 200px;
+}
+
+.update-form input::placeholder,
+.update-form textarea::placeholder {
+    color: #76F;
+}
+
+.form-buttons {
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Основные стили для модального окна */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    /* Полупрозрачный черный фон */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    /* Убедимся, что модальное окно поверх других элементов */
+}
+
+.modal-content {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    /* Тень для модального окна */
+    width: 400px;
+    max-width: 90%;
+    /* Чтобы модальное окно не выходило за пределы экрана на мобильных устройствах */
+    animation: fadeIn 0.3s ease-in-out;
+    /* Анимация появления */
+}
+
+/* Анимация появления модального окна */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Заголовок модального окна */
+.modal-content h2 {
+    margin-top: 0;
+    font-size: 24px;
+    color: #333333;
+    text-align: center;
+}
+
+/* Стили для полей ввода */
+.modal-content input,
+.modal-content textarea,
+.modal-content select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #cccccc;
+    border-radius: 5px;
+    font-size: 14px;
+    color: #333333;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.modal-content input:focus,
+.modal-content textarea:focus,
+.modal-content select:focus {
+    border-color: #007bff;
+    /* Изменение цвета рамки при фокусе */
+}
+
+/* Стили для текстового поля */
+.modal-content textarea {
+    resize: vertical;
+    /* Разрешаем изменение высоты текстового поля */
+    min-height: 100px;
+}
+
+/* Стили для кнопок */
+.form-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.form-buttons button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+
+/* Стили для таблицы курсов */
+.course-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.course-table th,
+.course-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #dddddd;
+}
+
+.course-table th {
+    background-color: #f8f9fa;
+    /* Светлый фон для заголовков таблицы */
+    font-weight: bold;
+    color: #333333;
+}
+
+.course-table tr:hover {
+    background-color: #f1f1f1;
+    /* Подсветка строки при наведении */
+}
+
+
+
+/* Стили для формы обновления курса */
+.update-form {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+.update-form input,
+.update-form textarea,
+.update-form select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.update-form .form-buttons {
+    margin-top: 10px;
+}
+
+
+button.approve-btn {
+    font-size: 16px;
+    background-color: #28a745;
+    color: white;
+}
+
+button.reject-btn {
+    font-size: 16px;
+    background-color: #dc3545;
+    color: white;
+}
+
+.filter-section {
+    display: flex;
+    flex-direction: column;
+        margin-bottom: 20px;
+  }
+  
+  .filter-section label {
+    margin-right: 10px;
+    font-weight: bold;
+  }
+  
+  .filter-section select {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
