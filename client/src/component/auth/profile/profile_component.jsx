@@ -53,8 +53,7 @@ const Profile = () => {
             <p>Email: {profile.email || "Данные отсутствуют"}</p>
             <p>Дата рождения: {profile.birthDate || "Данные отсутствуют"}</p>
             <p>Образование: {profile.education || "Данные отсутствуют"}</p>
-            
-            <Link className="prifle_nav_button prifle_nav_a" to="/auth/edit_profile">Заполнить профиль</Link>
+            <Link to="/auth/edit_profile">Заполнить профиль</Link>
           </div>
         </div>
         <div className="profile_course">

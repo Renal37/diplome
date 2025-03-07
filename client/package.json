@@ -12,7 +12,6 @@
   "dependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "github:fortawesome/react-fontawesome",
-    "@react-pdf/renderer": "^4.2.1",
     "axios": "^1.7.9",
     "coockies": "^1.0.1",
     "js-cookie": "^3.0.5",
@@ -23,7 +22,6 @@
     "react": "^18.2.0",
     "react-cookie": "^7.2.2",
     "react-dom": "^18.2.0",
-    "react-pdf": "^9.2.1",
     "react-router-dom": "^7.1.1",
     "react-slick": "^0.30.3",
     "slick-carousel": "^1.8.1"
@@ -36,6 +34,6 @@
     "eslint-plugin-react": "^7.34.1",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
-    "vite": "^5.4.14"
+    "vite": "^5.2.0"
   }
 }

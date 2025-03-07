@@ -3,31 +3,12 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './header_bottom.component.css';
 import Cookies from 'js-cookie';
 
-const Header_bottom = ({ isAuthenticated, setIsAuthenticated, checkToken }) => {
+const Header_bottom = ({ isAuthenticated, setIsAuthenticated }) => {
     const navigate = useNavigate();
     const location = useLocation(); // Получаем текущий путь
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false); // Новое состояние для отслеживания скролла
-    const [profile, setProfile] = useState(null);
 
-    useEffect(() => {
-        const fetchProfile = async () => {
-            try {
-                const response = await fetch("http://localhost:5000/profile", {
-                    method: "GET",
-                    credentials: "include",
-                });
-                if (!response.ok) {
-                    throw new Error("Ошибка при загрузке профиля");
-                }
-                const data = await response.json();
-                setProfile(data);
-            } catch (err) {
-                console.error(err.message);
-            }
-        };
-        fetchProfile();
-    }, [isAuthenticated]); // Добавляем зависимость isAuthenticated
     useEffect(() => {
         if (isAuthenticated) {
             const storedUsername = localStorage.getItem('username');
@@ -41,7 +22,7 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated, checkToken }) => {
             if (window.scrollY > 350) {
                 setIsScrolled(true);
                 // Добавляем отступ для контента под header_bottom
-                document.querySelector('.main_top').style.paddingTop = '0px'; // Замените на актуальную высоту
+                document.querySelector('.main_top').style.paddingTop = '170px'; // Замените на актуальную высоту
             } else {
                 setIsScrolled(false);
                 // Убираем отступ, если header_bottom не фиксированный
@@ -86,22 +67,6 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated, checkToken }) => {
         setIsDropdownOpen(!isDropdownOpen);
     };
 
-    // Обработчик для кнопки "Записаться"
-    const handleRegisterCourse = async () => {
-        if (!isAuthenticated) {
-            // Если пользователь не авторизован, проверяем токен
-            await checkToken();
-        }
-
-        if (!isAuthenticated || !profile) {
-            // Если пользователь не авторизован или у него нет профиля, перенаправляем на страницу регистрации
-            navigate('/auth');
-        } else {
-            // Если пользователь авторизован и у него есть профиль, переходим на страницу записи
-            navigate('/courses/register/678df19a0a96fa5b989aeaa5');
-        }
-    };
-
     // Определяем класс для header_bottom с учетом текущего пути
     const headerBottomClass = location.pathname.startsWith('/admin') || location.pathname.startsWith('/auth')
         ? 'header_bottom' // Без класса "scrolled" на страницах /admin и /auth
@@ -123,9 +88,6 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated, checkToken }) => {
                                     <div className="dropdown-menu">
                                         <Link to="/auth/profile" className="dropdown-item">Профиль</Link>
                                         <Link to="/auth/edit_profile" className="dropdown-item">Редактировать профиль</Link>
-                                        {profile?.username === 'admin' && (
-                                            <Link to="/admin" className="dropdown-item">Админ панель</Link>
-                                        )}
                                         <button onClick={handleLogout} className="dropdown-item">Выйти</button>
                                     </div>
                                 )}
@@ -145,7 +107,7 @@ const Header_bottom = ({ isAuthenticated, setIsAuthenticated, checkToken }) => {
                                 <h1>Записаться на интересный курс:</h1>
                                 <p>Педагог профессионального обучения</p>
                             </div>
-                            <button onClick={handleRegisterCourse} className="request_button">Записаться</button>
+                            <Link to="/courses/register/678df19a0a96fa5b989aeaa5" className="request_button">Записаться</Link>
                         </div>
                     </div>
                 </div>

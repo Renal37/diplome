@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './authorization_component.css';
 import privates from "../../../assets/private.svg";
@@ -9,24 +9,7 @@ const AuthorizationComponent = ({ setIsAuthenticated }) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const response = await fetch('http://localhost:5000/check-token', {
-                    method: 'POST',
-                    credentials: 'include', // Куки отправляются автоматически
-                });
 
-                if (response.ok) {
-                    navigate('/auth/profile'); // Если пользователь авторизован, перенаправляем на профиль
-                }
-            } catch (error) {
-                console.error('Ошибка при проверке авторизации:', error);
-            }
-        };
-
-        checkAuth();
-    }, [navigate]);
     const handleSubmit = async (e) => {
         e.preventDefault();
         const response = await fetch('http://localhost:5000/login', {

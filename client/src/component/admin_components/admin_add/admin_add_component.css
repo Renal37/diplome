@@ -1,0 +1,61 @@
+.admin-course-management {
+  margin-top: 100px;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  background-color: #f9f9f9;
+}
+
+.admin-course-management h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #76F;
+}
+
+.admin-course-management form {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-course-management input,
+.admin-course-management select {
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: #333;
+}
+
+.admin-course-management input::placeholder {
+  color: #76F;
+}
+
+.admin-course-management button {
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  background-color: #76F;
+  color: white;
+  cursor: pointer;
+}
+
+.admin-course-management button:hover {
+  background-color: #5a5aff;
+}
+
+.course-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.course-item {
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
+
+.course-item strong {
+  color: #76F;
+}

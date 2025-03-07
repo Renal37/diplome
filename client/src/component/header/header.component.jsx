@@ -10,18 +10,14 @@ const Header = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     const checkToken = async () => {
-        try {
-            const response = await fetch('http://localhost:5000/check-token', {
-                method: 'POST',
-                credentials: 'include', // Куки отправляются автоматически
-            });
-            if (response.ok) {
-                setIsAuthenticated(true);
-            } else {
-                setIsAuthenticated(false);
-            }
-        } catch (error) {
-            console.error('Ошибка при проверке токена:', error);
+        const response = await fetch('http://localhost:5000/check-token', {
+            method: 'POST',
+            credentials: 'include', // Куки отправляются автоматически
+        });
+
+        if (response.ok) {
+            setIsAuthenticated(true);
+        } else {
             setIsAuthenticated(false);
         }
     };
@@ -30,7 +26,8 @@ const Header = () => {
         checkToken();
         const interval = setInterval(() => {
             checkToken();
-        }, 1 * 1000); // Проверяем токен каждую минуту
+        }, 1 * 1 * 1000);
+
         return () => clearInterval(interval);
     }, []);
 
@@ -41,11 +38,7 @@ const Header = () => {
                     <Header_top />
                     <Header_center />
                 </div>
-                <Header_bottom
-                    isAuthenticated={isAuthenticated}
-                    setIsAuthenticated={setIsAuthenticated}
-                    checkToken={checkToken} // Передаем функцию checkToken
-                />
+                <Header_bottom isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated} />
             </header>
             <Outlet />
         </Fragment>

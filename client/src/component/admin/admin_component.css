@@ -1,46 +1,31 @@
 .admin-component {
-  margin-top: 100px;
-  max-width: 1680px;
-  margin: 0 auto;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  background-color: #ffffff;
-}
-.admin-title{
-  padding-top: 50px;
-}
-.nav-links {
-  margin-top: 50px;
-  list-style-type: none;
-  padding: 0;
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.nav-link {
-  text-decoration: none;
-  color: #007bff;
-  font-weight: bold;
-  padding: 10px 20px;
-  border: 1px solid #007bff;
-  border-radius: 4px;
-  transition: background-color 0.3s, color 0.3s;
-}
-
-.nav-link:hover {
-  background-color: #007bff;
-  color: white;
-}
-.nav-link.active {
-  background-color: #007bff;
-  color: #fff;
-}
-
-.admin_components {
-  padding-top: 50px;
-}
-
+    margin-top: 50px;
+    padding: 20px;
+  }
+  
+  .nav-links {
+    list-style-type: none;
+    padding: 0;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  
+  .nav-link {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: bold;
+    padding: 10px 20px;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    transition: background-color 0.3s, color 0.3s;
+  }
+  
+  .nav-link:hover {
+    background-color: #007bff;
+    color: white;
+  }
+  .admin_components{
+    padding-top: 50px;
+  }

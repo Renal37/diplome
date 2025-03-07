@@ -60,42 +60,12 @@ const ProfileEditDate = () => {
         fetchUserData();
     }, []);
 
-    // Функция для валидации кириллицы
-    const validateCyrillic = (text) => {
-        const cyrillicRegex = /^[а-яА-ЯёЁ\s-]+$/; // Разрешаем кириллицу, пробелы и дефисы
-        return cyrillicRegex.test(text);
-    };
-
-    // Функция для форматирования первой буквы в заглавную
-    const capitalizeFirstLetter = (text) => {
-        return text
-            .split(' ') // Разделяем строку на слова
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Каждое слово начинаем с заглавной буквы
-            .join(' '); // Соединяем слова обратно в строку
-    };
-
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-
-        // Валидация для ФИО (только кириллица)
-        if (name === 'lastName' || name === 'firstName' || name === 'middleName') {
-            if (!validateCyrillic(value) && value !== '') {
-                setError('ФИО должно содержать только кириллицу');
-                return;
-            }
-        }
-
-        // Форматирование первой буквы в заглавную для ФИО
-        let formattedValue = value;
-        if (name === 'lastName' || name === 'firstName' || name === 'middleName') {
-            formattedValue = capitalizeFirstLetter(value);
-        }
-
         setUserData((prevState) => ({
             ...prevState,
-            [name]: type === 'checkbox' ? checked : formattedValue,
+            [name]: type === 'checkbox' ? checked : value,
         }));
-        setError(''); // Сбрасываем ошибку при успешном вводе
     };
 
     const validatePhone = (phone) => {
@@ -192,9 +162,6 @@ const ProfileEditDate = () => {
         setShowPassword(!showPassword);
     };
 
-    // Получаем текущую дату для ограничения выбора даты рождения
-    const today = new Date().toISOString().split('T')[0];
-
     return (
         <div className="profile-edit-container">
             <form onSubmit={handleSubmit}>
@@ -228,6 +195,7 @@ const ProfileEditDate = () => {
                                 value={userData.middleName}
                                 onChange={handleChange}
                                 required
+
                             />
                         </div>
                         <div className="form-group">
@@ -237,8 +205,6 @@ const ProfileEditDate = () => {
                                 name="birthDate"
                                 value={userData.birthDate}
                                 onChange={handleChange}
-                                max={today} // Ограничение на выбор даты
-                                required
                             />
                         </div>
                         <div className="form-group">

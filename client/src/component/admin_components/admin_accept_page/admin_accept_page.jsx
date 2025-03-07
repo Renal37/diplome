@@ -21,7 +21,7 @@ const AdminAcceptPage = () => {
                     setError(data.error);
                 } else {
                     const approvedRegistrations = data.filter(
-                        (reg) => reg.status === "Принят"
+                        (reg) => reg.status === "Одобренный"
                     );
                     setRegistrations(approvedRegistrations);
                 }

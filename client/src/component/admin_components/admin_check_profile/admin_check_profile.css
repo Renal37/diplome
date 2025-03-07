@@ -3,7 +3,10 @@
     max-width: 100%;
     margin: 0 auto;
     padding: 20px;
-  
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    background-color: #f9f9f9;
 }
 
 .admin-delete-component h1 {
@@ -15,7 +18,7 @@
 .controls {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 10px;
     margin-bottom: 20px;
 }
 

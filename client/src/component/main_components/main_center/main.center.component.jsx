@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import './main.center.component.css';
 
 const Main_center = () => {
-    const [courses, setCourses] = useState([]); // Инициализируем как пустой массив
+    const [courses, setCourses] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('');
     const location = useLocation(); // Хук для получения текущего пути
@@ -11,9 +11,10 @@ const Main_center = () => {
     useEffect(() => {
         fetch('http://localhost:5000/courses')
             .then(response => response.json())
-            .then(data => setCourses(data || [])) // Убедимся, что data не null или undefined
+            .then(data => setCourses(data))
             .catch(error => console.error('Error fetching courses:', error));
     }, []);
+
     // Определяем тип курсов в зависимости от текущего пути
     const getCourseTypeByPath = () => {
         if (location.pathname === '/promotion') {
@@ -68,7 +69,7 @@ const Main_center = () => {
                             <div className='course_text'>
                                 <h2>{course.title}</h2>
                                 {/* <p>{course.description}</p> */}
-
+                             
                             </div>
 
                             <div className='course_btn'>
@@ -81,4 +82,5 @@ const Main_center = () => {
         </div>
     );
 }
+
 export default Main_center;
