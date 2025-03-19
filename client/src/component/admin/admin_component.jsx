@@ -90,14 +90,14 @@ const AdminComponent = () => {
                 Управление заявками
               </Link>
             </li>
-            <li>
+            {/* <li>
               <Link
                 to="/admin/groups"
                 className={`nav-link ${isActive('/admin/groups') ? 'active' : ''}`}
               >
                 Управление группами
               </Link>
-            </li>
+            </li> */}
           </ul>
         </nav>
       </div>

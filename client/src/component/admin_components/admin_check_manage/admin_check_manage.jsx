@@ -14,6 +14,7 @@ const AdminCoursesManagement = () => {
     const [selectedUser, setSelectedUser] = useState(null); // Выбранный пользователь
     const [filterStatus, setFilterStatus] = useState("all"); // Фильтр по статусу
     const [groups, setGroups] = useState([]); // Список групп
+    const [selectedRegistrations, setSelectedRegistrations] = useState([]);
     const [searchUserName, setSearchUserName] = useState(""); // Поиск по имени пользователя
     const [searchCourseTitle, setSearchCourseTitle] = useState(""); // Поиск по названию курса
 
@@ -24,7 +25,27 @@ const AdminCoursesManagement = () => {
         const matchesCourseTitle = registration.courseTitle.toLowerCase().includes(searchCourseTitle.toLowerCase());
         return matchesStatus && matchesUserName && matchesCourseTitle;
     });
+    const handleMassApprove = () => {
+        if (selectedRegistrations.length === 0) {
+            setError("Выберите хотя бы одну заявку для одобрения");
+            return;
+        }
 
+        selectedRegistrations.forEach(registrationId => {
+            handleApprove(registrationId);
+        });
+    };
+
+    const handleMassDelete = () => {
+        if (selectedRegistrations.length === 0) {
+            setError("Выберите хотя бы одну заявку для удаления");
+            return;
+        }
+
+        selectedRegistrations.forEach(registrationId => {
+            handleDelete(registrationId);
+        });
+    };
     // Загрузка списка групп
     useEffect(() => {
         const fetchGroups = async () => {
@@ -329,16 +350,21 @@ const AdminCoursesManagement = () => {
                     </div>
                 </div>
             </div>
-
+            <div className="mass-actions">
+                <button onClick={handleMassApprove}>Одобрить выбранные</button>
+                <button onClick={handleMassDelete}>Удалить выбранные</button>
+            </div>
             {/* Таблица заявок */}
             <table>
                 <thead>
                     <tr>
                         <th>Курс</th>
                         <th>Пользователь</th>
-                        <th>Группа</th>
+
                         <th>Статус</th>
+                        <th>Выборка</th>
                         <th>Действия</th>
+
                     </tr>
                 </thead>
                 <tbody>
@@ -363,7 +389,8 @@ const AdminCoursesManagement = () => {
                                     {registration.userName}
                                 </button>
                             </td>
-                            <td>
+
+                            {/* <td>
                                 {registration.status === "Принят" && (
                                     <div className="filter-group">
                                         <select
@@ -379,8 +406,21 @@ const AdminCoursesManagement = () => {
                                         </select>
                                     </div>
                                 )}
-                            </td>
+                            </td> */}
                             <td>{registration.status}</td>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    checked={selectedRegistrations.includes(registration._id)}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedRegistrations([...selectedRegistrations, registration._id]);
+                                        } else {
+                                            setSelectedRegistrations(selectedRegistrations.filter(id => id !== registration._id));
+                                        }
+                                    }}
+                                />
+                            </td>
                             <td className="admin_btns">
                                 {registration.status === "Ожидание" && (
                                     <>
@@ -411,6 +451,7 @@ const AdminCoursesManagement = () => {
                                     </>
                                 )}
                             </td>
+
                         </tr>
                     ))}
                 </tbody>
