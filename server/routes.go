@@ -31,6 +31,7 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/courses/register", handlers.RegisterForCourse).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/delete-registration/{id}", handlers.DeleteRegistration).Methods("POST")
 	r.HandleFunc("/user/view-contract/{id}", handlers.ViewContract).Methods("GET")
+	r.HandleFunc("/user/withdraw-registration/{id}", handlers.WithdrawRegistration).Methods("DELETE", "OPTIONS")
 	
 
 	// Маршруты для пользовательских курсов

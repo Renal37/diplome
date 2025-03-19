@@ -836,3 +836,62 @@ func DeleteRegistration(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
+func WithdrawRegistration(w http.ResponseWriter, r *http.Request) {
+	// Получаем ID заявки из URL
+	vars := mux.Vars(r)
+	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+			http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+			return
+	}
+
+	// Получаем ID пользователя из токена
+	cookie, err := r.Cookie("token")
+	if err != nil {
+			http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+			return
+	}
+
+	claims := &utils.Claims{}
+	token, err := jwt.ParseWithClaims(cookie.Value, claims, func(token *jwt.Token) (interface{}, error) {
+			return utils.JwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+			http.Error(w, "Неверный токен", http.StatusUnauthorized)
+			return
+	}
+
+	userID, err := primitive.ObjectIDFromHex(claims.UserID)
+	if err != nil {
+			http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
+			return
+	}
+
+	// Подключаемся к базе данных
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+			http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+			return
+	}
+	defer client.Disconnect(context.Background())
+
+	collection := client.Database("diplome").Collection("course_registrations")
+
+	// Проверяем, что заявка принадлежит пользователю
+	filter := bson.M{"_id": registrationID, "userId": userID}
+	result, err := collection.DeleteOne(context.Background(), filter)
+	if err != nil {
+			http.Error(w, "Ошибка при удалении заявки", http.StatusInternalServerError)
+			return
+	}
+
+	if result.DeletedCount == 0 {
+			http.Error(w, "Заявка не найдена или не принадлежит пользователю", http.StatusNotFound)
+			return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}

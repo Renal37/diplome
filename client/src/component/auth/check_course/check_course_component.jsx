@@ -91,7 +91,29 @@ const CheckCourse = () => {
             alert(err.message);
         }
     };
+    const handleWithdrawRegistration = async (registrationId) => {
+        try {
+            const response = await fetch(`http://localhost:5000/user/withdraw-registration/${registrationId}`, {
+                method: "DELETE",
+                credentials: "include",
+            });
 
+            if (!response.ok) {
+                throw new Error("Ошибка при отзыве заявки");
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                // Обновляем список курсов после успешного отзыва заявки
+                setCourses((prevCourses) => prevCourses.filter(course => course._id !== registrationId));
+                alert("Заявка успешно отозвана!");
+            } else {
+                throw new Error("Ошибка при отзыве заявки");
+            }
+        } catch (err) {
+            alert(err.message);
+        }
+    };
     return (
         <div className="check-course-container">
             {/* Навигация по статусам курсов */}
@@ -160,6 +182,14 @@ const CheckCourse = () => {
                                     <span className="reject-reason">
                                         Причина отказа: {course.rejectReason}
                                     </span>
+                                )}
+                                {course.status === "Ожидание" && (
+                                    <button
+                                        className="withdraw-button"
+                                        onClick={() => handleWithdrawRegistration(course._id)}
+                                    >
+                                        Отозвать заявку
+                                    </button>
                                 )}
                                 {course.status === "Одобренный" && (
                                     <>
