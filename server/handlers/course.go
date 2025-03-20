@@ -895,3 +895,35 @@ func WithdrawRegistration(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
+func PayCourse(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+			http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+			return
+	}
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+			http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+			return
+	}
+	collection := client.Database("diplome").Collection("course_registrations")
+
+	filter := bson.M{"_id": registrationID}
+	update := bson.M{
+			"$set": bson.M{
+					"status": "Оплаченный",
+			},
+	}
+
+	_, err = collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+			http.Error(w, "Ошибка при обновлении статуса оплаты", http.StatusInternalServerError)
+			return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}

@@ -7,6 +7,8 @@ const CheckCourse = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedStatus, setSelectedStatus] = useState("all");
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedCourse, setSelectedCourse] = useState(null);
 
     const fetchCourses = async (status) => {
         try {
@@ -91,6 +93,7 @@ const CheckCourse = () => {
             alert(err.message);
         }
     };
+
     const handleWithdrawRegistration = async (registrationId) => {
         try {
             const response = await fetch(`http://localhost:5000/user/withdraw-registration/${registrationId}`, {
@@ -114,6 +117,46 @@ const CheckCourse = () => {
             alert(err.message);
         }
     };
+
+    const handleOpenPaymentModal = (course) => {
+        setSelectedCourse(course);
+        setIsModalOpen(true);
+    };
+
+    const handleClosePaymentModal = () => {
+        setIsModalOpen(false);
+        setSelectedCourse(null);
+    };
+
+    const handlePayment = async () => {
+        try {
+            const response = await fetch(`http://localhost:5000/user/pay-course/${selectedCourse._id}`, {
+                method: "POST",
+                credentials: "include",
+            });
+
+            if (!response.ok) {
+                throw new Error("Ошибка при оплате курса");
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                // Обновляем статус курса в списке
+                setCourses((prevCourses) =>
+                    prevCourses.map((course) =>
+                        course._id === selectedCourse._id ? { ...course, status: "Оплаченный" } : course
+                    )
+                );
+                alert("Курс успешно оплачен!");
+                handleClosePaymentModal();
+            } else {
+                throw new Error("Ошибка при оплате курса");
+            }
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
     return (
         <div className="check-course-container">
             {/* Навигация по статусам курсов */}
@@ -136,8 +179,6 @@ const CheckCourse = () => {
                 >
                     Одобренные
                 </button>
-
-
                 <button
                     onClick={() => setSelectedStatus("Принят")}
                     className={`prifle_nav_button ${selectedStatus === "Принят" ? "active" : ""}`}
@@ -193,8 +234,6 @@ const CheckCourse = () => {
                                 )}
                                 {course.status === "Одобренный" && (
                                     <>
-
-
                                         {!course.contractUploaded && (
                                             <div className="download-buttons">
                                                 <button
@@ -227,11 +266,36 @@ const CheckCourse = () => {
                                         </span>
                                     </>
                                 )}
+                                {course.status === "Принят" && (
+                                    <button
+                                        className="pay-button"
+                                        onClick={() => handleOpenPaymentModal(course)}
+                                    >
+                                        Оплатить
+                                    </button>
+                                )}
                             </li>
                         ))}
                     </ul>
                 )}
             </div>
+
+            {/* Модальное окно для оплаты */}
+            {isModalOpen && (
+                <div className="payment-modal">
+                    <div className="payment-modal-content">
+                        <h2>Оплата курса: {selectedCourse.courseTitle}</h2>
+                        <div className="qr-code-placeholder">
+                            {/* Здесь можно вставить реальный QR-код */}
+                            <img src="https://via.placeholder.com/200" alt="QR Code" />
+                        </div>
+                        <div className="payment-modal-buttons">
+                            <button onClick={handlePayment}>Оплатил</button>
+                            <button onClick={handleClosePaymentModal}>Назад</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
