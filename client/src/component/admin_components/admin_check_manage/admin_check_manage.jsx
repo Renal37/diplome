@@ -30,11 +30,27 @@ const AdminCoursesManagement = () => {
             setError("Выберите хотя бы одну заявку для одобрения");
             return;
         }
-
+    
+        // Проверяем, что все выбранные заявки находятся в статусе "Ожидание"
+        const allPending = selectedRegistrations.every(registrationId => {
+            const registration = registrations.find(reg => reg._id === registrationId);
+            return registration.status === "Ожидание";
+        });
+    
+        if (!allPending) {
+            setError("Можно одобрять только заявки со статусом 'Ожидание'");
+            return;
+        }
+    
+        // Если все заявки в статусе "Ожидание", выполняем одобрение
         selectedRegistrations.forEach(registrationId => {
             handleApprove(registrationId);
         });
     };
+    const isMassApproveDisabled = selectedRegistrations.length === 0 || !selectedRegistrations.every(registrationId => {
+        const registration = registrations.find(reg => reg._id === registrationId);
+        return registration.status === "Ожидание";
+    });
 
     const handleMassDelete = () => {
         if (selectedRegistrations.length === 0) {
@@ -280,17 +296,32 @@ const AdminCoursesManagement = () => {
             setError("Выберите группу");
             return;
         }
-
+    
         try {
-            const response = await fetch(`http://localhost:5000/admin/assign-group/${registrationId}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ groupId }),
-            });
-
+            const response = await fetch(
+                `http://localhost:5000/admin/assign-group/${registrationId}`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({ groupId }),
+                }
+            );
+    
+            // Проверяем, что ответ является JSON
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                throw new Error("Ошибка: сервер вернул невалидный JSON");
+            }
+    
             const data = await response.json();
-
+    
+            if (!response.ok) {
+                throw new Error(data.error || "Ошибка при привязке к группе");
+            }
+    
             if (data.success) {
                 setRegistrations((prevRegistrations) =>
                     prevRegistrations.map((reg) =>
@@ -302,7 +333,7 @@ const AdminCoursesManagement = () => {
             }
         } catch (error) {
             console.error("Error assigning group:", error);
-            setError("Ошибка при привязке к группе");
+            setError(error.message || "Ошибка при привязке к группе");
         }
     };
 
@@ -346,12 +377,15 @@ const AdminCoursesManagement = () => {
                             <option value="Отклоненный">Отклоненный</option>
                             <option value="Отчисленный">Отчисленный</option>
                             <option value="Принят">Принят</option>
+                            <option value="Оплаченный">Оплаченный</option>
                         </select>
                     </div>
                 </div>
             </div>
             <div className="mass-actions">
-                <button onClick={handleMassApprove}>Одобрить выбранные</button>
+            <button onClick={handleMassApprove} 
+            // disabled={isMassApproveDisabled}
+            >Одобрить выбранные</button>
                 <button onClick={handleMassDelete}>Удалить выбранные</button>
             </div>
             {/* Таблица заявок */}
@@ -360,7 +394,7 @@ const AdminCoursesManagement = () => {
                     <tr>
                         <th>Курс</th>
                         <th>Пользователь</th>
-
+                        <th>Группа</th>
                         <th>Статус</th>
                         <th>Выборка</th>
                         <th>Действия</th>
@@ -390,8 +424,8 @@ const AdminCoursesManagement = () => {
                                 </button>
                             </td>
 
-                            {/* <td>
-                                {registration.status === "Принят" && (
+                            <td>
+                                {registration.status === "Оплаченный" && (
                                     <div className="filter-group">
                                         <select
                                             value={registration.groupId || ""}
@@ -406,7 +440,7 @@ const AdminCoursesManagement = () => {
                                         </select>
                                     </div>
                                 )}
-                            </td> */}
+                            </td>
                             <td>{registration.status}</td>
                             <td>
                                 <input

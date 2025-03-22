@@ -3,19 +3,20 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
-	"net/http"
 )
 
 type Group struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
 	GroupName string             `bson:"groupName" json:"groupName"`
-	CourseID  string             `bson:"courseId" json:"courseId"`
+	CourseID  primitive.ObjectID `bson:"courseId" json:"courseId"` // Исправлено на ObjectID
 }
 
 func CreateGroup(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +28,7 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if group.GroupName == "" || group.CourseID == "" {
+	if group.GroupName == "" || group.CourseID.IsZero() { // Проверка на пустой ObjectID
 		http.Error(w, "Название группы и ID курса обязательны", http.StatusBadRequest)
 		return
 	}
@@ -41,6 +42,17 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	defer client.Disconnect(context.Background())
 
+	// Проверяем, что курс существует
+	courseCollection := client.Database("diplome").Collection("courses")
+	var course bson.M
+	err = courseCollection.FindOne(context.Background(), bson.M{"_id": group.CourseID}).Decode(&course)
+	if err != nil {
+		log.Printf("Error finding course: %v", err)
+		http.Error(w, "Курс не найден", http.StatusNotFound)
+		return
+	}
+
+	// Создаем группу
 	collection := client.Database("diplome").Collection("groups")
 	_, err = collection.InsertOne(context.Background(), group)
 	if err != nil {
@@ -92,11 +104,6 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if updatedGroup.GroupName == "" || updatedGroup.CourseID == "" {
-		http.Error(w, "Название группы и ID курса обязательны", http.StatusBadRequest)
-		return
-	}
-
 	vars := mux.Vars(r)
 	id := vars["id"]
 	if id == "" {
@@ -125,7 +132,6 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{"_id": objectId}
 	update := bson.M{"$set": bson.M{
 		"groupName": updatedGroup.GroupName,
-		"courseId":  updatedGroup.CourseID,
 	}}
 
 	result, err := collection.UpdateOne(context.Background(), filter, update)
@@ -202,7 +208,9 @@ func AssignGroup(w http.ResponseWriter, r *http.Request) {
 	registrationId, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
 		log.Printf("Invalid registration ID: %v", err)
-		http.Error(w, "Неверный формат идентификатора заявки", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Неверный формат идентификатора заявки"})
 		return
 	}
 
@@ -212,19 +220,25 @@ func AssignGroup(w http.ResponseWriter, r *http.Request) {
 	err = json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
 		log.Printf("Error decoding request body: %v", err)
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Неверный формат данных"})
 		return
 	}
 
 	if requestBody.GroupID == "" {
-		http.Error(w, "ID группы обязателен", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "ID группы обязателен"})
 		return
 	}
 
 	groupId, err := primitive.ObjectIDFromHex(requestBody.GroupID)
 	if err != nil {
 		log.Printf("Invalid group ID: %v", err)
-		http.Error(w, "Неверный формат ID группы", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Неверный формат ID группы"})
 		return
 	}
 
@@ -232,28 +246,137 @@ func AssignGroup(w http.ResponseWriter, r *http.Request) {
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
 		log.Printf("Database connection error: %v", err)
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Ошибка подключения к базе данных"})
 		return
 	}
 	defer client.Disconnect(context.Background())
 
-	collection := client.Database("diplome").Collection("course_registrations")
-	filter := bson.M{"_id": registrationId}
-	update := bson.M{"$set": bson.M{"groupId": groupId}}
+	// Получаем информацию о заявке
+	registrationCollection := client.Database("diplome").Collection("course_registrations")
+	var registration bson.M
+	err = registrationCollection.FindOne(context.Background(), bson.M{"_id": registrationId}).Decode(&registration)
+	if err != nil {
+		log.Printf("Error finding registration: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Заявка не найдена"})
+		return
+	}
 
-	result, err := collection.UpdateOne(context.Background(), filter, update)
+	// Получаем ID курса из заявки
+	courseId := registration["courseId"].(primitive.ObjectID)
+
+	// Получаем информацию о группе
+	groupCollection := client.Database("diplome").Collection("groups")
+	var group bson.M
+	err = groupCollection.FindOne(context.Background(), bson.M{"_id": groupId}).Decode(&group)
+	if err != nil {
+		log.Printf("Error finding group: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Группа не найдена"})
+		return
+	}
+
+	// Проверяем, что группа принадлежит тому же курсу
+	if group["courseId"].(primitive.ObjectID) != courseId {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Группа не принадлежит этому курсу"})
+		return
+	}
+
+	// Обновляем группу в заявке
+	update := bson.M{"$set": bson.M{"groupId": groupId}}
+	result, err := registrationCollection.UpdateOne(context.Background(), bson.M{"_id": registrationId}, update)
 	if err != nil {
 		log.Printf("Error updating registration: %v", err)
-		http.Error(w, "Ошибка при обновлении заявки", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Ошибка при обновлении заявки"})
 		return
 	}
 
 	if result.MatchedCount == 0 {
-		http.Error(w, "Заявка не найдена", http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Заявка не найдена"})
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+func GetGroupMembers(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	groupId := vars["id"]
+	if groupId == "" {
+			http.Error(w, "ID группы не указан", http.StatusBadRequest)
+			return
+	}
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+			log.Printf("Database connection error: %v", err)
+			http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+			return
+	}
+	defer client.Disconnect(context.Background())
+
+	// Преобразуем строковый ID в ObjectID
+	objectId, err := primitive.ObjectIDFromHex(groupId)
+	if err != nil {
+			http.Error(w, "Неверный формат ID", http.StatusBadRequest)
+			return
+	}
+
+	// Получаем участников группы из коллекции course_registrations
+	collection := client.Database("diplome").Collection("course_registrations")
+	pipeline := bson.A{
+			bson.M{
+					"$match": bson.M{"groupId": objectId},
+			},
+			bson.M{
+					"$lookup": bson.M{
+							"from":         "users",
+							"localField":   "userId",
+							"foreignField":  "_id",
+							"as":           "user",
+					},
+			},
+			bson.M{
+					"$project": bson.M{
+							"username": bson.M{
+									"$arrayElemAt": bson.A{"$user.username", 0},
+							},
+							"email": bson.M{
+									"$arrayElemAt": bson.A{"$user.email", 0},
+							},
+					},
+			},
+	}
+
+	cursor, err := collection.Aggregate(context.Background(), pipeline)
+	if err != nil {
+			log.Printf("Error fetching group members: %v", err)
+			http.Error(w, "Ошибка при получении участников группы", http.StatusInternalServerError)
+			return
+	}
+	defer cursor.Close(context.Background())
+
+	var members []bson.M
+	if err := cursor.All(context.Background(), &members); err != nil {
+			log.Printf("Error decoding group members: %v", err)
+			http.Error(w, "Ошибка при декодировании участников группы", http.StatusInternalServerError)
+			return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{"members": members})
 }

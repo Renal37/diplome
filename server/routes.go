@@ -33,7 +33,6 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/user/view-contract/{id}", handlers.ViewContract).Methods("GET")
 	r.HandleFunc("/user/withdraw-registration/{id}", handlers.WithdrawRegistration).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/user/pay-course/{id}", handlers.PayCourse).Methods("POST", "OPTIONS")
-	
 
 	// Маршруты для пользовательских курсов
 	r.HandleFunc("/user/courses", handlers.GetCoursesForUser).Methods("GET")
@@ -52,6 +51,7 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/admin/update-group/{id}", handlers.UpdateGroup).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/admin/delete-group/{id}", handlers.DeleteGroup).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/admin/assign-group/{id}", handlers.AssignGroup).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/group-members/{id}", handlers.GetGroupMembers).Methods("GET")
 
 	// Маршруты для проверки токена
 	r.HandleFunc("/check-token", handlers.CheckToken).Methods("POST", "OPTIONS")

@@ -5,12 +5,15 @@ const AdminGroupManagement = () => {
     const [groups, setGroups] = useState([]);
     const [filteredGroups, setFilteredGroups] = useState([]); // Состояние для отфильтрованных групп
     const [searchTerm, setSearchTerm] = useState(""); // Состояние для строки поиска
-    const [selectedGroup, setSelectedGroup] = useState(null);
-    const [groupName, setGroupName] = useState("");
-    const [courseId, setCourseId] = useState("");
-    const [error, setError] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedGroup, setSelectedGroup] = useState(null); // Выбранная группа для редактирования
+    const [groupName, setGroupName] = useState(""); // Название группы для создания/редактирования
+    const [courseId, setCourseId] = useState(""); // ID курса для создания группы
+    const [error, setError] = useState(""); // Сообщение об ошибке
+    const [successMessage, setSuccessMessage] = useState(""); // Сообщение об успехе
+    const [isModalOpen, setIsModalOpen] = useState(false); // Состояние модального окна для создания группы
+    const [groupMembers, setGroupMembers] = useState([]); // Участники группы
+    const [selectedGroupId, setSelectedGroupId] = useState(null); // ID выбранной группы для просмотра участников
+    const [courses, setCourses] = useState([]); // Список курсов
 
     // Загрузка списка групп
     const fetchGroups = async () => {
@@ -31,8 +34,24 @@ const AdminGroupManagement = () => {
         }
     };
 
+    // Загрузка списка курсов
+    const fetchCourses = async () => {
+        try {
+            const response = await fetch("http://localhost:5000/courses");
+            if (!response.ok) {
+                throw new Error("Ошибка при загрузке курсов");
+            }
+            const data = await response.json();
+            setCourses(data);
+        } catch (error) {
+            console.error("Error fetching courses:", error);
+            setError("Ошибка при загрузке курсов");
+        }
+    };
+
     useEffect(() => {
         fetchGroups();
+        fetchCourses();
     }, []);
 
     // Обработка изменения строки поиска
@@ -41,10 +60,8 @@ const AdminGroupManagement = () => {
         setSearchTerm(term);
 
         // Фильтрация групп по строке поиска
-        const filtered = groups.filter(
-            (group) =>
-                group.groupName.toLowerCase().includes(term) ||
-                group.courseId.toString().toLowerCase().includes(term)
+        const filtered = groups.filter((group) =>
+            group.groupName.toLowerCase().includes(term)
         );
         setFilteredGroups(filtered);
     };
@@ -59,7 +76,7 @@ const AdminGroupManagement = () => {
     // Обработка сохранения изменений
     const handleSave = async () => {
         if (!groupName || !courseId) {
-            setError("Пожалуйста, заполните все поля");
+            setError("Пожалуйста, заполните название группы и выберите курс");
             return;
         }
         try {
@@ -85,9 +102,7 @@ const AdminGroupManagement = () => {
                 setCourseId("");
                 setError("");
                 const updatedGroups = groups.map((g) =>
-                    g._id === selectedGroup._id
-                        ? { ...g, groupName, courseId }
-                        : g
+                    g._id === selectedGroup._id ? { ...g, groupName, courseId } : g
                 );
                 setGroups(updatedGroups);
                 setFilteredGroups(updatedGroups); // Обновляем отфильтрованные группы
@@ -134,7 +149,7 @@ const AdminGroupManagement = () => {
     const handleCreateGroup = async (e) => {
         e.preventDefault();
         if (!groupName || !courseId) {
-            setError("Пожалуйста, заполните все поля");
+            setError("Пожалуйста, заполните название группы и выберите курс");
             return;
         }
         try {
@@ -163,6 +178,33 @@ const AdminGroupManagement = () => {
         }
     };
 
+    // Функция для получения участников группы
+    const fetchGroupMembers = async (groupId) => {
+        try {
+            const response = await fetch(`http://localhost:5000/admin/group-members/${groupId}`);
+            if (!response.ok) {
+                throw new Error("Ошибка при загрузке участников группы");
+            }
+            const data = await response.json();
+            setGroupMembers(data.members || []);
+        } catch (error) {
+            console.error("Error fetching group members:", error);
+            setError("Ошибка при загрузке участников группы");
+        }
+    };
+
+    // Обработка нажатия на кнопку "Просмотр участников"
+    const handleViewMembers = (groupId) => {
+        setSelectedGroupId(groupId);
+        fetchGroupMembers(groupId);
+    };
+
+    // Закрытие модального окна с участниками группы
+    const handleCloseMembersModal = () => {
+        setSelectedGroupId(null);
+        setGroupMembers([]);
+    };
+
     // Закрытие модального окна и формы редактирования
     const handleClose = () => {
         setIsModalOpen(false);
@@ -178,6 +220,7 @@ const AdminGroupManagement = () => {
         const handleKeyDown = (event) => {
             if (event.key === "Escape") {
                 handleClose();
+                handleCloseMembersModal();
             }
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -209,13 +252,6 @@ const AdminGroupManagement = () => {
                     <div className="modal-content">
                         <h2>Создание новой группы</h2>
                         <form onSubmit={handleCreateGroup}>
-                            <label>ID курса:</label>
-                            <input
-                                type="text"
-                                value={courseId}
-                                onChange={(e) => setCourseId(e.target.value)}
-                                placeholder="Введите ID курса"
-                            />
                             <label>Название группы:</label>
                             <input
                                 type="text"
@@ -223,6 +259,18 @@ const AdminGroupManagement = () => {
                                 onChange={(e) => setGroupName(e.target.value)}
                                 placeholder="Введите название группы"
                             />
+                            <label>Курс:</label>
+                            <select
+                                value={courseId}
+                                onChange={(e) => setCourseId(e.target.value)}
+                            >
+                                <option value="">Выберите курс</option>
+                                {courses.map((course) => (
+                                    <option key={course._id} value={course._id}>
+                                        {course.title}
+                                    </option>
+                                ))}
+                            </select>
                             <div className="form-buttons">
                                 <button className="approve-btn" type="submit">
                                     Создать
@@ -239,22 +287,27 @@ const AdminGroupManagement = () => {
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Название группы</th>
+                        <th>Курс</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
                 <tbody>
                     {filteredGroups.map((group) => (
                         <tr key={group._id}>
-                            <td>{group.courseId}</td>
                             <td>{group.groupName}</td>
+                            <td>
+                                {courses.find((course) => course._id === group.courseId)?.title || "Неизвестный курс"}
+                            </td>
                             <td>
                                 <button className="approve-btn" onClick={() => handleEdit(group)}>
                                     Редактировать
                                 </button>
                                 <button className="reject-btn" onClick={() => handleDelete(group._id)}>
                                     Удалить
+                                </button>
+                                <button className="view-members-btn" onClick={() => handleViewMembers(group._id)}>
+                                    Просмотр участников
                                 </button>
                             </td>
                         </tr>
@@ -273,12 +326,18 @@ const AdminGroupManagement = () => {
                                 value={groupName}
                                 onChange={(e) => setGroupName(e.target.value)}
                             />
-                            <label>ID курса:</label>
-                            <input
-                                type="text"
+                            <label>Курс:</label>
+                            <select
                                 value={courseId}
                                 onChange={(e) => setCourseId(e.target.value)}
-                            />
+                            >
+                                <option value="">Выберите курс</option>
+                                {courses.map((course) => (
+                                    <option key={course._id} value={course._id}>
+                                        {course.title}
+                                    </option>
+                                ))}
+                            </select>
                             <div className="form-buttons">
                                 <button type="button" onClick={handleSave}>
                                     Сохранить
@@ -288,6 +347,33 @@ const AdminGroupManagement = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {selectedGroupId && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <h2>Участники группы</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Имя пользователя</th>
+                                    <th>Email</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {groupMembers.map((member) => (
+                                    <tr key={member._id}>
+                                        <td>{member.username}</td>
+                                        <td>{member.email}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <button className="reject-btn" onClick={handleCloseMembersModal}>
+                            Закрыть
+                        </button>
                     </div>
                 </div>
             )}
