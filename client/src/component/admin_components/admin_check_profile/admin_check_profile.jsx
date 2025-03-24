@@ -1,31 +1,39 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom"; // Импортируем useNavigate
 import "./admin_check_profile.css";
 
 const AdminCheckProfile = () => {
     const [users, setUsers] = useState([]);
-    const [fioSearchQuery, setFioSearchQuery] = useState(""); // Поиск по ФИО
-    const [loginSearchQuery, setLoginSearchQuery] = useState(""); // Поиск по логину
+    const [fioSearchQuery, setFioSearchQuery] = useState("");
+    const [loginSearchQuery, setLoginSearchQuery] = useState("");
     const [showFullInfo, setShowFullInfo] = useState(false);
+    const location = useLocation();
+    const navigate = useNavigate(); // Используем useNavigate
 
     useEffect(() => {
+        // Получаем логин из параметров URL
+        const searchParams = new URLSearchParams(location.search);
+        const username = searchParams.get("username");
+        if (username) {
+            setLoginSearchQuery(username);
+        }
+
         fetch("http://localhost:5000/users")
             .then((res) => res.json())
             .then((data) => setUsers(data));
-    }, []);
+    }, [location.search]);
 
-    // Фильтрация пользователей по ФИО и логину
     const filteredUsers = users.filter((user) => {
         const fullName = [
             user.lastname || "",
             user.firstname || "",
             user.middlename || ""
-        ].join(" ").toLowerCase(); // Собираем ФИО в одну строку
-        const login = user.username?.toLowerCase() || ""; // Логин пользователя
+        ].join(" ").toLowerCase();
+        const login = user.username?.toLowerCase() || "";
 
-        // Проверяем, соответствует ли пользователь хотя бы одному из условий
         return (
-            (!fioSearchQuery || fullName.includes(fioSearchQuery.toLowerCase())) && // Поиск по ФИО
-            (!loginSearchQuery || login.includes(loginSearchQuery.toLowerCase())) // Поиск по логину
+            (!fioSearchQuery || fullName.includes(fioSearchQuery.toLowerCase())) &&
+            (!loginSearchQuery || login.includes(loginSearchQuery.toLowerCase()))
         );
     });
 
@@ -33,7 +41,6 @@ const AdminCheckProfile = () => {
         <div className="admin-delete-component">
             <div className="controls">
                 <div className="search-container">
-                    {/* Ввод для поиска по ФИО */}
                     <input
                         type="text"
                         placeholder="Поиск по ФИО"
@@ -41,7 +48,6 @@ const AdminCheckProfile = () => {
                         onChange={(e) => setFioSearchQuery(e.target.value)}
                         className="search-input"
                     />
-                    {/* Ввод для поиска по логину */}
                     <input
                         type="text"
                         placeholder="Поиск по логину"

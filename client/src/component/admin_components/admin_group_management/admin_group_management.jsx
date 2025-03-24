@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./admin_group_management.css";
 
 const AdminGroupManagement = () => {
@@ -14,6 +15,7 @@ const AdminGroupManagement = () => {
     const [groupMembers, setGroupMembers] = useState([]); // Участники группы
     const [selectedGroupId, setSelectedGroupId] = useState(null); // ID выбранной группы для просмотра участников
     const [courses, setCourses] = useState([]); // Список курсов
+    const navigate = useNavigate();
 
     // Загрузка списка групп
     const fetchGroups = async () => {
@@ -66,11 +68,22 @@ const AdminGroupManagement = () => {
         setFilteredGroups(filtered);
     };
 
-    // Обработка редактирования группы
-    const handleEdit = (group) => {
-        setSelectedGroup(group);
-        setGroupName(group.groupName);
-        setCourseId(group.courseId);
+    // В функции handleEdit добавим проверку на наличие участников
+    const handleEdit = async (group) => {
+        try {
+            const response = await fetch(`http://localhost:5000/admin/group-members/${group._id}`);
+            const data = await response.json();
+            if (data.members && data.members.length > 0) {
+                setError("Невозможно изменить курс, так как в группе есть участники");
+                return;
+            }
+            setSelectedGroup(group);
+            setGroupName(group.groupName);
+            setCourseId(group.courseId);
+        } catch (error) {
+            console.error("Error fetching group members:", error);
+            setError("Ошибка при загрузке участников группы");
+        }
     };
 
     // Обработка сохранения изменений
@@ -360,6 +373,7 @@ const AdminGroupManagement = () => {
                                 <tr>
                                     <th>Имя пользователя</th>
                                     <th>Email</th>
+                                    <th>Действия</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -367,13 +381,26 @@ const AdminGroupManagement = () => {
                                     <tr key={member._id}>
                                         <td>{member.username}</td>
                                         <td>{member.email}</td>
+                                        <td>
+                                            <button
+                                                className="view-profile-btn"
+                                                onClick={() => {
+                                                    navigate(`/admin/profile?username=${member.username}`);
+                                                }}
+                                            >
+                                                Посмотреть данные
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
+                        <div className="button">
                         <button className="reject-btn" onClick={handleCloseMembersModal}>
                             Закрыть
                         </button>
+                        </div>
+                     
                     </div>
                 </div>
             )}

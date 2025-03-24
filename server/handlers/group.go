@@ -96,59 +96,72 @@ func GetGroups(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"groups": groups})
 }
 func UpdateGroup(w http.ResponseWriter, r *http.Request) {
-	var updatedGroup Group
-	err := json.NewDecoder(r.Body).Decode(&updatedGroup)
-	if err != nil {
-		log.Printf("Error decoding request body: %v", err)
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
-		return
-	}
+    var updatedGroup Group
+    err := json.NewDecoder(r.Body).Decode(&updatedGroup)
+    if err != nil {
+        log.Printf("Error decoding request body: %v", err)
+        http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+        return
+    }
 
-	vars := mux.Vars(r)
-	id := vars["id"]
-	if id == "" {
-		http.Error(w, "ID группы не указан", http.StatusBadRequest)
-		return
-	}
+    vars := mux.Vars(r)
+    id := vars["id"]
+    if id == "" {
+        http.Error(w, "ID группы не указан", http.StatusBadRequest)
+        return
+    }
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		log.Printf("Database connection error: %v", err)
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
+    clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+    client, err := mongo.Connect(context.Background(), clientOptions)
+    if err != nil {
+        log.Printf("Database connection error: %v", err)
+        http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+        return
+    }
+    defer client.Disconnect(context.Background())
 
-	collection := client.Database("diplome").Collection("groups")
+    // Проверяем, есть ли участники в группе
+    registrationCollection := client.Database("diplome").Collection("course_registrations")
+    count, err := registrationCollection.CountDocuments(context.Background(), bson.M{"groupId": id})
+    if err != nil {
+        log.Printf("Error checking group members: %v", err)
+        http.Error(w, "Ошибка при проверке участников группы", http.StatusInternalServerError)
+        return
+    }
 
-	// Преобразуем строковый ID в ObjectID
-	objectId, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		http.Error(w, "Неверный формат ID", http.StatusBadRequest)
-		return
-	}
+    if count > 0 {
+        http.Error(w, "Невозможно изменить курс, так как в группе есть участники", http.StatusBadRequest)
+        return
+    }
 
-	filter := bson.M{"_id": objectId}
-	update := bson.M{"$set": bson.M{
-		"groupName": updatedGroup.GroupName,
-	}}
+    collection := client.Database("diplome").Collection("groups")
+    objectId, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        http.Error(w, "Неверный формат ID", http.StatusBadRequest)
+        return
+    }
 
-	result, err := collection.UpdateOne(context.Background(), filter, update)
-	if err != nil {
-		log.Printf("Error updating group: %v", err)
-		http.Error(w, "Ошибка при обновлении группы", http.StatusInternalServerError)
-		return
-	}
+    filter := bson.M{"_id": objectId}
+    update := bson.M{"$set": bson.M{
+        "groupName": updatedGroup.GroupName,
+        "courseId":  updatedGroup.CourseID,
+    }}
 
-	if result.MatchedCount == 0 {
-		http.Error(w, "Группа не найдена", http.StatusNotFound)
-		return
-	}
+    result, err := collection.UpdateOne(context.Background(), filter, update)
+    if err != nil {
+        log.Printf("Error updating group: %v", err)
+        http.Error(w, "Ошибка при обновлении группы", http.StatusInternalServerError)
+        return
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+    if result.MatchedCount == 0 {
+        http.Error(w, "Группа не найдена", http.StatusNotFound)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

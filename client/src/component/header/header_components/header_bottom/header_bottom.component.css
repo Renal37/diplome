@@ -7,7 +7,45 @@
     text-decoration: none;
 }
 
+/* Общие стили для всех ссылок */
+a {
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.3s ease, background-color 0.3s ease;
+}
 
+a:hover {
+    text-decoration: none;
+}
+
+/* Стили для ссылок в навигации */
+.header_bottom nav ul li .a {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 100px;
+    padding-right: 100px;
+    border-right: 1px solid white;
+    border-left: 1px solid white;
+    text-decoration: none;
+    color: white;
+    font-size: 20px;
+    transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+.header_bottom nav ul li .a:hover {
+    color: #76F;
+    background-color: rgb(255, 255, 255);
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.header_bottom nav ul li .a.active {
+    color: #76F;
+    background-color: rgb(255, 255, 255);
+    border-radius: 4px;
+}
+
+/* Стили для выпадающего меню */
 .dropdown {
     position: relative;
 }
@@ -22,7 +60,7 @@
 
 .dropdown-menu {
     position: absolute;
-    top: 13 0%;
+    top: 130%;
     right: 0;
     display: flex;
     flex-direction: column;
@@ -38,7 +76,6 @@
 
 .dropdown-item {
     font-size: 20px;
-
     display: block;
     padding: 8px 16px;
     text-decoration: none;
@@ -48,10 +85,83 @@
     width: 100%;
     text-align: left;
     cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dropdown-item:hover {
+    background-color: #76F;
+    color: white;
+    text-decoration: none;
+}
+
+.dropdown-item.active {
+    background-color: #76F;
+    color: white;
+}
+
+.dropdown-item:not(.active):hover {
     background-color: #f5f5f5;
+    color: #76F;
+}
+
+/* Стили для кнопки "Записаться" */
+.request_button {
+    background-color: #76F;
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 5px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.request_button:hover {
+    background-color: #5a4fcf;
+    transform: translateY(-2px);
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Стили для header_bottom при скролле */
+.header_bottom.scrolled {
+    position: fixed;
+    top: 0;
+    z-index: 9999;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.header_bottom.scrolled .header_bottom_bg {
+    background-color: white;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.header_bottom.scrolled nav ul li .a {
+    color: #76F;
+    border-right: 1px solid #76F;
+    border-left: 1px solid #76F;
+}
+
+.header_bottom.scrolled nav ul li .a:hover {
+    color: white;
+    background-color: #76F;
+}
+
+.header_bottom.scrolled #drop {
+    background-color: black;
+    color: white;
+}
+
+.header_bottom.scrolled .dropdown-item {
+    color: #76F;
+}
+
+.header_bottom.scrolled .dropdown-item:hover {
+    background-color: #76F;
+    color: white;
 }
 
 /* Стили для request_course */
@@ -100,46 +210,6 @@ body[data-path^="/admin"] .request_course {
     text-align: center;
 }
 
-.header_bottom nav ul li .a {
-    padding-left: 100px;
-    padding-right: 100px;
-    border-right: 1px solid white;
-    border-left: 1px solid white;
-    text-decoration: none;
-    color: white;
-    font-size: 20px;
-}
-
-.header_bottom nav ul li .a:hover {
-    text-decoration: underline;
-}
-
-/* Стили для header_bottom при скролле */
-.header_bottom.scrolled {
-    position: fixed;
-    top: 0;
-    z-index: 9999;
-    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.header_bottom.scrolled .header_bottom_bg {
-    background-color: white;
-    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.header_bottom.scrolled nav ul li .a {
-    color: #76F;
-    border-right: 1px solid #76F;
-    border-left: 1px solid #76F;
-}
-
-.header_bottom.scrolled #drop {
-    background-color: black;
-    color: white;
-}
-
 /* Стили для request_course при скролле */
 .header_bottom.scrolled .request_course {
     background: #76F;
@@ -154,33 +224,13 @@ body[data-path^="/admin"] .request_course {
     background: white;
 }
 
-/* style for request_course */
-/* Общий стиль для request_course */
-.request_course {
-    transition: all 0.3s ease;
-    background: white;
-    width: 100%;
-    padding: 10px 0;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-    /* Тень */
-    display: flex;
-    justify-content: center;
-    /* Центрирование содержимого */
-}
-
 /* Стиль контейнера request_card */
 .request_card {
     max-width: 1680px;
-    /* Максимальная ширина */
     width: 90%;
-    /* Ширина для адаптивности */
     margin: 0 auto;
-    /* Центрирование по горизонтали */
-    /* background: white;  */
     border-radius: 10px;
-    /* Закругленные углы */
     overflow: hidden;
-    /* Для скрытия внутренних границ */
 }
 
 /* Стиль request_item */
@@ -189,9 +239,7 @@ body[data-path^="/admin"] .request_course {
     align-items: center;
     justify-content: space-between;
     padding: 20px 30px;
-    /* Отступы внутри карточки */
     gap: 20px;
-    /* Пространство между элементами */
 }
 
 .request_text {
