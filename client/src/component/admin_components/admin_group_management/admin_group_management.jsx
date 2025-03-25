@@ -3,33 +3,39 @@ import { useNavigate } from "react-router-dom";
 import "./admin_group_management.css";
 
 const AdminGroupManagement = () => {
-    const [groups, setGroups] = useState([]);
-    const [filteredGroups, setFilteredGroups] = useState([]); // Состояние для отфильтрованных групп
-    const [searchTerm, setSearchTerm] = useState(""); // Состояние для строки поиска
-    const [selectedGroup, setSelectedGroup] = useState(null); // Выбранная группа для редактирования
-    const [groupName, setGroupName] = useState(""); // Название группы для создания/редактирования
-    const [courseId, setCourseId] = useState(""); // ID курса для создания группы
-    const [error, setError] = useState(""); // Сообщение об ошибке
-    const [successMessage, setSuccessMessage] = useState(""); // Сообщение об успехе
-    const [isModalOpen, setIsModalOpen] = useState(false); // Состояние модального окна для создания группы
-    const [groupMembers, setGroupMembers] = useState([]); // Участники группы
-    const [selectedGroupId, setSelectedGroupId] = useState(null); // ID выбранной группы для просмотра участников
-    const [courses, setCourses] = useState([]); // Список курсов
     const navigate = useNavigate();
+    const [groups, setGroups] = useState([]);
+    const [filteredGroups, setFilteredGroups] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedGroup, setSelectedGroup] = useState(null);
+    const [groupName, setGroupName] = useState("");
+    const [courseId, setCourseId] = useState("");
+    const [error, setError] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [groupMembers, setGroupMembers] = useState([]);
+    const [selectedGroupId, setSelectedGroupId] = useState(null);
+    const [courses, setCourses] = useState([]);
+    const [groupsWithMembers, setGroupsWithMembers] = useState({});
 
-    // Загрузка списка групп
+    // Загрузка списка групп и информации о наличии участников
     const fetchGroups = async () => {
         try {
             const response = await fetch("http://localhost:5000/groups");
-            if (!response.ok) {
-                throw new Error("Ошибка при загрузке групп");
-            }
+            if (!response.ok) throw new Error("Ошибка при загрузке групп");
             const data = await response.json();
-            if (!data || !data.groups) {
-                throw new Error("Данные не получены или пусты");
+            if (!data?.groups) throw new Error("Данные не получены или пусты");
+
+            const groupsWithMembersInfo = {};
+            for (const group of data.groups) {
+                const membersResponse = await fetch(`http://localhost:5000/admin/group-members/${group._id}`);
+                const membersData = await membersResponse.json();
+                groupsWithMembersInfo[group._id] = membersData.members?.length > 0;
             }
+
             setGroups(data.groups);
-            setFilteredGroups(data.groups); // Инициализируем filteredGroups всеми группами
+            setFilteredGroups(data.groups);
+            setGroupsWithMembers(groupsWithMembersInfo);
         } catch (error) {
             console.error("Error fetching groups:", error);
             setError("Ошибка при загрузке групп");
@@ -40,9 +46,7 @@ const AdminGroupManagement = () => {
     const fetchCourses = async () => {
         try {
             const response = await fetch("http://localhost:5000/courses");
-            if (!response.ok) {
-                throw new Error("Ошибка при загрузке курсов");
-            }
+            if (!response.ok) throw new Error("Ошибка при загрузке курсов");
             const data = await response.json();
             setCourses(data);
         } catch (error) {
@@ -56,34 +60,20 @@ const AdminGroupManagement = () => {
         fetchCourses();
     }, []);
 
-    // Обработка изменения строки поиска
+    // Обработка поиска
     const handleSearchChange = (e) => {
         const term = e.target.value.toLowerCase();
         setSearchTerm(term);
-
-        // Фильтрация групп по строке поиска
-        const filtered = groups.filter((group) =>
+        setFilteredGroups(groups.filter(group =>
             group.groupName.toLowerCase().includes(term)
-        );
-        setFilteredGroups(filtered);
+        ));
     };
 
-    // В функции handleEdit добавим проверку на наличие участников
-    const handleEdit = async (group) => {
-        try {
-            const response = await fetch(`http://localhost:5000/admin/group-members/${group._id}`);
-            const data = await response.json();
-            if (data.members && data.members.length > 0) {
-                setError("Невозможно изменить курс, так как в группе есть участники");
-                return;
-            }
-            setSelectedGroup(group);
-            setGroupName(group.groupName);
-            setCourseId(group.courseId);
-        } catch (error) {
-            console.error("Error fetching group members:", error);
-            setError("Ошибка при загрузке участников группы");
-        }
+    // Обработка редактирования группы
+    const handleEdit = (group) => {
+        setSelectedGroup(group);
+        setGroupName(group.groupName);
+        setCourseId(group.courseId);
     };
 
     // Обработка сохранения изменений
@@ -93,32 +83,17 @@ const AdminGroupManagement = () => {
             return;
         }
         try {
-            const response = await fetch(
-                `http://localhost:5000/admin/update-group/${selectedGroup._id}`,
-                {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    credentials: "include",
-                    body: JSON.stringify({ groupName, courseId }),
-                }
-            );
-            if (!response.ok) {
-                throw new Error("Ошибка при обновлении группы");
-            }
+            const response = await fetch(`http://localhost:5000/admin/update-group/${selectedGroup._id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ groupName, courseId })
+            });
             const data = await response.json();
             if (data.success) {
                 setSuccessMessage("Группа успешно обновлена!");
-                setSelectedGroup(null);
-                setGroupName("");
-                setCourseId("");
-                setError("");
-                const updatedGroups = groups.map((g) =>
-                    g._id === selectedGroup._id ? { ...g, groupName, courseId } : g
-                );
-                setGroups(updatedGroups);
-                setFilteredGroups(updatedGroups); // Обновляем отфильтрованные группы
+                handleClose();
+                fetchGroups();
             } else {
                 setError(data.message || "Ошибка при обновлении группы");
             }
@@ -131,24 +106,15 @@ const AdminGroupManagement = () => {
     // Обработка удаления группы
     const handleDelete = async (groupId) => {
         try {
-            const response = await fetch(
-                `http://localhost:5000/admin/delete-group/${groupId}`,
-                {
-                    method: "DELETE",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    credentials: "include",
-                }
-            );
-            if (!response.ok) {
-                throw new Error("Ошибка при удалении группы");
-            }
+            const response = await fetch(`http://localhost:5000/admin/delete-group/${groupId}`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include"
+            });
             const data = await response.json();
             if (data.success) {
                 setSuccessMessage("Группа успешно удалена!");
-                setGroups(groups.filter((g) => g._id !== groupId));
-                setFilteredGroups(filteredGroups.filter((g) => g._id !== groupId)); // Обновляем отфильтрованные группы
+                fetchGroups();
             } else {
                 setError(data.message || "Ошибка при удалении группы");
             }
@@ -158,7 +124,7 @@ const AdminGroupManagement = () => {
         }
     };
 
-    // Обработка создания группы
+    // Создание новой группы
     const handleCreateGroup = async (e) => {
         e.preventDefault();
         if (!groupName || !courseId) {
@@ -168,20 +134,15 @@ const AdminGroupManagement = () => {
         try {
             const response = await fetch("http://localhost:5000/admin/create-group", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({ groupName, courseId }),
+                body: JSON.stringify({ groupName, courseId })
             });
             const data = await response.json();
             if (data.success) {
                 setSuccessMessage("Группа успешно создана!");
-                setGroupName("");
-                setCourseId("");
-                setError("");
-                setIsModalOpen(false);
-                fetchGroups(); // Перезагружаем данные
+                handleClose();
+                fetchGroups();
             } else {
                 setError(data.message || "Ошибка при создании группы");
             }
@@ -191,34 +152,31 @@ const AdminGroupManagement = () => {
         }
     };
 
-    // Функция для получения участников группы
+    // Получение участников группы
     const fetchGroupMembers = async (groupId) => {
         try {
             const response = await fetch(`http://localhost:5000/admin/group-members/${groupId}`);
-            if (!response.ok) {
-                throw new Error("Ошибка при загрузке участников группы");
-            }
+            if (!response.ok) throw new Error("Ошибка при загрузке участников");
             const data = await response.json();
             setGroupMembers(data.members || []);
         } catch (error) {
-            console.error("Error fetching group members:", error);
-            setError("Ошибка при загрузке участников группы");
+            console.error("Error fetching members:", error);
+            setError("Ошибка при загрузке участников");
         }
     };
 
-    // Обработка нажатия на кнопку "Просмотр участников"
+    // Просмотр участников группы
     const handleViewMembers = (groupId) => {
         setSelectedGroupId(groupId);
         fetchGroupMembers(groupId);
     };
 
-    // Закрытие модального окна с участниками группы
+    // Закрытие модальных окон
     const handleCloseMembersModal = () => {
         setSelectedGroupId(null);
         setGroupMembers([]);
     };
 
-    // Закрытие модального окна и формы редактирования
     const handleClose = () => {
         setIsModalOpen(false);
         setSelectedGroup(null);
@@ -230,16 +188,14 @@ const AdminGroupManagement = () => {
 
     // Обработка нажатия Escape
     useEffect(() => {
-        const handleKeyDown = (event) => {
-            if (event.key === "Escape") {
+        const handleKeyDown = (e) => {
+            if (e.key === "Escape") {
                 handleClose();
                 handleCloseMembersModal();
             }
         };
         window.addEventListener("keydown", handleKeyDown);
-        return () => {
-            window.removeEventListener("keydown", handleKeyDown);
-        };
+        return () => window.removeEventListener("keydown", handleKeyDown);
     }, []);
 
     return (
@@ -278,19 +234,15 @@ const AdminGroupManagement = () => {
                                 onChange={(e) => setCourseId(e.target.value)}
                             >
                                 <option value="">Выберите курс</option>
-                                {courses.map((course) => (
+                                {courses.map(course => (
                                     <option key={course._id} value={course._id}>
                                         {course.title}
                                     </option>
                                 ))}
                             </select>
                             <div className="form-buttons">
-                                <button className="approve-btn" type="submit">
-                                    Создать
-                                </button>
-                                <button className="reject-btn" type="button" onClick={handleClose}>
-                                    Закрыть
-                                </button>
+                                <button className="approve-btn" type="submit">Создать</button>
+                                <button className="reject-btn" type="button" onClick={handleClose}>Закрыть</button>
                             </div>
                         </form>
                     </div>
@@ -313,15 +265,23 @@ const AdminGroupManagement = () => {
                                 {courses.find((course) => course._id === group.courseId)?.title || "Неизвестный курс"}
                             </td>
                             <td>
-                                <button className="approve-btn" onClick={() => handleEdit(group)}>
-                                    Редактировать
-                                </button>
-                                <button className="reject-btn" onClick={() => handleDelete(group._id)}>
-                                    Удалить
-                                </button>
-                                <button className="view-members-btn" onClick={() => handleViewMembers(group._id)}>
-                                    Просмотр участников
-                                </button>
+                                <div className="bt">
+                                    {groupsWithMembers[group._id] && (
+                                        <button className="approve-btn" onClick={() => handleViewMembers(group._id)}>
+                                            Просмотр  участников
+                                        </button>
+                                    )}
+                                    {!groupsWithMembers[group._id] && (
+                                        <button className="approve-btn" onClick={() => handleEdit(group)}>
+                                            Редактировать
+                                        </button>
+                                    )}
+                                    <button className="reject-btn" onClick={() => handleDelete(group._id)}>
+                                        Удалить
+                                    </button>
+
+                                </div>
+
                             </td>
                         </tr>
                     ))}
@@ -345,19 +305,15 @@ const AdminGroupManagement = () => {
                                 onChange={(e) => setCourseId(e.target.value)}
                             >
                                 <option value="">Выберите курс</option>
-                                {courses.map((course) => (
+                                {courses.map(course => (
                                     <option key={course._id} value={course._id}>
                                         {course.title}
                                     </option>
                                 ))}
                             </select>
                             <div className="form-buttons">
-                                <button type="button" onClick={handleSave}>
-                                    Сохранить
-                                </button>
-                                <button type="button" onClick={handleClose}>
-                                    Закрыть
-                                </button>
+                                <button type="button" onClick={handleSave}>Сохранить</button>
+                                <button type="button" onClick={handleClose}>Закрыть</button>
                             </div>
                         </form>
                     </div>
@@ -377,16 +333,14 @@ const AdminGroupManagement = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {groupMembers.map((member) => (
+                                {groupMembers.map(member => (
                                     <tr key={member._id}>
                                         <td>{member.username}</td>
                                         <td>{member.email}</td>
                                         <td>
                                             <button
                                                 className="view-profile-btn"
-                                                onClick={() => {
-                                                    navigate(`/admin/profile?username=${member.username}`);
-                                                }}
+                                                onClick={() => navigate(`/admin/profile?username=${member.username}`)}
                                             >
                                                 Посмотреть данные
                                             </button>
@@ -396,11 +350,10 @@ const AdminGroupManagement = () => {
                             </tbody>
                         </table>
                         <div className="button">
-                        <button className="reject-btn" onClick={handleCloseMembersModal}>
-                            Закрыть
-                        </button>
+                            <button className="reject-btn" onClick={handleCloseMembersModal}>
+                                Закрыть
+                            </button>
                         </div>
-                     
                     </div>
                 </div>
             )}

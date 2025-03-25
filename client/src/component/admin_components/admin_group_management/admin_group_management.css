@@ -108,3 +108,8 @@
     color: green;
     margin-bottom: 10px;
 }
+.bt{
+    display: flex;
+align-items: center;
+justify-content: space-between;
+}
