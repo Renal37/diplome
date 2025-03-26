@@ -383,10 +383,10 @@ const AdminCoursesManagement = () => {
                 </div>
             </div>
             <div className="mass-actions">
-            <button onClick={handleMassApprove} 
+            <button className="approve-btn" onClick={handleMassApprove} 
             // disabled={isMassApproveDisabled}
             >Одобрить выбранные</button>
-                <button onClick={handleMassDelete}>Удалить выбранные</button>
+                <button className="reject-btn" onClick={handleMassDelete}>Удалить выбранные</button>
             </div>
             {/* Таблица заявок */}
             <table>
@@ -481,7 +481,7 @@ const AdminCoursesManagement = () => {
                                 )}
                                 {!(registration.status == "Ожидание") && !(registration.status === "Отклоненный" || registration.status === "Отчисленный") && (
                                     <>
-                                        <button onClick={() => handleViewConsent(registration.userId)}>Просмотр согласия</button>
+                                        <button onClick={() => handleViewConsent(registration.userId)} className="toggle-info-button">Просмотр согласия</button>
                                     </>
                                 )}
                             </td>

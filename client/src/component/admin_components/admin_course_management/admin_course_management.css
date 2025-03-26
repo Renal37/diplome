@@ -258,3 +258,82 @@ button.reject-btn {
     border: 1px solid #ccc;
     border-radius: 4px;
   }
+  /* Add these styles to your existing CSS file */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    width: 80%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  .modal-content h2 {
+    margin-top: 0;
+  }
+  
+  .form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  
+  .price-selection {
+    margin: 15px 0;
+  }
+  
+  .price-selection label {
+    display: block;
+    margin-bottom: 5px;
+  }
+  
+  .price-selection select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+  }
+  
+  .price-list {
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+  }
+  
+  .price-list h3 {
+    margin-bottom: 10px;
+  }
+  
+  .price-list ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .price-list li {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .price-list li:last-child {
+    border-bottom: none;
+  }
+  
+  .button-group {
+    display: flex;
+    gap: 10px;
+  }

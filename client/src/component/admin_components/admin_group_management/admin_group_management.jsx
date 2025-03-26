@@ -339,8 +339,9 @@ const AdminGroupManagement = () => {
                                         <td>{member.email}</td>
                                         <td>
                                             <button
-                                                className="view-profile-btn"
+                                                className="toggle-info-button"
                                                 onClick={() => navigate(`/admin/profile?username=${member.username}`)}
+                                               
                                             >
                                                 Посмотреть данные
                                             </button>

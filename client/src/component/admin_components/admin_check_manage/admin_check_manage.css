@@ -171,3 +171,9 @@ textarea {
     border: 1px solid #ccc;
     border-radius: 4px;
 }
+.mass-actions{
+    justify-content: end;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}

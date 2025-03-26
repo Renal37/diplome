@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-
 	"github.com/Renal37/models"
 	"github.com/Renal37/utils"
 	"github.com/dgrijalva/jwt-go"
@@ -14,10 +12,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"net/http"
+	"time"
 )
 
 func AddCourse(w http.ResponseWriter, r *http.Request) {
 	var course models.Course
+
 	err := json.NewDecoder(r.Body).Decode(&course)
 	if err != nil {
 		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
@@ -30,15 +31,31 @@ func AddCourse(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
 		return
 	}
+	defer client.Disconnect(context.Background())
+
 	collection := client.Database("diplome").Collection("courses")
 
-	_, err = collection.InsertOne(context.Background(), course)
+	fullCourse := bson.M{
+		"title":       course.Title,
+		"description": course.Description,
+		"duration":    course.Duration,
+		"priceId":     course.PriceId,
+		"price":       course.Price,
+		"type":        course.Type,
+		"createdAt":   time.Now(),
+	}
+
+	_, err = collection.InsertOne(context.Background(), fullCourse)
 	if err != nil {
 		http.Error(w, "Ошибка при добавлении курса в базу данных", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Fprintf(w, "Курс '%s' успешно добавлен!", course.Title)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("Курс '%s' успешно добавлен!", course.Title),
+	})
 }
 
 func GetCourses(w http.ResponseWriter, r *http.Request) {
@@ -841,39 +858,39 @@ func WithdrawRegistration(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-			http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
-			return
+		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		return
 	}
 
 	// Получаем ID пользователя из токена
 	cookie, err := r.Cookie("token")
 	if err != nil {
-			http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
-			return
+		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+		return
 	}
 
 	claims := &utils.Claims{}
 	token, err := jwt.ParseWithClaims(cookie.Value, claims, func(token *jwt.Token) (interface{}, error) {
-			return utils.JwtKey, nil
+		return utils.JwtKey, nil
 	})
 
 	if err != nil || !token.Valid {
-			http.Error(w, "Неверный токен", http.StatusUnauthorized)
-			return
+		http.Error(w, "Неверный токен", http.StatusUnauthorized)
+		return
 	}
 
 	userID, err := primitive.ObjectIDFromHex(claims.UserID)
 	if err != nil {
-			http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
-			return
+		http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
+		return
 	}
 
 	// Подключаемся к базе данных
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
-			http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-			return
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
 	}
 	defer client.Disconnect(context.Background())
 
@@ -883,13 +900,13 @@ func WithdrawRegistration(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{"_id": registrationID, "userId": userID}
 	result, err := collection.DeleteOne(context.Background(), filter)
 	if err != nil {
-			http.Error(w, "Ошибка при удалении заявки", http.StatusInternalServerError)
-			return
+		http.Error(w, "Ошибка при удалении заявки", http.StatusInternalServerError)
+		return
 	}
 
 	if result.DeletedCount == 0 {
-			http.Error(w, "Заявка не найдена или не принадлежит пользователю", http.StatusNotFound)
-			return
+		http.Error(w, "Заявка не найдена или не принадлежит пользователю", http.StatusNotFound)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -899,29 +916,29 @@ func PayCourse(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-			http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
-			return
+		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		return
 	}
 
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
-			http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-			return
+		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		return
 	}
 	collection := client.Database("diplome").Collection("course_registrations")
 
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
-			"$set": bson.M{
-					"status": "Оплаченный",
-			},
+		"$set": bson.M{
+			"status": "Оплаченный",
+		},
 	}
 
 	_, err = collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-			http.Error(w, "Ошибка при обновлении статуса оплаты", http.StatusInternalServerError)
-			return
+		http.Error(w, "Ошибка при обновлении статуса оплаты", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
