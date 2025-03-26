@@ -54,9 +54,12 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/admin/group-members/{id}", handlers.GetGroupMembers).Methods("GET")
 
 	// Маршруты для стоимости
-	r.HandleFunc("/add-price", handlers.AddPrice).Methods("POST", "OPTIONS")
+	// Маршруты для стоимости
 	r.HandleFunc("/prices", handlers.GetPrices).Methods("GET", "OPTIONS")
-	r.HandleFunc("/active-price", handlers.GetActivePrice).Methods("GET", "OPTIONS")
+	r.HandleFunc("/add-price", handlers.AddPrice).Methods("POST", "OPTIONS")
+	r.HandleFunc("/update-price/{id}", handlers.UpdatePrice).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/delete-price/{id}", handlers.DeletePrice).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/bulk-update-prices", handlers.BulkUpdatePrices).Methods("POST", "OPTIONS")
 
 	// Маршруты для проверки токена
 	r.HandleFunc("/check-token", handlers.CheckToken).Methods("POST", "OPTIONS")

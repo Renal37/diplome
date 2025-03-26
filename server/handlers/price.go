@@ -3,9 +3,11 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -20,16 +22,17 @@ type Price struct {
 	Description string             `bson:"description" json:"description"`
 }
 
-// AddPrice добавляет новую стоимость в базу данных
+// AddPrice добавляет новую стоимость
 func AddPrice(w http.ResponseWriter, r *http.Request) {
+	
+
 	var request struct {
 		Amount      int    `json:"amount"`
 		Description string `json:"description"`
 	}
-	
-	err := json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		sendError(w, "Неверный формат данных", http.StatusBadRequest)
 		return
 	}
 
@@ -39,28 +42,23 @@ func AddPrice(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:   time.Now(),
 	}
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	collection := client.Database("diplome").Collection("prices")
+	collection := getPricesCollection()
 	result, err := collection.InsertOne(context.Background(), price)
 	if err != nil {
-		http.Error(w, "Ошибка при добавлении стоимости", http.StatusInternalServerError)
+		sendError(w, "Ошибка при добавлении стоимости", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	sendJSON(w, map[string]interface{}{
 		"success": true,
-		"id":      result.InsertedID,
+		"price":   map[string]interface{}{
+			"id":          result.InsertedID,
+			"amount":      price.Amount,
+			"description": price.Description,
+			"createdAt":   price.CreatedAt,
+		},
 	})
 }
-
 // GetPrices возвращает список всех стоимостей, отсортированных по дате (новые сначала)
 func GetPrices(w http.ResponseWriter, r *http.Request) {
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
@@ -99,33 +97,143 @@ func GetPrices(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(prices)
 }
 
-// GetActivePrice возвращает последнюю добавленную стоимость
-func GetActivePrice(w http.ResponseWriter, r *http.Request) {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
+
+// UpdatePrice обновляет существующую стоимость
+func UpdatePrice(w http.ResponseWriter, r *http.Request) {
+	
+
+	vars := mux.Vars(r)
+	id, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
+		sendError(w, "Неверный формат ID", http.StatusBadRequest)
 		return
 	}
-	defer client.Disconnect(context.Background())
 
-	collection := client.Database("diplome").Collection("prices")
-	
-	// Получаем последнюю добавленную стоимость
-	findOptions := options.FindOne()
-	findOptions.SetSort(bson.D{{"createdAt", -1}})
-	
-	var price Price
-	err = collection.FindOne(context.Background(), bson.M{}, findOptions).Decode(&price)
+	var request struct {
+		Amount      int    `json:"amount"`
+		Description string `json:"description"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		sendError(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+
+	collection := getPricesCollection()
+	filter := bson.M{"_id": id}
+	update := bson.M{
+		"$set": bson.M{
+			"amount":      request.Amount,
+			"description": request.Description,
+		},
+	}
+
+	result, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			http.Error(w, "Нет доступных стоимостей", http.StatusNotFound)
-		} else {
-			http.Error(w, "Ошибка при получении стоимости", http.StatusInternalServerError)
+		sendError(w, "Ошибка при обновлении стоимости", http.StatusInternalServerError)
+		return
+	}
+
+	if result.MatchedCount == 0 {
+		sendError(w, "Стоимость не найдена", http.StatusNotFound)
+		return
+	}
+
+	sendJSON(w, map[string]interface{}{
+		"success": true,
+		"message": "Стоимость успешно обновлена",
+	})
+}
+
+// DeletePrice удаляет стоимость
+func DeletePrice(w http.ResponseWriter, r *http.Request) {
+	
+
+	vars := mux.Vars(r)
+	id, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		sendError(w, "Неверный формат ID", http.StatusBadRequest)
+		return
+	}
+
+	collection := getPricesCollection()
+	filter := bson.M{"_id": id}
+
+	result, err := collection.DeleteOne(context.Background(), filter)
+	if err != nil {
+		sendError(w, "Ошибка при удалении стоимости", http.StatusInternalServerError)
+		return
+	}
+
+	if result.DeletedCount == 0 {
+		sendError(w, "Стоимость не найдена", http.StatusNotFound)
+		return
+	}
+
+	sendJSON(w, map[string]interface{}{
+		"success": true,
+		"message": "Стоимость успешно удалена",
+	})
+}
+
+// BulkUpdatePrices массово обновляет стоимости
+func BulkUpdatePrices(w http.ResponseWriter, r *http.Request) {
+	
+
+	var request struct {
+		PriceIDs []string `json:"priceIds"`
+		Percent  float64  `json:"percent"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		sendError(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+
+	var objectIDs []primitive.ObjectID
+	for _, id := range request.PriceIDs {
+		objID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			sendError(w, fmt.Sprintf("Неверный формат ID: %s", id), http.StatusBadRequest)
+			return
 		}
+		objectIDs = append(objectIDs, objID)
+	}
+
+	collection := getPricesCollection()
+	filter := bson.M{"_id": bson.M{"$in": objectIDs}}
+	update := bson.M{
+		"$mul": bson.M{
+			"amount": 1 + request.Percent/100,
+		},
+	}
+
+	result, err := collection.UpdateMany(context.Background(), filter, update)
+	if err != nil {
+		sendError(w, "Ошибка при массовом обновлении стоимостей", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(price)
+	sendJSON(w, map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("Обновлено %d стоимостей", result.ModifiedCount),
+	})
+}
+
+// Вспомогательные функции
+func getPricesCollection() *mongo.Collection {
+	client, _ := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
+	return client.Database("diplome").Collection("prices")
+}
+
+func sendJSON(w http.ResponseWriter, data interface{}) {
+	json.NewEncoder(w).Encode(data)
+}
+
+func sendError(w http.ResponseWriter, message string, statusCode int) {
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": false,
+		"error":   message,
+	})
 }
