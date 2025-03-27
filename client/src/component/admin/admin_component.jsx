@@ -1,7 +1,6 @@
 import { Route, Routes, Link, useLocation, Navigate } from 'react-router-dom';
 import './admin_component.css';
 import AdminCheckProfile from '../admin_components/admin_check_profile/admin_check_profile';
-import AdminAcceptPage from '../admin_components/admin_accept_page/admin_accept_page';
 import AdminCourseManagement from '../admin_components/admin_course_management/admin_course_management';
 import AdminCoursesManagement from '../admin_components/admin_check_manage/admin_check_manage';
 import AdminGroupManagement from '../admin_components/admin_group_management/admin_group_management';
@@ -106,7 +105,7 @@ const AdminComponent = () => {
           <Route index element={<AdminCourseManagement />} />
           <Route path="profile" element={<AdminCheckProfile />} />
           <Route path="courses" element={<AdminCoursesManagement />} />
-          <Route path="accept" element={<AdminAcceptPage />} />
+          
           <Route path="groups" element={<AdminGroupManagement />} />
         </Routes>
       </div>
