@@ -8,17 +8,17 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"github.com/Renal37/db"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	
 )
 
 func DownloadDocument(w http.ResponseWriter, r *http.Request) {
 	// Путь к шаблону PDF
-	templatePath := "../server/handlers/согласие на обработку ПД совершеннолетнего студента.pdf"
+	templatePath := "../server/document_donwload/согласие на обработку ПД совершеннолетнего студента.pdf"
 
 	// Проверяем, существует ли файл по указанному пути
 	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
@@ -43,17 +43,8 @@ func UploadDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Подключение к MongoDB
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		log.Printf("Database connection error: %v", err)
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
+	collection := db.GetCollection(db.UsersCollection)
 
-	// Проверка существования пользователя
-	collection := client.Database("diplome").Collection("users")
 	filter := bson.M{"_id": userId}
 	var user bson.M
 	err = collection.FindOne(context.Background(), filter).Decode(&user)
@@ -122,16 +113,7 @@ func ViewConsent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Подключение к MongoDB
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		log.Printf("Database connection error: %v", err)
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	collection := client.Database("diplome").Collection("users")
+	collection := db.GetCollection(db.UsersCollection)
 
 	// Получаем путь к файлу согласия
 	var user bson.M

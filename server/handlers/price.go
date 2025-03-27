@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"time"
-
+	"github.com/Renal37/db"
+	// "github.com/Renal37/models"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"net/http"
+	"time"
 )
 
 // Price структура для хранения информации о стоимости
@@ -24,7 +24,6 @@ type Price struct {
 
 // AddPrice добавляет новую стоимость
 func AddPrice(w http.ResponseWriter, r *http.Request) {
-	
 
 	var request struct {
 		Amount      int    `json:"amount"`
@@ -42,7 +41,7 @@ func AddPrice(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:   time.Now(),
 	}
 
-	collection := getPricesCollection()
+	collection := db.GetCollection(db.PricesCollection)
 	result, err := collection.InsertOne(context.Background(), price)
 	if err != nil {
 		sendError(w, "Ошибка при добавлении стоимости", http.StatusInternalServerError)
@@ -51,7 +50,7 @@ func AddPrice(w http.ResponseWriter, r *http.Request) {
 
 	sendJSON(w, map[string]interface{}{
 		"success": true,
-		"price":   map[string]interface{}{
+		"price": map[string]interface{}{
 			"id":          result.InsertedID,
 			"amount":      price.Amount,
 			"description": price.Description,
@@ -59,22 +58,16 @@ func AddPrice(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
+
 // GetPrices возвращает список всех стоимостей, отсортированных по дате (новые сначала)
 func GetPrices(w http.ResponseWriter, r *http.Request) {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	collection := client.Database("diplome").Collection("prices")
 	
+	collection := db.GetCollection(db.PricesCollection)
+
 	// Сортировка по дате создания (новые сначала)
 	findOptions := options.Find()
 	findOptions.SetSort(bson.D{{"createdAt", -1}})
-	
+
 	cursor, err := collection.Find(context.Background(), bson.M{}, findOptions)
 	if err != nil {
 		http.Error(w, "Ошибка при получении стоимостей", http.StatusInternalServerError)
@@ -97,10 +90,8 @@ func GetPrices(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(prices)
 }
 
-
 // UpdatePrice обновляет существующую стоимость
 func UpdatePrice(w http.ResponseWriter, r *http.Request) {
-	
 
 	vars := mux.Vars(r)
 	id, err := primitive.ObjectIDFromHex(vars["id"])
@@ -119,7 +110,7 @@ func UpdatePrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := getPricesCollection()
+	collection := db.GetCollection(db.PricesCollection)
 	filter := bson.M{"_id": id}
 	update := bson.M{
 		"$set": bson.M{
@@ -147,7 +138,6 @@ func UpdatePrice(w http.ResponseWriter, r *http.Request) {
 
 // DeletePrice удаляет стоимость
 func DeletePrice(w http.ResponseWriter, r *http.Request) {
-	
 
 	vars := mux.Vars(r)
 	id, err := primitive.ObjectIDFromHex(vars["id"])
@@ -156,7 +146,7 @@ func DeletePrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := getPricesCollection()
+	collection := db.GetCollection(db.PricesCollection)
 	filter := bson.M{"_id": id}
 
 	result, err := collection.DeleteOne(context.Background(), filter)
@@ -178,7 +168,6 @@ func DeletePrice(w http.ResponseWriter, r *http.Request) {
 
 // BulkUpdatePrices массово обновляет стоимости
 func BulkUpdatePrices(w http.ResponseWriter, r *http.Request) {
-	
 
 	var request struct {
 		PriceIDs []string `json:"priceIds"`
@@ -200,7 +189,7 @@ func BulkUpdatePrices(w http.ResponseWriter, r *http.Request) {
 		objectIDs = append(objectIDs, objID)
 	}
 
-	collection := getPricesCollection()
+	collection := db.GetCollection(db.PricesCollection)
 	filter := bson.M{"_id": bson.M{"$in": objectIDs}}
 	update := bson.M{
 		"$mul": bson.M{
@@ -220,11 +209,6 @@ func BulkUpdatePrices(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Вспомогательные функции
-func getPricesCollection() *mongo.Collection {
-	client, _ := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
-	return client.Database("diplome").Collection("prices")
-}
 
 func sendJSON(w http.ResponseWriter, data interface{}) {
 	json.NewEncoder(w).Encode(data)

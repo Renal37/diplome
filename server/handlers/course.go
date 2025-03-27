@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Renal37/db"
 	"github.com/Renal37/models"
 	"github.com/Renal37/utils"
 	"github.com/dgrijalva/jwt-go"
@@ -11,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"time"
 )
@@ -25,15 +25,7 @@ func AddCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	collection := client.Database("diplome").Collection("courses")
+	collection := db.GetCollection(db.CoursesCollection)
 
 	fullCourse := bson.M{
 		"title":       course.Title,
@@ -59,13 +51,7 @@ func AddCourse(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetCourses(w http.ResponseWriter, r *http.Request) {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("courses")
+	collection := db.GetCollection(db.CoursesCollection)
 
 	cursor, err := collection.Find(context.Background(), bson.M{})
 	if err != nil {
@@ -103,13 +89,7 @@ func UpdateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("courses")
+	collection := db.GetCollection(db.CoursesCollection)
 
 	filter := bson.M{"_id": id}
 	update := bson.M{
@@ -139,16 +119,8 @@ func DeleteCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	// Удаляем курс
-	courseCollection := client.Database("diplome").Collection("courses")
+	
+	courseCollection := db.GetCollection(db.CoursesCollection)
 	filter := bson.M{"_id": id}
 	_, err = courseCollection.DeleteOne(context.Background(), filter)
 	if err != nil {
@@ -157,7 +129,7 @@ func DeleteCourse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Удаляем все заявки, связанные с этим курсом
-	registrationCollection := client.Database("diplome").Collection("course_registrations")
+	registrationCollection :=  db.GetCollection(db.CourseRegistrationsCollection)
 	_, err = registrationCollection.DeleteMany(context.Background(), bson.M{"courseId": id})
 	if err != nil {
 		http.Error(w, "Ошибка при удалении заявок на курс", http.StatusInternalServerError)
@@ -174,13 +146,7 @@ func GetCourseByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("courses")
+	collection := db.GetCollection(db.CoursesCollection)
 
 	var course models.Course
 	filter := bson.M{"_id": courseID}
@@ -207,13 +173,7 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
 		return
 	}
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	registration := bson.M{
 		"courseId": request.CourseID,
@@ -237,14 +197,7 @@ func ApproveCourseRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
-
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
@@ -263,15 +216,7 @@ func ApproveCourseRegistration(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	// Агрегация для получения данных о курсе и пользователе
 	pipeline := bson.A{
@@ -428,14 +373,7 @@ func ApproveRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
-
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
@@ -475,14 +413,7 @@ func RejectRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Причина отклонения обязательна", http.StatusBadRequest)
 		return
 	}
-
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
@@ -545,15 +476,7 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Подключаемся к базе данных
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	// Агрегация для получения курсов конкретного пользователя с указанным статусом
 	pipeline := bson.A{
@@ -656,15 +579,7 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Подключаемся к базе данных
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	// Агрегация для получения курсов конкретного пользователя
 	pipeline := bson.A{
@@ -751,14 +666,7 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Причина отчисления обязательна", http.StatusBadRequest)
 		return
 	}
-
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
@@ -800,14 +708,7 @@ func IssueDocument(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Тип документа обязателен", http.StatusBadRequest)
 		return
 	}
-
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
@@ -833,14 +734,7 @@ func DeleteRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
-
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	filter := bson.M{"_id": registrationID}
 	_, err = collection.DeleteOne(context.Background(), filter)
@@ -886,15 +780,7 @@ func WithdrawRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Подключаемся к базе данных
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	// Проверяем, что заявка принадлежит пользователю
 	filter := bson.M{"_id": registrationID, "userId": userID}
@@ -919,14 +805,7 @@ func PayCourse(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
-
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{

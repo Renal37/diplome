@@ -227,9 +227,15 @@ const AdminCourseManagement = () => {
     }
   };
 
+
   const handleBulkUpdate = async () => {
     if (selectedPrices.length === 0 || !percentIncrease) {
       alert('Выберите стоимости и укажите процент');
+      return;
+    }
+
+    if (percentIncrease <= 0) {
+      alert('Процент должен быть положительным');
       return;
     }
 
@@ -259,6 +265,7 @@ const AdminCourseManagement = () => {
       alert(error.message);
     }
   };
+
 
   const togglePriceSelection = (priceId) => {
     setSelectedPrices(prev =>
@@ -291,9 +298,9 @@ const AdminCourseManagement = () => {
           <button className='approve-btn' onClick={() => setIsModalOpen(true)}>
             Добавить курс
           </button>
-          <button className='approve-btn' onClick={() => setIsPriceModalOpen(true)}>
+          {/* <button className='approve-btn' onClick={() => setIsPriceModalOpen(true)}>
             Управление стоимостями
-          </button>
+          </button> */}
         </div>
       </div>
 

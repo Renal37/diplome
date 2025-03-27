@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import "./check_course_component.css";
 import { PDFDocument } from "pdf-lib";
 
+import qr from "../../../assets/mustafin_qr.jpg";
+
 const CheckCourse = () => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -287,7 +289,7 @@ const CheckCourse = () => {
                         <h2>Оплата курса: {selectedCourse.courseTitle}</h2>
                         <div className="qr-code-placeholder">
                             {/* Здесь можно вставить реальный QR-код */}
-                            <img src="https://via.placeholder.com/200" alt="QR Code" />
+                            <img src={qr} alt="QR Code" />
                         </div>
                         <div className="payment-modal-buttons">
                             <button onClick={handlePayment}>Оплатил</button>

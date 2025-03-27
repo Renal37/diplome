@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Renal37/db"
 	"github.com/Renal37/models"
 	"github.com/Renal37/utils"
 	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -24,13 +24,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("users")
+	collection := db.GetCollection(db.UsersCollection)
 
 	var existingUser models.User
 	err = collection.FindOne(context.Background(), bson.M{"email": user.Email}).Decode(&existingUser)
@@ -104,13 +98,7 @@ func GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("users")
+	collection := db.GetCollection(db.UsersCollection)
 
 	var user models.User
 	userID, err := primitive.ObjectIDFromHex(claims.UserID)
@@ -147,7 +135,7 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		FirstName         string `json:"firstName,omitempty"`
 		MiddleName        string `json:"middleName,omitempty"`
 		Education         string `json:"education,omitempty"`
-		Phone         string `json:"phone,omitempty"`
+		Phone             string `json:"phone,omitempty"`
 		BirthDate         string `json:"birthDate,omitempty"`
 		BirthPlace        string `json:"birthPlace,omitempty"`
 		HomeAddress       string `json:"homeAddress,omitempty"`
@@ -182,16 +170,10 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный токен", http.StatusUnauthorized)
 		return
 	}
-	
+
 	userID := claims.UserID
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("users")
+	collection := db.GetCollection(db.UsersCollection)
 
 	// Получаем текущие данные пользователя
 	var user models.User
@@ -273,19 +255,13 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Данные успешно обновлены"})
 }
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("users")
+	collection := db.GetCollection(db.UsersCollection)
 
 	cursor, err := collection.Find(context.Background(), bson.M{})
 	if err != nil {

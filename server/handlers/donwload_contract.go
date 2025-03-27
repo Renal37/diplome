@@ -10,11 +10,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Renal37/db"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func DownloadContract(w http.ResponseWriter, r *http.Request) {
@@ -26,16 +25,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		log.Printf("Database connection error: %v", err)
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 	pipeline := bson.A{
 		bson.M{"$match": bson.M{"_id": courseId}},
 		bson.M{"$lookup": bson.M{
@@ -97,7 +87,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Путь к шаблону PDF
-	templatePath := "../server/handlers/ДОГОВОР_fix.pdf"
+	templatePath := "../server/document_donwload/ДОГОВОР.pdf"
 
 	// Отправка PDF-шаблона клиенту
 	w.Header().Set("Content-Type", "application/pdf")
@@ -115,17 +105,7 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Подключение к MongoDB
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		log.Printf("Database connection error: %v", err)
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	// Проверка существования курса
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 	filter := bson.M{"_id": courseId}
 	var courseRegistration bson.M
 	err = collection.FindOne(context.Background(), filter).Decode(&courseRegistration)
@@ -194,16 +174,7 @@ func ApproveContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		log.Printf("Database connection error: %v", err)
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 	filter := bson.M{"_id": contractId}
 	update := bson.M{"$set": bson.M{"status": "Принят"}}
 	result, err := collection.UpdateOne(context.Background(), filter, update)
@@ -234,16 +205,7 @@ func ViewContract(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Подключение к MongoDB
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		log.Printf("Database connection error: %v", err)
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	defer client.Disconnect(context.Background())
-
-	collection := client.Database("diplome").Collection("course_registrations")
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	// Получаем путь к файлу договора
 	var registration bson.M

@@ -4,15 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"time"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/Renal37/db"
 	"github.com/Renal37/models"
 	"github.com/Renal37/utils"
+	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
+	"net/http"
+	"time"
 )
 
 func LoginUser(w http.ResponseWriter, r *http.Request) {
@@ -26,13 +25,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, err := mongo.Connect(context.Background(), clientOptions)
-	if err != nil {
-		http.Error(w, "Ошибка подключения к базе данных", http.StatusInternalServerError)
-		return
-	}
-	collection := client.Database("diplome").Collection("users")
+	collection := db.GetCollection(db.UsersCollection)
 
 	var user models.User
 	err = collection.FindOne(context.Background(), bson.M{"username": credentials.Username}).Decode(&user)
