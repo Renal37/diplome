@@ -18,6 +18,7 @@ const ProfileEditDate = () => {
         confirmPassword: '',
         agreeToProcessing: false,
     });
+    const [educations, setEducations] = useState([]);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -59,6 +60,25 @@ const ProfileEditDate = () => {
 
         fetchUserData();
     }, []);
+    useEffect(() => {
+        const fetchEducations = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/admin/educations', {
+                    credentials: 'include',
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setEducations(data);
+                }
+            } catch (err) {
+                console.error('Ошибка при загрузке уровней образования:', err);
+            }
+        };
+
+        fetchEducations();
+    }, []);
+
+
 
     // Функция для валидации кириллицы
     const validateCyrillic = (text) => {
@@ -255,14 +275,19 @@ const ProfileEditDate = () => {
                         <div className="form-group">
                             <label>Образование:</label>
                             <select
-                                name="education"
-                                value={userData.education}
-                                onChange={handleChange}
+                                name="educationId"
+                                value={userData.educationId || ''}
+                                onChange={(e) => setUserData({
+                                    ...userData,
+                                    educationId: e.target.value
+                                })}
                             >
                                 <option value="">Выберите образование</option>
-                                <option value="Высшее">Высшее</option>
-                                <option value="Среднее профессиональное">Среднее профессиональное</option>
-                                <option value="Среднее общее">Среднее общее</option>
+                                {educations.map(edu => (
+                                    <option key={edu._id} value={edu._id}>
+                                        {edu.name}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         <div className="form-group">

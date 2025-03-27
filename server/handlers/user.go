@@ -8,7 +8,7 @@ import (
 
 	"github.com/Renal37/db"
 	"github.com/Renal37/models"
-	"github.com/Renal37/utils"
+	"github.com/Renal37/utils"	
 	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -134,7 +134,7 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		LastName          string `json:"lastName,omitempty"`
 		FirstName         string `json:"firstName,omitempty"`
 		MiddleName        string `json:"middleName,omitempty"`
-		Education         string `json:"education,omitempty"`
+		EducationID string `json:"educationId,omitempty"`
 		Phone             string `json:"phone,omitempty"`
 		BirthDate         string `json:"birthDate,omitempty"`
 		BirthPlace        string `json:"birthPlace,omitempty"`
@@ -199,8 +199,13 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	if updateData.MiddleName != "" {
 		update["middlename"] = updateData.MiddleName
 	}
-	if updateData.Education != "" {
-		update["education"] = updateData.Education
+	if updateData.EducationID != "" {
+		educationID, err := primitive.ObjectIDFromHex(updateData.EducationID)
+		if err != nil {
+			http.Error(w, "Неверный формат ID образования", http.StatusBadRequest)
+			return
+		}
+		update["educationId"] = educationID
 	}
 	if updateData.Phone != "" {
 		update["phone"] = updateData.Phone

@@ -22,6 +22,12 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/admin/issue-document/{id}", handlers.IssueDocument).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/approve-contract/{id}", handlers.ApproveContract).Methods("POST")
 
+	// Добавление уровня образования
+	r.HandleFunc("/admin/educations", handlers.GetEducations).Methods("GET")
+	r.HandleFunc("/admin/educations/add", handlers.AddEducation).Methods("POST")
+	r.HandleFunc("/admin/educations/update/{id}", handlers.UpdateEducation).Methods("PUT")
+	r.HandleFunc("/admin/educations/delete/{id}", handlers.DeleteEducation).Methods("DELETE")
+
 	// Маршруты для курсов
 	r.HandleFunc("/update-course/{id}", handlers.UpdateCourse).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/delete-course/{id}", handlers.DeleteCourse).Methods("DELETE", "OPTIONS")
