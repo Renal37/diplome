@@ -18,7 +18,7 @@ const ProfileEditDate = () => {
         confirmPassword: '',
         agreeToProcessing: false,
     });
-    const [educations, setEducations] = useState([]);
+    const [educations, setEducations] = useState([]); // Инициализируем пустым массивом
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -37,17 +37,17 @@ const ProfileEditDate = () => {
                     // Обновляем состояние, сохраняя предыдущие значения
                     setUserData((prevState) => ({
                         ...prevState,
-                        lastName: data.lastName || '',
-                        firstName: data.firstName || '',
-                        middleName: data.middleName || '',
+                        lastName: data.lastname || '',
+                        firstName: data.firstname || '',
+                        middleName: data.middlename || '',
                         education: data.education || '',
                         phone: data.phone || '',
-                        birthDate: data.birthDate || '',
-                        birthPlace: data.birthPlace || '',
-                        homeAddress: data.homeAddress || '',
-                        workPlace: data.workPlace || '',
-                        jobTitle: data.jobTitle || '',
-                        agreeToProcessing: data.agreeToProcessing || false,
+                        birthDate: data.birthdate || '',
+                        birthPlace: data.birthplace || '',
+                        homeAddress: data.homeaddress || '',
+                        workPlace: data.workplace || '',
+                        jobTitle: data.jobtitle || '',
+                        agreeToProcessing: data.agreetoprocessing || false,
                     }));
                 } else {
                     setError('Ошибка при загрузке данных пользователя');
@@ -60,24 +60,38 @@ const ProfileEditDate = () => {
 
         fetchUserData();
     }, []);
+
     useEffect(() => {
-        const fetchEducations = async () => {
+        const fetchData = async () => {
             try {
-                const response = await fetch('http://localhost:5000/admin/educations', {
+                // Загрузка данных пользователя
+                const userResponse = await fetch('http://localhost:5000/profile', {
                     credentials: 'include',
                 });
-                if (response.ok) {
-                    const data = await response.json();
-                    setEducations(data);
+                if (userResponse.ok) {
+                    const userData = await userResponse.json();
+                    setUserData(prev => ({
+                        ...prev,
+                        ...userData,
+                        educationId: userData.educationId?._id || userData.educationId || ''
+                    }));
+                }
+
+                // Загрузка списка образований
+                const eduResponse = await fetch('http://localhost:5000/admin/educations', {
+                    credentials: 'include',
+                });
+                if (eduResponse.ok) {
+                    const eduData = await eduResponse.json();
+                    setEducations(eduData || []); // Гарантируем массив
                 }
             } catch (err) {
-                console.error('Ошибка при загрузке уровней образования:', err);
+                console.error('Ошибка загрузки:', err);
             }
         };
 
-        fetchEducations();
+        fetchData();
     }, []);
-
 
 
     // Функция для валидации кириллицы
@@ -175,6 +189,7 @@ const ProfileEditDate = () => {
             education: userData.education,
             phone: userData.phone,
             birthDate: userData.birthDate,
+            educationId: userData.educationId,
             birthPlace: userData.birthPlace,
             homeAddress: userData.homeAddress,
             workPlace: userData.workPlace,
@@ -283,7 +298,7 @@ const ProfileEditDate = () => {
                                 })}
                             >
                                 <option value="">Выберите образование</option>
-                                {educations.map(edu => (
+                                {educations && educations.map(edu => (
                                     <option key={edu._id} value={edu._id}>
                                         {edu.name}
                                     </option>

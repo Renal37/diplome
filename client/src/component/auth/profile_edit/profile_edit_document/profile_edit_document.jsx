@@ -105,8 +105,8 @@ const ProfileEditDocument = () => {
                     // Обновляем состояние, сохраняя предыдущие значения
                     setUserData((prevState) => ({
                         ...prevState,
-                        passportSeries: data.passportData ? data.passportData.split(' ')[0] : '',
-                        passportNumber: data.passportData ? data.passportData.split(' ')[1] : '',
+                        passportSeries: data.passportdata ? data.passportdata.split(' ')[0] : '',
+                        passportNumber: data.passportdata ? data.passportdata.split(' ')[1] : '',
                         snils: data.snils || '',
                         agreeToProcessing: data.agreeToProcessing || false,
                     }));

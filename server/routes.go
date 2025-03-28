@@ -24,9 +24,9 @@ func registerRoutes(r *mux.Router) {
 
 	// Добавление уровня образования
 	r.HandleFunc("/admin/educations", handlers.GetEducations).Methods("GET")
-	r.HandleFunc("/admin/educations/add", handlers.AddEducation).Methods("POST")
-	r.HandleFunc("/admin/educations/update/{id}", handlers.UpdateEducation).Methods("PUT")
-	r.HandleFunc("/admin/educations/delete/{id}", handlers.DeleteEducation).Methods("DELETE")
+	r.HandleFunc("/admin/educations/add", handlers.AddEducation).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/educations/update/{id}", handlers.UpdateEducation).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/admin/educations/delete/{id}", handlers.DeleteEducation).Methods("DELETE", "OPTIONS")
 
 	// Маршруты для курсов
 	r.HandleFunc("/update-course/{id}", handlers.UpdateCourse).Methods("PUT", "OPTIONS")

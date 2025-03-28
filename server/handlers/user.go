@@ -8,7 +8,7 @@ import (
 
 	"github.com/Renal37/db"
 	"github.com/Renal37/models"
-	"github.com/Renal37/utils"	
+	"github.com/Renal37/utils"
 	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -76,44 +76,103 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetProfile(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
-			return
-		}
-		http.Error(w, "Ошибка при получении токена", http.StatusBadRequest)
-		return
-	}
+    // Получаем токен из куки
+    cookie, err := r.Cookie("token")
+    if err != nil {
+        if err == http.ErrNoCookie {
+            http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+            return
+        }
+        http.Error(w, "Ошибка при получении токена", http.StatusBadRequest)
+        return
+    }
 
-	tokenStr := cookie.Value
+    // Парсим токен
+    tokenStr := cookie.Value
+    claims := &utils.Claims{}
+    token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+        return utils.JwtKey, nil
+    })
 
-	claims := &utils.Claims{}
-	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return utils.JwtKey, nil
-	})
+    if err != nil || !token.Valid {
+        http.Error(w, "Неверный токен", http.StatusUnauthorized)
+        return
+    }
 
-	if err != nil || !token.Valid {
-		http.Error(w, "Неверный токен", http.StatusUnauthorized)
-		return
-	}
+    // Преобразуем ID пользователя в ObjectID
+    userID, err := primitive.ObjectIDFromHex(claims.UserID)
+    if err != nil {
+        http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
+        return
+    }
 
-	collection := db.GetCollection(db.UsersCollection)
+    // Получаем коллекцию пользователей
+    collection := db.GetCollection(db.UsersCollection)
 
-	var user models.User
-	userID, err := primitive.ObjectIDFromHex(claims.UserID)
-	if err != nil {
-		http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
-		return
-	}
-	err = collection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
-	if err != nil {
-		http.Error(w, "Пользователь не найден", http.StatusNotFound)
-		return
-	}
+    // Создаем pipeline для агрегации
+    pipeline := []bson.M{
+        {
+            "$match": bson.M{"_id": userID},
+        },
+        {
+            "$lookup": bson.M{
+                "from":         db.EducationsCollection,
+                "localField":   "educationId",
+                "foreignField": "_id",
+                "as":           "education",
+            },
+        },
+        {
+            "$addFields": bson.M{
+                "education": bson.M{"$arrayElemAt": bson.A{"$education", 0}},
+            },
+        },
+        {
+            "$project": bson.M{
+                "password": 0, // Исключаем пароль из результатов
+            },
+        },
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+    // Выполняем агрегацию
+    cursor, err := collection.Aggregate(context.Background(), pipeline)
+    if err != nil {
+        http.Error(w, "Ошибка при получении данных пользователя", http.StatusInternalServerError)
+        return
+    }
+    defer cursor.Close(context.Background())
+
+    // Декодируем результат
+    var userData bson.M
+    if cursor.Next(context.Background()) {
+        if err := cursor.Decode(&userData); err != nil {
+            http.Error(w, "Ошибка при обработке данных пользователя", http.StatusInternalServerError)
+            return
+        }
+    } else {
+        http.Error(w, "Пользователь не найден", http.StatusNotFound)
+        return
+    }
+
+    // Преобразуем ObjectID в строку для удобства фронтенда
+    if userData["_id"] != nil {
+        userData["_id"] = userData["_id"].(primitive.ObjectID).Hex()
+    }
+    if userData["educationId"] != nil {
+        userData["educationId"] = userData["educationId"].(primitive.ObjectID).Hex()
+    }
+    if userData["education"] != nil {
+        education := userData["education"].(bson.M)
+        if education["_id"] != nil {
+            education["_id"] = education["_id"].(primitive.ObjectID).Hex()
+        }
+    }
+
+    // Отправляем данные пользователя
+    w.Header().Set("Content-Type", "application/json")
+    if err := json.NewEncoder(w).Encode(userData); err != nil {
+        http.Error(w, "Ошибка при формировании ответа", http.StatusInternalServerError)
+    }
 }
 
 func LogoutUser(w http.ResponseWriter, r *http.Request) {
@@ -129,140 +188,142 @@ func LogoutUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 func UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	var updateData struct {
-		FullName          string `json:"fullName,omitempty"`
-		LastName          string `json:"lastName,omitempty"`
-		FirstName         string `json:"firstName,omitempty"`
-		MiddleName        string `json:"middleName,omitempty"`
-		EducationID string `json:"educationId,omitempty"`
-		Phone             string `json:"phone,omitempty"`
-		BirthDate         string `json:"birthDate,omitempty"`
-		BirthPlace        string `json:"birthPlace,omitempty"`
-		HomeAddress       string `json:"homeAddress,omitempty"`
-		WorkPlace         string `json:"workPlace,omitempty"`
-		JobTitle          string `json:"jobTitle,omitempty"`
-		OldPassword       string `json:"oldPassword,omitempty"`
-		NewPassword       string `json:"newPassword,omitempty"`
-		PassportData      string `json:"passportData,omitempty"`
-		SNILS             string `json:"snils,omitempty"`
-		AgreeToProcessing bool   `json:"agreeToProcessing,omitempty"`
-	}
+    // Получаем и парсим данные запроса
+    var updateData struct {
+        LastName          string `json:"lastName,omitempty"`
+        FirstName         string `json:"firstName,omitempty"`
+        MiddleName        string `json:"middleName,omitempty"`
+        EducationID       string `json:"educationId,omitempty"` // Изменено на строку
+        Phone             string `json:"phone,omitempty"`
+        BirthDate         string `json:"birthDate,omitempty"`
+        BirthPlace        string `json:"birthPlace,omitempty"`
+        HomeAddress       string `json:"homeAddress,omitempty"`
+        WorkPlace         string `json:"workPlace,omitempty"`
+        JobTitle          string `json:"jobTitle,omitempty"`
+        OldPassword       string `json:"oldPassword,omitempty"`
+        NewPassword       string `json:"newPassword,omitempty"`
+        AgreeToProcessing bool   `json:"agreeToProcessing,omitempty"`
+    }
 
-	err := json.NewDecoder(r.Body).Decode(&updateData)
-	if err != nil {
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
-		return
-	}
+    if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
+        http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+        return
+    }
 
-	// Получаем ID пользователя из токена
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
-		return
-	}
+    // Получаем ID пользователя из токена
+    cookie, err := r.Cookie("token")
+    if err != nil {
+        http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+        return
+    }
 
-	claims := &utils.Claims{}
-	token, err := jwt.ParseWithClaims(cookie.Value, claims, func(token *jwt.Token) (interface{}, error) {
-		return utils.JwtKey, nil
-	})
+    claims := &utils.Claims{}
+    token, err := jwt.ParseWithClaims(cookie.Value, claims, func(token *jwt.Token) (interface{}, error) {
+        return utils.JwtKey, nil
+    })
 
-	if err != nil || !token.Valid {
-		http.Error(w, "Неверный токен", http.StatusUnauthorized)
-		return
-	}
+    if err != nil || !token.Valid {
+        http.Error(w, "Неверный токен", http.StatusUnauthorized)
+        return
+    }
 
-	userID := claims.UserID
+    userID, err := primitive.ObjectIDFromHex(claims.UserID)
+    if err != nil {
+        http.Error(w, "Неверный формат ID пользователя", http.StatusBadRequest)
+        return
+    }
 
-	collection := db.GetCollection(db.UsersCollection)
+    collection := db.GetCollection(db.UsersCollection)
 
-	// Получаем текущие данные пользователя
-	var user models.User
-	objID, _ := primitive.ObjectIDFromHex(userID)
-	err = collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&user)
-	if err != nil {
-		http.Error(w, "Пользователь не найден", http.StatusNotFound)
-		return
-	}
+    // Создаём объект для обновления
+    update := bson.M{}
 
-	// Создаем объект для обновления
-	update := bson.M{}
+    // Обновляем основные поля
+    if updateData.LastName != "" {
+        update["lastname"] = updateData.LastName
+    }
+    if updateData.FirstName != "" {
+        update["firstname"] = updateData.FirstName
+    }
+    if updateData.MiddleName != "" {
+        update["middlename"] = updateData.MiddleName
+    }
+    if updateData.Phone != "" {
+        update["phone"] = updateData.Phone
+    }
+    if updateData.BirthDate != "" {
+        update["birthdate"] = updateData.BirthDate
+    }
+    if updateData.BirthPlace != "" {
+        update["birthplace"] = updateData.BirthPlace
+    }
+    if updateData.HomeAddress != "" {
+        update["homeaddress"] = updateData.HomeAddress
+    }
+    if updateData.WorkPlace != "" {
+        update["workplace"] = updateData.WorkPlace
+    }
+    if updateData.JobTitle != "" {
+        update["jobtitle"] = updateData.JobTitle
+    }
+    update["agreetoprocessing"] = updateData.AgreeToProcessing
 
-	if updateData.FullName != "" {
-		update["fullName"] = updateData.FullName
-	}
-	if updateData.LastName != "" {
-		update["lastname"] = updateData.LastName
-	}
-	if updateData.FirstName != "" {
-		update["firstname"] = updateData.FirstName
-	}
-	if updateData.MiddleName != "" {
-		update["middlename"] = updateData.MiddleName
-	}
-	if updateData.EducationID != "" {
-		educationID, err := primitive.ObjectIDFromHex(updateData.EducationID)
-		if err != nil {
-			http.Error(w, "Неверный формат ID образования", http.StatusBadRequest)
-			return
-		}
-		update["educationId"] = educationID
-	}
-	if updateData.Phone != "" {
-		update["phone"] = updateData.Phone
-	}
-	if updateData.BirthDate != "" {
-		update["birthdate"] = updateData.BirthDate
-	}
-	if updateData.BirthPlace != "" {
-		update["birthplace"] = updateData.BirthPlace
-	}
-	if updateData.HomeAddress != "" {
-		update["homeaddress"] = updateData.HomeAddress
-	}
-	if updateData.WorkPlace != "" {
-		update["workplace"] = updateData.WorkPlace
-	}
-	if updateData.JobTitle != "" {
-		update["jobtitle"] = updateData.JobTitle
-	}
-	if updateData.PassportData != "" {
-		update["passportdata"] = updateData.PassportData
-	}
-	if updateData.SNILS != "" {
-		update["snils"] = updateData.SNILS
-	}
-	if updateData.AgreeToProcessing {
-		update["agreetoprocessing"] = updateData.AgreeToProcessing
-	}
+    // Обработка образования
+    if updateData.EducationID != "" {
+        educationID, err := primitive.ObjectIDFromHex(updateData.EducationID)
+        if err != nil {
+            http.Error(w, "Неверный формат ID образования", http.StatusBadRequest)
+            return
+        }
+        update["educationid"] = educationID // Важно: используем правильное имя поля в БД
+    } else {
+        update["educationid"] = nil // Очищаем, если образование не указано
+    }
 
-	// Если пользователь хочет изменить пароль
-	if updateData.OldPassword != "" && updateData.NewPassword != "" {
-		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(updateData.OldPassword))
-		if err != nil {
-			http.Error(w, "Неверный старый пароль", http.StatusUnauthorized)
-			return
-		}
+    // Обработка пароля
+    if updateData.OldPassword != "" && updateData.NewPassword != "" {
+        var user models.User
+        if err := collection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user); err != nil {
+            http.Error(w, "Пользователь не найден", http.StatusNotFound)
+            return
+        }
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updateData.NewPassword), bcrypt.DefaultCost)
-		if err != nil {
-			http.Error(w, "Ошибка при хешировании пароля", http.StatusInternalServerError)
-			return
-		}
+        if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(updateData.OldPassword)); err != nil {
+            http.Error(w, "Неверный старый пароль", http.StatusUnauthorized)
+            return
+        }
 
-		update["password"] = string(hashedPassword)
-	}
+        hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updateData.NewPassword), bcrypt.DefaultCost)
+        if err != nil {
+            http.Error(w, "Ошибка при хешировании пароля", http.StatusInternalServerError)
+            return
+        }
 
-	// Обновляем только те поля, которые были переданы
-	if len(update) > 0 {
-		_, err = collection.UpdateOne(context.Background(), bson.M{"_id": objID}, bson.M{"$set": update})
-		if err != nil {
-			http.Error(w, "Ошибка при обновлении данных", http.StatusInternalServerError)
-			return
-		}
-	}
+        update["password"] = string(hashedPassword)
+    }
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Данные успешно обновлены"})
+    // Выполняем обновление
+    result, err := collection.UpdateOne(
+        context.Background(),
+        bson.M{"_id": userID},
+        bson.M{"$set": update},
+    )
+
+    if err != nil {
+        http.Error(w, "Ошибка при обновлении профиля", http.StatusInternalServerError)
+        return
+    }
+
+    if result.MatchedCount == 0 {
+        http.Error(w, "Пользователь не найден", http.StatusNotFound)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]interface{}{
+        "success": true,
+        "message": "Профиль успешно обновлён",
+    })
 }
 
 func GetUser(w http.ResponseWriter, r *http.Request) {

@@ -2,29 +2,40 @@ import React, { useState, useEffect } from 'react';
 import './admin_all_add.css';
 
 const AdminAllAdd = () => {
-    const [educations, setEducations] = useState([]);
+    const [educations, setEducations] = useState([]); // Инициализируем пустым массивом вместо null
     const [newEducation, setNewEducation] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [editValue, setEditValue] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     // Загрузка списка образований
     useEffect(() => {
+        const fetchEducations = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch('http://localhost:5000/admin/educations', {
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    throw new Error('Ошибка при загрузке данных');
+                }
+
+                const data = await response.json();
+                setEducations(data || []); // Гарантируем, что data будет массивом
+                setError(null);
+            } catch (err) {
+                console.error('Ошибка при загрузке уровней образования:', err);
+                setError(err.message);
+                setEducations([]); // Устанавливаем пустой массив в случае ошибки
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchEducations();
     }, []);
-
-    const fetchEducations = async () => {
-        try {
-            const response = await fetch('http://localhost:5000/admin/educations', {
-                credentials: 'include',
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setEducations(data);
-            }
-        } catch (err) {
-            console.error('Ошибка при загрузке уровней образования:', err);
-        }
-    };
 
     const handleAddEducation = async () => {
         if (!newEducation.trim()) return;
@@ -39,12 +50,16 @@ const AdminAllAdd = () => {
                 body: JSON.stringify({ name: newEducation }),
             });
 
-            if (response.ok) {
-                setNewEducation('');
-                fetchEducations();
+            if (!response.ok) {
+                throw new Error('Ошибка при добавлении');
             }
+
+            const result = await response.json();
+            setEducations(prev => [...prev, result]);
+            setNewEducation('');
         } catch (err) {
             console.error('Ошибка при добавлении уровня образования:', err);
+            setError(err.message);
         }
     };
 
@@ -66,12 +81,19 @@ const AdminAllAdd = () => {
                 body: JSON.stringify({ name: editValue }),
             });
 
-            if (response.ok) {
-                setEditingId(null);
-                fetchEducations();
+            if (!response.ok) {
+                throw new Error('Ошибка при обновлении');
             }
+
+            setEducations(prev =>
+                prev.map(edu =>
+                    edu._id === id ? { ...edu, name: editValue } : edu
+                )
+            );
+            setEditingId(null);
         } catch (err) {
             console.error('Ошибка при обновлении уровня образования:', err);
+            setError(err.message);
         }
     };
 
@@ -84,21 +106,31 @@ const AdminAllAdd = () => {
                 credentials: 'include',
             });
 
-            if (response.ok) {
-                fetchEducations();
-            } else {
+            if (!response.ok) {
                 const data = await response.json();
-                alert(data.message || 'Ошибка при удалении');
+                throw new Error(data.message || 'Ошибка при удалении');
             }
+
+            setEducations(prev => prev.filter(edu => edu._id !== id));
         } catch (err) {
             console.error('Ошибка при удалении уровня образования:', err);
+            setError(err.message);
+            alert(err.message);
         }
     };
+
+    if (loading) {
+        return <div>Загрузка...</div>;
+    }
+
+    if (error) {
+        return <div className="error-message">Ошибка: {error}</div>;
+    }
 
     return (
         <div className="admin-education-container">
             <h2>Управление уровнями образования</h2>
-            
+
             <div className="add-education-form">
                 <input
                     type="text"
@@ -111,29 +143,33 @@ const AdminAllAdd = () => {
 
             <div className="educations-list">
                 <h3>Список уровней образования</h3>
-                <ul>
-                    {educations.map(edu => (
-                        <li key={edu._id}>
-                            {editingId === edu._id ? (
-                                <>
-                                    <input
-                                        type="text"
-                                        value={editValue}
-                                        onChange={(e) => setEditValue(e.target.value)}
-                                    />
-                                    <button onClick={() => handleUpdateEducation(edu._id)}>Сохранить</button>
-                                    <button onClick={() => setEditingId(null)}>Отмена</button>
-                                </>
-                            ) : (
-                                <>
-                                    <span>{edu.name}</span>
-                                    <button onClick={() => startEditing(edu._id, edu.name)}>Редактировать</button>
-                                    <button onClick={() => handleDeleteEducation(edu._id)}>Удалить</button>
-                                </>
-                            )}
-                        </li>
-                    ))}
-                </ul>
+                {educations.length === 0 ? (
+                    <p>Нет доступных уровней образования</p>
+                ) : (
+                    <ul>
+                        {educations.map(edu => (
+                            <li key={edu._id}>
+                                {editingId === edu._id ? (
+                                    <>
+                                        <input
+                                            type="text"
+                                            value={editValue}
+                                            onChange={(e) => setEditValue(e.target.value)}
+                                        />
+                                        <button onClick={() => handleUpdateEducation(edu._id)}>Сохранить</button>
+                                        <button onClick={() => setEditingId(null)}>Отмена</button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>{edu.name}</span>
+                                        <button onClick={() => startEditing(edu._id, edu.name)}>Редактировать</button>
+                                        <button onClick={() => handleDeleteEducation(edu._id)}>Удалить</button>
+                                    </>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </div>
         </div>
     );

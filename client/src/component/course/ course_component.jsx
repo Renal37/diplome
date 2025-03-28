@@ -35,7 +35,7 @@ const CourseRegistration = () => {
                     navigate('/auth/login');
                 } else {
                     setUser(data);
-                    console.log(data);
+                    
                 }
             })
             .catch(error => {
@@ -45,7 +45,8 @@ const CourseRegistration = () => {
     }, [courseId, navigate]);
 
     const handleRegister = () => {
-        if (!user || !user.ID) {
+     
+        if (!user || !user._id) {
             console.error("User ID is missing");
             return;
         }
@@ -60,20 +61,20 @@ const CourseRegistration = () => {
         }
 
         const requiredFields = [
-            { field: 'lastName', message: 'Фамилия не заполнена' },
-            { field: 'firstName', message: 'Имя не заполнено' },
-            { field: 'middleName', message: 'Отчество не заполнено' },
-            { field: 'birthDate', message: 'Дата рождения не указана' },
-            { field: 'birthPlace', message: 'Место рождения не указано' },
+            { field: 'lastname', message: 'Фамилия не заполнена' },
+            { field: 'firstname', message: 'Имя не заполнено' },
+            { field: 'middlename', message: 'Отчество не заполнено' },
+            { field: 'birthdate', message: 'Дата рождения не указана' },
+            { field: 'birthplace', message: 'Место рождения не указано' },
             { field: 'education', message: 'Образование не указано' },
             { field: 'email', message: 'Email не указан' },
-            { field: 'homeAddress', message: 'Домашний адрес не указан' },
-            { field: 'jobTitle', message: 'Должность не указана' },
-            { field: 'passportData', message: 'Паспортные данные не указаны' },
+            { field: 'homeaddress', message: 'Домашний адрес не указан' },
+            { field: 'jobtitle', message: 'Должность не указана' },
+            { field: 'passportdata', message: 'Паспортные данные не указаны' },
             { field: 'phone', message: 'Телефон не указан' },
             { field: 'snils', message: 'СНИЛС не указан' },
-            { field: 'workPlace', message: 'Место работы не указано' },
-            { field: 'contractuploaded', message: 'Соглашение не найдено' },
+            { field: 'workplace', message: 'Место работы не указано' },
+            { field: 'contractUploaded', message: 'Соглашение не найдено' },
         ];
 
         for (const { field, message } of requiredFields) {
@@ -92,7 +93,7 @@ const CourseRegistration = () => {
             credentials: 'include',
             body: JSON.stringify({
                 courseId: courseId,
-                userId: user.ID,
+                userId: user._id,
             }),
         })
             .then(response => response.json())
@@ -111,7 +112,7 @@ const CourseRegistration = () => {
     };
 
     const isProfileComplete = () => {
-        return user && user.ID;
+        return user && user._id;
     };
 
     if (isLoading) {
