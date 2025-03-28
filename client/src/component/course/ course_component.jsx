@@ -53,8 +53,8 @@ const CourseRegistration = () => {
 
         // Проверка уровня образования для курсов типа "Профессиональная переподготовка"
         if (course.type === "Профессиональная переподготовка") {
-            const allowedEducations = ["Среднее профессиональное", "Высшее"];
-            if (!allowedEducations.includes(user.education)) {
+            const allowedEducations = ["Среднее профессиональное", "Высшее","Высшее образование","Среднее профессиональное"];
+            if (!allowedEducations.includes(user.education.name)) {
                 alert("Для записи на этот курс требуется среднее профессиональное или высшее образование.");
                 return;
             }
