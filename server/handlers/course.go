@@ -16,8 +16,17 @@ import (
 	"time"
 )
 
+// Update AddCourse handler to include typeId
 func AddCourse(w http.ResponseWriter, r *http.Request) {
-	var course models.Course
+	var course struct {
+		Title       string             `json:"title"`
+		Description string             `json:"description"`
+		Duration    int                `json:"duration"`
+		PriceId     primitive.ObjectID `json:"priceId"`
+		Price       float64            `json:"price"`
+		TypeId      primitive.ObjectID `json:"typeId"`
+		Type        string             `json:"type"`
+	}
 
 	err := json.NewDecoder(r.Body).Decode(&course)
 	if err != nil {
@@ -33,6 +42,7 @@ func AddCourse(w http.ResponseWriter, r *http.Request) {
 		"duration":    course.Duration,
 		"priceId":     course.PriceId,
 		"price":       course.Price,
+		"typeId":      course.TypeId,
 		"type":        course.Type,
 		"createdAt":   time.Now(),
 	}
@@ -50,10 +60,38 @@ func AddCourse(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Update GetCourses handler to include type information
 func GetCourses(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection(db.CoursesCollection)
 
-	cursor, err := collection.Find(context.Background(), bson.M{})
+	// Добавляем lookup для типов курсов
+	pipeline := bson.A{
+		bson.M{
+			"$lookup": bson.M{
+				"from":         db.CourseTypesCollection,
+				"localField":   "typeId",
+				"foreignField": "_id",
+				"as":           "courseType",
+			},
+		},
+		bson.M{
+			"$addFields": bson.M{
+				"type": bson.M{
+					"$ifNull": bson.A{
+						bson.M{"$arrayElemAt": bson.A{"$courseType.name", 0}},
+						"$type", // Используем старое значение, если тип не найден
+					},
+				},
+			},
+		},
+		bson.M{
+			"$project": bson.M{
+				"courseType": 0, // Убираем временное поле
+			},
+		},
+	}
+
+	cursor, err := collection.Aggregate(context.Background(), pipeline)
 	if err != nil {
 		http.Error(w, "Ошибка при получении курсов из базы данных", http.StatusInternalServerError)
 		return
@@ -68,6 +106,12 @@ func GetCourses(w http.ResponseWriter, r *http.Request) {
 
 	for i := range courses {
 		courses[i]["_id"] = courses[i]["_id"].(primitive.ObjectID).Hex()
+		if courses[i]["priceId"] != nil {
+			courses[i]["priceId"] = courses[i]["priceId"].(primitive.ObjectID).Hex()
+		}
+		if courses[i]["typeId"] != nil {
+			courses[i]["typeId"] = courses[i]["typeId"].(primitive.ObjectID).Hex()
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -119,7 +163,6 @@ func DeleteCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	courseCollection := db.GetCollection(db.CoursesCollection)
 	filter := bson.M{"_id": id}
 	_, err = courseCollection.DeleteOne(context.Background(), filter)
@@ -129,7 +172,7 @@ func DeleteCourse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Удаляем все заявки, связанные с этим курсом
-	registrationCollection :=  db.GetCollection(db.CourseRegistrationsCollection)
+	registrationCollection := db.GetCollection(db.CourseRegistrationsCollection)
 	_, err = registrationCollection.DeleteMany(context.Background(), bson.M{"courseId": id})
 	if err != nil {
 		http.Error(w, "Ошибка при удалении заявок на курс", http.StatusInternalServerError)

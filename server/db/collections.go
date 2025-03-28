@@ -5,6 +5,7 @@ const (
     CoursesCollection           = "courses"
     GroupsCollection            = "groups"
     PricesCollection            = "prices"
-    EducationsCollection        = "educations" // Добавляем коллекцию для уровней образования
+    EducationsCollection        = "educations"
     CourseRegistrationsCollection = "course_registrations"
+    CourseTypesCollection       = "course_types" 
 )

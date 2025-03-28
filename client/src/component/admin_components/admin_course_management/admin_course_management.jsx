@@ -9,8 +9,14 @@ const AdminCourseManagement = () => {
   const [courseDescription, setCourseDescription] = useState('');
   const [courseDuration, setCourseDuration] = useState('');
   const [coursePriceId, setCoursePriceId] = useState('');
-  const [courseType, setCourseType] = useState('Повышение квалификации');
+  const [courseTypeId, setCourseTypeId] = useState('');
+  const [courseTypes, setCourseTypes] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [newTypeName, setNewTypeName] = useState('');
+  const [editingTypeId, setEditingTypeId] = useState(null);
+  const [editingTypeName, setEditingTypeName] = useState('');
+
 
   // Состояния для стоимостей
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
@@ -48,35 +54,41 @@ const AdminCourseManagement = () => {
     }
   };
 
+  // Загрузка типов курсов
+  const fetchCourseTypes = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/admin/course-types', {
+        credentials: 'include',
+      });
+      const data = await response.json();
+      setCourseTypes(data || []);
+    } catch (error) {
+      console.error('Ошибка при загрузке типов курсов:', error);
+      setCourseTypes([]);
+    }
+  };
+
+
   useEffect(() => {
     fetchCourses();
     fetchPrices();
+    fetchCourseTypes();
   }, []);
 
-  // Обработчики для курсов
-  const handleCourseSelect = (course) => {
-    if (!course || !course._id) {
-      console.error("Ошибка: отсутствует ID курса");
-      return;
-    }
-    setSelectedCourse(course);
-    setCourseTitle(course.title);
-    setCourseDescription(course.description);
-    setCourseDuration(course.duration);
-    setCoursePriceId(course.priceId || '');
-    setCourseType(course.type);
-  };
 
+  // Обновляем handleAddCourse для работы с courseTypeId
   const handleAddCourse = async (e) => {
     e.preventDefault();
-    if (!coursePriceId) {
-      alert('Пожалуйста, выберите стоимость');
+    if (!coursePriceId || !courseTypeId) {
+      alert('Пожалуйста, заполните все обязательные поля');
       return;
     }
 
     const selectedPrice = prices.find(price => price._id === coursePriceId);
-    if (!selectedPrice) {
-      alert('Выбранная стоимость не найдена');
+    const selectedType = courseTypes.find(type => type._id === courseTypeId);
+
+    if (!selectedPrice || !selectedType) {
+      alert('Выбранная стоимость или тип курса не найдены');
       return;
     }
 
@@ -86,13 +98,15 @@ const AdminCourseManagement = () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           title: courseTitle,
           description: courseDescription,
           duration: parseInt(courseDuration, 10),
           priceId: coursePriceId,
           price: selectedPrice.amount,
-          type: courseType,
+          typeId: courseTypeId,
+          type: selectedType.name,
         }),
       });
 
@@ -111,6 +125,7 @@ const AdminCourseManagement = () => {
       alert(error.message);
     }
   };
+
 
   const handleDeleteCourse = async (courseId) => {
     if (!window.confirm('Вы уверены, что хотите удалить этот курс?')) {
@@ -134,14 +149,16 @@ const AdminCourseManagement = () => {
     }
   };
 
+  // Обновляем resetCourseForm
   const resetCourseForm = () => {
     setCourseTitle('');
     setCourseDescription('');
     setCourseDuration('');
     setCoursePriceId('');
-    setCourseType('Повышение квалификации');
+    setCourseTypeId('');
     setSelectedCourse(null);
   };
+
 
   // Обработчики для стоимостей
   const handleAddPrice = async (e) => {
@@ -265,6 +282,153 @@ const AdminCourseManagement = () => {
       alert(error.message);
     }
   };
+  // Обработчик добавления типа курса
+  const handleAddCourseType = async () => {
+    if (!newTypeName.trim()) return;
+
+    try {
+      const response = await fetch('http://localhost:5000/admin/course-types/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ name: newTypeName }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при добавлении типа курса');
+      }
+
+      const result = await response.json();
+      setCourseTypes(prev => [...prev, { _id: result.id, name: newTypeName }]);
+      setNewTypeName('');
+      alert('Тип курса успешно добавлен');
+    } catch (err) {
+      console.error('Ошибка:', err);
+      alert(err.message);
+    }
+  };
+  const startEditingType = (type) => {
+    setEditingTypeId(type._id);
+    setEditingTypeName(type.name);
+  };
+
+  const handleUpdateCourseType = async () => {
+    if (!editingTypeId || !editingTypeName.trim()) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/admin/course-types/update/${editingTypeId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ name: editingTypeName }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при обновлении типа курса');
+      }
+
+      setCourseTypes(prev =>
+        prev.map(type =>
+          type._id === editingTypeId ? { ...type, name: editingTypeName } : type
+        )
+      );
+      setEditingTypeId(null);
+      setEditingTypeName('');
+      alert('Тип курса успешно обновлен');
+    } catch (err) {
+      console.error('Ошибка:', err);
+      alert(err.message);
+    }
+  };
+
+  const cancelEditingType = () => {
+    setEditingTypeId(null);
+    setEditingTypeName('');
+  };
+
+  // Обработчик удаления типа курса
+  const handleDeleteCourseType = async (typeId) => {
+    if (!window.confirm('Вы уверены, что хотите удалить этот тип курса?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/admin/course-types/delete/${typeId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при удалении типа курса');
+      }
+
+      setCourseTypes(prev => prev.filter(type => type._id !== typeId));
+      alert('Тип курса успешно удален');
+    } catch (err) {
+      console.error('Ошибка:', err);
+      alert(err.message);
+    }
+  };
+  const handleUpdateCourse = async (e) => {
+    e.preventDefault();
+    if (!selectedCourse) return;
+
+    try {
+      const selectedPrice = prices.find(price => price._id === coursePriceId);
+      const selectedType = courseTypes.find(type => type._id === courseTypeId);
+
+      if (!selectedPrice || !selectedType) {
+        alert('Выбранная стоимость или тип курса не найдены');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:5000/update-course/${selectedCourse._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: courseTitle,
+          description: courseDescription,
+          duration: parseInt(courseDuration, 10),
+          priceId: coursePriceId,
+          price: selectedPrice.amount,
+          typeId: courseTypeId,
+          type: selectedType.name,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Ошибка при обновлении курса');
+      }
+
+      alert('Курс успешно обновлен');
+      setIsModalOpen(false);
+      resetCourseForm();
+      fetchCourses();
+    } catch (error) {
+      console.error('Ошибка:', error);
+      alert(error.message);
+    }
+  };
+
+  // Обновляем handleCourseSelect для работы с courseTypeId
+  const handleCourseSelect = (course) => {
+    if (!course || !course._id) {
+      console.error("Ошибка: отсутствует ID курса");
+      return;
+    }
+    setSelectedCourse(course);
+    setCourseTitle(course.title);
+    setCourseDescription(course.description);
+    setCourseDuration(course.duration);
+    setCoursePriceId(course.priceId || '');
+    setCourseTypeId(course.typeId || '');
+  };
 
 
   const togglePriceSelection = (priceId) => {
@@ -357,14 +521,28 @@ const AdminCourseManagement = () => {
                 </button>
               </div>
 
-              <select
-                value={courseType}
-                onChange={(e) => setCourseType(e.target.value)}
-                required
-              >
-                <option value="Повышение квалификации">Повышение квалификации</option>
-                <option value="Профессиональная переподготовка">Профессиональная переподготовка</option>
-              </select>
+              <div className="form-group">
+                <label>Тип курса:</label>
+                <select
+                  value={courseTypeId}
+                  onChange={(e) => setCourseTypeId(e.target.value)}
+                  required
+                >
+                  <option value="">-- Выберите тип курса --</option>
+                  {courseTypes.map(type => (
+                    <option key={type._id} value={type._id}>
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="small-btn"
+                  onClick={() => setIsTypeModalOpen(true)}
+                >
+                  Управление типами
+                </button>
+              </div>
 
               <div className="form-buttons">
                 <button className='approve-btn' type="submit">
@@ -504,7 +682,114 @@ const AdminCourseManagement = () => {
           </div>
         </div>
       )}
+      {/* Модальное окно управления типами курсов */}
+      {isTypeModalOpen && (
+        <div className="modal">
+          <div className="modal-content">
+            <h2>Управление типами курсов</h2>
 
+            {/* Форма добавления нового типа */}
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleAddCourseType();
+            }}>
+              <input
+                type="text"
+                value={newTypeName}
+                onChange={(e) => setNewTypeName(e.target.value)}
+                placeholder="Новый тип курса"
+                required
+              />
+              <div className="form-buttons">
+                <button className='approve-btn' type="submit">
+                  Добавить тип
+                </button>
+              </div>
+            </form>
+
+            {/* Список типов курсов с возможностью редактирования */}
+            <div className="types-table-container">
+              <h3>Список типов курсов</h3>
+              {courseTypes.length === 0 ? (
+                <p>Нет доступных типов курсов</p>
+              ) : (
+                <table className="types-table">
+                  <thead>
+                    <tr>
+                      <th>Название</th>
+                      <th>Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courseTypes.map(type => (
+                      <tr key={type._id}>
+                        <td>
+                          {editingTypeId === type._id ? (
+                            <input
+                              type="text"
+                              value={editingTypeName}
+                              onChange={(e) => setEditingTypeName(e.target.value)}
+                              autoFocus
+                            />
+                          ) : (
+                            <span>{type.name}</span>
+                          )}
+                        </td>
+                        <td>
+                          {editingTypeId === type._id ? (
+                            <>
+                              <button
+                                className='approve-btn'
+                                onClick={handleUpdateCourseType}
+                              >
+                                Сохранить
+                              </button>
+                              <button
+                                className='reject-btn'
+                                onClick={cancelEditingType}
+                              >
+                                Отмена
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                className='edit-btn'
+                                onClick={() => startEditingType(type)}
+                              >
+                                Редактировать
+                              </button>
+                              <button
+                                className='reject-btn'
+                                onClick={() => handleDeleteCourseType(type._id)}
+                              >
+                                Удалить
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Кнопка закрытия модального окна */}
+            <div className="modal-footer">
+              <button
+                className='reject-btn'
+                onClick={() => {
+                  setIsTypeModalOpen(false);
+                  cancelEditingType();
+                }}
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Таблица курсов */}
       <table className="course-table">
         <thead>

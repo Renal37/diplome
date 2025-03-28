@@ -67,6 +67,12 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/delete-price/{id}", handlers.DeletePrice).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/bulk-update-prices", handlers.BulkUpdatePrices).Methods("POST", "OPTIONS")
 
+	// Добавьте эти маршруты в функцию registerRoutes
+	r.HandleFunc("/admin/course-types", handlers.GetCourseTypes).Methods("GET")
+	r.HandleFunc("/admin/course-types/add", handlers.AddCourseType).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/course-types/update/{id}", handlers.UpdateCourseType).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/admin/course-types/delete/{id}", handlers.DeleteCourseType).Methods("DELETE", "OPTIONS")
+
 	// Маршруты для проверки токена
 	r.HandleFunc("/check-token", handlers.CheckToken).Methods("POST", "OPTIONS")
 }
