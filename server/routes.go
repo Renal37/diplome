@@ -60,7 +60,6 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/admin/group-members/{id}", handlers.GetGroupMembers).Methods("GET")
 
 	// Маршруты для стоимости
-	// Маршруты для стоимости
 	r.HandleFunc("/prices", handlers.GetPrices).Methods("GET", "OPTIONS")
 	r.HandleFunc("/add-price", handlers.AddPrice).Methods("POST", "OPTIONS")
 	r.HandleFunc("/update-price/{id}", handlers.UpdatePrice).Methods("PUT", "OPTIONS")
@@ -72,6 +71,12 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/admin/course-types/add", handlers.AddCourseType).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/course-types/update/{id}", handlers.UpdateCourseType).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/admin/course-types/delete/{id}", handlers.DeleteCourseType).Methods("DELETE", "OPTIONS")
+
+	// Добавьте эти маршруты в функцию registerRoutes
+	r.HandleFunc("/admin/order-types", handlers.GetOrderTypes).Methods("GET")
+	r.HandleFunc("/admin/order-types/add", handlers.AddOrderType).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/orders", handlers.GetOrders).Methods("GET")
+	r.HandleFunc("/admin/orders/add", handlers.AddOrder).Methods("POST", "OPTIONS")
 
 	// Маршруты для проверки токена
 	r.HandleFunc("/check-token", handlers.CheckToken).Methods("POST", "OPTIONS")

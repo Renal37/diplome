@@ -17,6 +17,10 @@ const AdminCoursesManagement = () => {
     const [selectedRegistrations, setSelectedRegistrations] = useState([]);
     const [searchUserName, setSearchUserName] = useState(""); // Поиск по имени пользователя
     const [searchCourseTitle, setSearchCourseTitle] = useState(""); // Поиск по названию курса
+    const [orderTypes, setOrderTypes] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const [selectedOrderId, setSelectedOrderId] = useState(null);
+
 
     // Фильтрация заявок по статусу, имени пользователя и названию курса
     const filteredRegistrations = registrations.filter((registration) => {
@@ -30,18 +34,18 @@ const AdminCoursesManagement = () => {
             setError("Выберите хотя бы одну заявку для одобрения");
             return;
         }
-    
+
         // Проверяем, что все выбранные заявки находятся в статусе "Ожидание"
         const allPending = selectedRegistrations.every(registrationId => {
             const registration = registrations.find(reg => reg._id === registrationId);
             return registration.status === "Ожидание";
         });
-    
+
         if (!allPending) {
             setError("Можно одобрять только заявки со статусом 'Ожидание'");
             return;
         }
-    
+
         // Если все заявки в статусе "Ожидание", выполняем одобрение
         selectedRegistrations.forEach(registrationId => {
             handleApprove(registrationId);
@@ -80,6 +84,31 @@ const AdminCoursesManagement = () => {
             }
         };
         fetchGroups();
+    }, []);
+    useEffect(() => {
+        const fetchOrderData = async () => {
+            try {
+                const [typesRes, ordersRes] = await Promise.all([
+                    fetch('http://localhost:5000/admin/order-types', { credentials: 'include' }),
+                    fetch('http://localhost:5000/admin/orders', { credentials: 'include' })
+                ]);
+
+                if (!typesRes.ok) throw new Error('Error fetching order types');
+                if (!ordersRes.ok) throw new Error('Error fetching orders');
+
+                const typesData = await typesRes.json();
+                const ordersData = await ordersRes.json();
+
+                setOrderTypes(typesData || []);
+                setOrders(ordersData || []);
+            } catch (error) {
+                console.error('Error fetching order data:', error);
+                setOrderTypes([]);
+                setOrders([]);
+            }
+        };
+
+        fetchOrderData();
     }, []);
     useEffect(() => {
         const handleKeyDown = (event) => {
@@ -166,37 +195,54 @@ const AdminCoursesManagement = () => {
         setSelectedRejectRegistrationId(registrationId);
     };
 
-    const confirmReject = () => {
+    const confirmReject = async () => {
         if (!rejectReason) {
             setError("Укажите причину отклонения");
             return;
         }
-        fetch(`http://localhost:5000/admin/reject-registration/${selectedRejectRegistrationId}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ reason: rejectReason }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.success) {
-                    setRegistrations(
-                        registrations.map((reg) =>
-                            reg._id === selectedRejectRegistrationId
-                                ? { ...reg, status: "Отклоненный", rejectReason }
-                                : reg
-                        )
-                    );
-                    setSelectedRejectRegistrationId(null);
-                    setRejectReason("");
-                } else {
-                    setError(data.message || "Ошибка при отклонении заявки");
+
+        try {
+            const response = await fetch(
+                `http://localhost:5000/admin/reject-registration/${selectedRejectRegistrationId}`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        reason: rejectReason,
+                        orderId: selectedOrderId
+                    }),
                 }
-            })
-            .catch((error) => {
-                console.error("Error rejecting registration:", error);
-                setError("Ошибка при отклонении заявки");
-            });
+            );
+
+            if (!response.ok) {
+                throw new Error('Ошибка при отклонении');
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                setRegistrations(prev =>
+                    prev.map(reg =>
+                        reg._id === selectedRejectRegistrationId
+                            ? {
+                                ...reg,
+                                status: "Отклоненный",
+                                rejectReason,
+                                rejectOrderId: selectedOrderId
+                            }
+                            : reg
+                    )
+                );
+                setSelectedRejectRegistrationId(null);
+                setRejectReason("");
+            } else {
+                setError(data.message || "Ошибка при отклонении заявки");
+            }
+        } catch (err) {
+            console.error("Error rejecting registration:", err);
+            setError(err.message || "Ошибка при отклонении заявки");
+        }
     };
 
     const handleViewConsent = (userId) => {
@@ -296,7 +342,7 @@ const AdminCoursesManagement = () => {
             setError("Выберите группу");
             return;
         }
-    
+
         try {
             const response = await fetch(
                 `http://localhost:5000/admin/assign-group/${registrationId}`,
@@ -309,19 +355,19 @@ const AdminCoursesManagement = () => {
                     body: JSON.stringify({ groupId }),
                 }
             );
-    
+
             // Проверяем, что ответ является JSON
             const contentType = response.headers.get("content-type");
             if (!contentType || !contentType.includes("application/json")) {
                 throw new Error("Ошибка: сервер вернул невалидный JSON");
             }
-    
+
             const data = await response.json();
-    
+
             if (!response.ok) {
                 throw new Error(data.error || "Ошибка при привязке к группе");
             }
-    
+
             if (data.success) {
                 setRegistrations((prevRegistrations) =>
                     prevRegistrations.map((reg) =>
@@ -383,9 +429,9 @@ const AdminCoursesManagement = () => {
                 </div>
             </div>
             <div className="mass-actions">
-            <button className="approve-btn" onClick={handleMassApprove} 
-            // disabled={isMassApproveDisabled}
-            >Одобрить выбранные</button>
+                <button className="approve-btn" onClick={handleMassApprove}
+                // disabled={isMassApproveDisabled}
+                >Одобрить выбранные</button>
                 <button className="reject-btn" onClick={handleMassDelete}>Удалить выбранные</button>
             </div>
             {/* Таблица заявок */}
@@ -504,6 +550,45 @@ const AdminCoursesManagement = () => {
                         />
                         <button className="approve-btn" onClick={confirmReject}>Подтвердить</button>
                         <button className="reject-btn" onClick={() => setSelectedRejectRegistrationId(null)}>Отмена</button>
+                    </div>
+                </div>
+            )}
+            // Обновите модальное окно для отклонения заявки
+            {selectedRejectRegistrationId && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <h3>Укажите причину отклонения</h3>
+                        <textarea
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            placeholder="Причина отклонения"
+                        />
+                        <div className="form-group">
+                            <label>Приказ:</label>
+                            <select
+                                value={selectedOrderId || ""}
+                                onChange={(e) => setSelectedOrderId(e.target.value)}
+                            >
+                                <option value="">Выберите приказ</option>
+                                {orders && orders.length > 0 ? (
+                                    orders.map(order => (
+                                        <option key={order._id} value={order._id}>
+                                            {order.number} от {order.date} ({order.orderType})
+                                        </option>
+                                    ))
+                                ) : (
+                                    <option disabled>Нет доступных приказов</option>
+                                )}
+                            </select>
+                        </div>
+                        <button className="approve-btn" onClick={() => {
+                            confirmReject();
+                            setSelectedOrderId(null);
+                        }}>Подтвердить</button>
+                        <button className="reject-btn" onClick={() => {
+                            setSelectedRejectRegistrationId(null);
+                            setSelectedOrderId(null);
+                        }}>Отмена</button>
                     </div>
                 </div>
             )}

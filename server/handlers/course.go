@@ -16,17 +16,8 @@ import (
 	"time"
 )
 
-// Update AddCourse handler to include typeId
 func AddCourse(w http.ResponseWriter, r *http.Request) {
-	var course struct {
-		Title       string             `json:"title"`
-		Description string             `json:"description"`
-		Duration    int                `json:"duration"`
-		PriceId     primitive.ObjectID `json:"priceId"`
-		Price       float64            `json:"price"`
-		TypeId      primitive.ObjectID `json:"typeId"`
-		Type        string             `json:"type"`
-	}
+	var course models.Course
 
 	err := json.NewDecoder(r.Body).Decode(&course)
 	if err != nil {
@@ -219,9 +210,10 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	registration := bson.M{
-		"courseId": request.CourseID,
-		"userId":   request.UserID,
-		"status":   "Ожидание", // Статус ожидания одобрения
+		"courseId":     request.CourseID,
+		"userId":       request.UserID,
+		"status":       "Ожидание",
+		"registerDate": time.Now().Format("2006-01-02"), // Добавляем текущую дату
 	}
 
 	_, err = collection.InsertOne(context.Background(), registration)
@@ -697,7 +689,8 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var requestBody struct {
-		Reason string `json:"reason"`
+		Reason  string             `json:"reason"`
+		OrderID primitive.ObjectID `json:"orderId"`
 	}
 	err = json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
@@ -709,13 +702,16 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Причина отчисления обязательна", http.StatusBadRequest)
 		return
 	}
+
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
 		"$set": bson.M{
 			"status":       "Отчисленный",
-			"rejectReason": requestBody.Reason, // Сохраняем причину отчисления
+			"expelReason":  requestBody.Reason,
+			"expelOrderId": requestBody.OrderID,
+			"expelDate":    time.Now(),
 		},
 	}
 
