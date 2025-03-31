@@ -6,6 +6,7 @@ import AdminCoursesManagement from '../admin_components/admin_check_manage/admin
 import AdminGroupManagement from '../admin_components/admin_group_management/admin_group_management';
 import { useEffect, useState } from 'react';
 import AdminAllAdd from '../admin_components/admin_all_add/admin_all_add';
+import AdminOrders from '../admin_components/admin_order/admin_order';
 
 const AdminComponent = () => {
   const [profile, setProfile] = useState(null);
@@ -103,7 +104,15 @@ const AdminComponent = () => {
                 to="/admin/all"
                 className={`nav-link ${isActive('/admin/all') ? 'active' : ''}`}
               >
-                Добавление
+                Добавление уровня образования
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/admin/order"
+                className={`nav-link ${isActive('/admin/order') ? 'active' : ''}`}
+              >
+                Добавление  
               </Link>
             </li>
           </ul>
@@ -115,6 +124,7 @@ const AdminComponent = () => {
           <Route path="profile" element={<AdminCheckProfile />} />
           <Route path="courses" element={<AdminCoursesManagement />} />
           <Route path="all" element={<AdminAllAdd />} />
+          <Route path="order" element={<AdminOrders />} />
           <Route path="groups" element={<AdminGroupManagement />} />
         </Routes>
       </div>

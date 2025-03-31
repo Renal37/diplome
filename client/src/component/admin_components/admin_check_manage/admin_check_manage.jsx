@@ -6,7 +6,6 @@ const AdminCoursesManagement = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
     const [rejectReason, setRejectReason] = useState(""); // Причина отклонения
-    const [expelReason, setExpelReason] = useState(""); // Причина отчисления
     const [selectedRejectRegistrationId, setSelectedRejectRegistrationId] = useState(null); // ID выбранной заявки для отклонения
     const [selectedExpelRegistrationId, setSelectedExpelRegistrationId] = useState(null); // ID выбранной заявки для отчисления
     const [selectedPdfRegistrationId, setSelectedPdfRegistrationId] = useState(null); // ID заявки с PDF
@@ -195,56 +194,38 @@ const AdminCoursesManagement = () => {
         setSelectedRejectRegistrationId(registrationId);
     };
 
-    const confirmReject = async () => {
+    const confirmReject = () => {
         if (!rejectReason) {
             setError("Укажите причину отклонения");
             return;
         }
-
-        try {
-            const response = await fetch(
-                `http://localhost:5000/admin/reject-registration/${selectedRejectRegistrationId}`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({
-                        reason: rejectReason,
-                        orderId: selectedOrderId
-                    }),
+        fetch(`http://localhost:5000/admin/reject-registration/${selectedRejectRegistrationId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ reason: rejectReason }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    setRegistrations(
+                        registrations.map((reg) =>
+                            reg._id === selectedRejectRegistrationId
+                                ? { ...reg, status: "Отклоненный", rejectReason }
+                                : reg
+                        )
+                    );
+                    setSelectedRejectRegistrationId(null);
+                    setRejectReason("");
+                } else {
+                    setError(data.message || "Ошибка при отклонении заявки");
                 }
-            );
-
-            if (!response.ok) {
-                throw new Error('Ошибка при отклонении');
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                setRegistrations(prev =>
-                    prev.map(reg =>
-                        reg._id === selectedRejectRegistrationId
-                            ? {
-                                ...reg,
-                                status: "Отклоненный",
-                                rejectReason,
-                                rejectOrderId: selectedOrderId
-                            }
-                            : reg
-                    )
-                );
-                setSelectedRejectRegistrationId(null);
-                setRejectReason("");
-            } else {
-                setError(data.message || "Ошибка при отклонении заявки");
-            }
-        } catch (err) {
-            console.error("Error rejecting registration:", err);
-            setError(err.message || "Ошибка при отклонении заявки");
-        }
+            })
+            .catch((error) => {
+                console.error("Error rejecting registration:", error);
+                setError("Ошибка при отклонении заявки");
+            });
     };
-
     const handleViewConsent = (userId) => {
         window.open(`http://localhost:5000/user/view-consent/${userId}`, '_blank');
     };
@@ -274,37 +255,52 @@ const AdminCoursesManagement = () => {
         setSelectedExpelRegistrationId(registrationId);
     };
 
-    const confirmExpel = () => {
-        if (!expelReason) {
+    const confirmExpel = async () => {
+        if (!selectedOrderId) {
             setError("Укажите причину отчисления");
             return;
         }
-        fetch(`http://localhost:5000/admin/expel-registration/${selectedExpelRegistrationId}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ reason: expelReason }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.success) {
-                    setRegistrations(
-                        registrations.map((reg) =>
-                            reg._id === selectedExpelRegistrationId
-                                ? { ...reg, status: "Отчисленный", rejectReason: expelReason }
-                                : reg
-                        )
-                    );
-                    setSelectedExpelRegistrationId(null);
-                    setExpelReason("");
-                } else {
-                    setError(data.message || "Ошибка при отчислении");
+
+        try {
+            const response = await fetch(
+                `http://localhost:5000/admin/expel-registration/${selectedExpelRegistrationId}`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        orderId: selectedOrderId
+                    }),
                 }
-            })
-            .catch((error) => {
-                console.error("Error expelling registration:", error);
-                setError("Ошибка при отчислении");
-            });
+            );
+
+            if (!response.ok) {
+                throw new Error('Ошибка при отчислении');
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                setRegistrations(prev =>
+                    prev.map(reg =>
+                        reg._id === selectedExpelRegistrationId
+                            ? {
+                                ...reg,
+                                status: "Отчисленный",
+                                expelOrderId: selectedOrderId
+                            }
+                            : reg
+                    )
+                );
+                setSelectedExpelRegistrationId(null);
+                setSelectedOrderId(null);
+            } else {
+                setError(data.message || "Ошибка при отчислении");
+            }
+        } catch (err) {
+            console.error("Error expelling registration:", err);
+            setError(err.message || "Ошибка при отчислении");
+        }
     };
 
     // Просмотр договора (PDF)
@@ -553,62 +549,36 @@ const AdminCoursesManagement = () => {
                     </div>
                 </div>
             )}
-            // Обновите модальное окно для отклонения заявки
-            {selectedRejectRegistrationId && (
-                <div className="modal">
-                    <div className="modal-content">
-                        <h3>Укажите причину отклонения</h3>
-                        <textarea
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="Причина отклонения"
-                        />
-                        <div className="form-group">
-                            <label>Приказ:</label>
-                            <select
-                                value={selectedOrderId || ""}
-                                onChange={(e) => setSelectedOrderId(e.target.value)}
-                            >
-                                <option value="">Выберите приказ</option>
-                                {orders && orders.length > 0 ? (
-                                    orders.map(order => (
-                                        <option key={order._id} value={order._id}>
-                                            {order.number} от {order.date} ({order.orderType})
-                                        </option>
-                                    ))
-                                ) : (
-                                    <option disabled>Нет доступных приказов</option>
-                                )}
-                            </select>
-                        </div>
-                        <button className="approve-btn" onClick={() => {
-                            confirmReject();
-                            setSelectedOrderId(null);
-                        }}>Подтвердить</button>
-                        <button className="reject-btn" onClick={() => {
-                            setSelectedRejectRegistrationId(null);
-                            setSelectedOrderId(null);
-                        }}>Отмена</button>
-                    </div>
-                </div>
-            )}
+
 
             {/* Модальное окно для отчисления */}
             {selectedExpelRegistrationId && (
                 <div className="modal">
                     <div className="modal-content">
                         <h3>Укажите причину отчисления</h3>
-                        <textarea
-                            type="text"
-                            value={expelReason}
-                            onChange={(e) => setExpelReason(e.target.value)}
-                            placeholder="Причина отчисления"
-                        />
+                        <div className="form-group">
+                            <label>Приказ об отчислении:</label>
+                            <select
+                                value={selectedOrderId || ""}
+                                onChange={(e) => setSelectedOrderId(e.target.value)}
+                            >
+                                <option value="">Выберите приказ</option>
+                                {orders && orders.map(order => (
+                                    <option key={order._id} value={order._id}>
+                                        {order.number} от {new Date(order.date).toLocaleDateString()} ({order.orderType})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                         <button className="approve-btn" onClick={confirmExpel}>Подтвердить</button>
-                        <button className="reject-btn" onClick={() => setSelectedExpelRegistrationId(null)}>Отмена</button>
+                        <button className="reject-btn" onClick={() => {
+                            setSelectedExpelRegistrationId(null);
+                            setSelectedOrderId(null);
+                        }}>Отмена</button>
                     </div>
                 </div>
             )}
+
 
             {/* Модальное окно для просмотра PDF */}
             {selectedPdfRegistrationId && (
