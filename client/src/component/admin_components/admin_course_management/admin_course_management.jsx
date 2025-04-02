@@ -17,7 +17,6 @@ const AdminCourseManagement = () => {
   const [editingTypeId, setEditingTypeId] = useState(null);
   const [editingTypeName, setEditingTypeName] = useState('');
 
-
   // Состояния для стоимостей
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
   const [prices, setPrices] = useState([]);
@@ -68,15 +67,37 @@ const AdminCourseManagement = () => {
     }
   };
 
-
   useEffect(() => {
     fetchCourses();
     fetchPrices();
     fetchCourseTypes();
   }, []);
 
+  // Обработчик нажатия клавиши Escape
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        if (isModalOpen) {
+          setIsModalOpen(false);
+        }
+        if (isPriceModalOpen) {
+          setIsPriceModalOpen(false);
+        }
+        if (isTypeModalOpen) {
+          setIsTypeModalOpen(false);
+        }
+        if (selectedCourse) {
+          handleCloseUpdateForm();
+        }
+      }
+    };
 
-  // Обновляем handleAddCourse для работы с courseTypeId
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isModalOpen, isPriceModalOpen, isTypeModalOpen, selectedCourse]);
+
   const handleAddCourse = async (e) => {
     e.preventDefault();
     if (!coursePriceId || !courseTypeId) {
@@ -126,7 +147,6 @@ const AdminCourseManagement = () => {
     }
   };
 
-
   const handleDeleteCourse = async (courseId) => {
     if (!window.confirm('Вы уверены, что хотите удалить этот курс?')) {
       return;
@@ -149,7 +169,6 @@ const AdminCourseManagement = () => {
     }
   };
 
-  // Обновляем resetCourseForm
   const resetCourseForm = () => {
     setCourseTitle('');
     setCourseDescription('');
@@ -159,8 +178,6 @@ const AdminCourseManagement = () => {
     setSelectedCourse(null);
   };
 
-
-  // Обработчики для стоимостей
   const handleAddPrice = async (e) => {
     e.preventDefault();
     if (!newPrice.amount || isNaN(newPrice.amount)) {
@@ -244,7 +261,6 @@ const AdminCourseManagement = () => {
     }
   };
 
-
   const handleBulkUpdate = async () => {
     if (selectedPrices.length === 0 || !percentIncrease) {
       alert('Выберите стоимости и укажите процент');
@@ -282,7 +298,7 @@ const AdminCourseManagement = () => {
       alert(error.message);
     }
   };
-  // Обработчик добавления типа курса
+
   const handleAddCourseType = async () => {
     if (!newTypeName.trim()) return;
 
@@ -309,6 +325,7 @@ const AdminCourseManagement = () => {
       alert(err.message);
     }
   };
+
   const startEditingType = (type) => {
     setEditingTypeId(type._id);
     setEditingTypeName(type.name);
@@ -350,7 +367,6 @@ const AdminCourseManagement = () => {
     setEditingTypeName('');
   };
 
-  // Обработчик удаления типа курса
   const handleDeleteCourseType = async (typeId) => {
     if (!window.confirm('Вы уверены, что хотите удалить этот тип курса?')) return;
 
@@ -371,6 +387,7 @@ const AdminCourseManagement = () => {
       alert(err.message);
     }
   };
+
   const handleUpdateCourse = async (e) => {
     e.preventDefault();
     if (!selectedCourse) return;
@@ -407,8 +424,7 @@ const AdminCourseManagement = () => {
       }
 
       alert('Курс успешно обновлен');
-      setIsModalOpen(false);
-      resetCourseForm();
+      handleCloseUpdateForm();
       fetchCourses();
     } catch (error) {
       console.error('Ошибка:', error);
@@ -416,7 +432,6 @@ const AdminCourseManagement = () => {
     }
   };
 
-  // Обновляем handleCourseSelect для работы с courseTypeId
   const handleCourseSelect = (course) => {
     if (!course || !course._id) {
       console.error("Ошибка: отсутствует ID курса");
@@ -430,6 +445,14 @@ const AdminCourseManagement = () => {
     setCourseTypeId(course.typeId || '');
   };
 
+  const handleCloseUpdateForm = () => {
+    setSelectedCourse(null);
+    setCourseTitle('');
+    setCourseDescription('');
+    setCourseDuration('');
+    setCoursePriceId('');
+    setCourseTypeId('');
+  };
 
   const togglePriceSelection = (priceId) => {
     setSelectedPrices(prev =>
@@ -453,8 +476,9 @@ const AdminCourseManagement = () => {
             onChange={(e) => setFilterType(e.target.value)}
           >
             <option value="Все">Все</option>
-            <option value="Повышение квалификации">Повышение квалификации</option>
-            <option value="Профессиональная переподготовка">Профессиональная переподготовка</option>
+            {courseTypes.map(type => (
+              <option key={type._id} value={type.name}>{type.name}</option>
+            ))}
           </select>
         </div>
 
@@ -462,9 +486,12 @@ const AdminCourseManagement = () => {
           <button className='approve-btn' onClick={() => setIsModalOpen(true)}>
             Добавить курс
           </button>
-          {/* <button className='approve-btn' onClick={() => setIsPriceModalOpen(true)}>
+          <button className='approve-btn' onClick={() => setIsPriceModalOpen(true)}>
             Управление стоимостями
-          </button> */}
+          </button>
+          <button className='approve-btn' onClick={() => setIsTypeModalOpen(true)}>
+            Управление типами
+          </button>
         </div>
       </div>
 
@@ -472,8 +499,8 @@ const AdminCourseManagement = () => {
       {isModalOpen && (
         <div className="modal">
           <div className="modal-content">
-            <h2>{selectedCourse ? 'Редактировать курс' : 'Добавить курс'}</h2>
-            <form onSubmit={selectedCourse ? handleUpdateCourse : handleAddCourse}>
+            <h2>Добавить курс</h2>
+            <form onSubmit={handleAddCourse}>
               <input
                 type="text"
                 placeholder="Заголовок"
@@ -509,16 +536,6 @@ const AdminCourseManagement = () => {
                     </option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  className='approve-btn'
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setIsPriceModalOpen(true);
-                  }}
-                >
-                  Добавить новую стоимость
-                </button>
               </div>
 
               <div className="form-group">
@@ -535,18 +552,11 @@ const AdminCourseManagement = () => {
                     </option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  className="small-btn"
-                  onClick={() => setIsTypeModalOpen(true)}
-                >
-                  Управление типами
-                </button>
               </div>
 
               <div className="form-buttons">
                 <button className='approve-btn' type="submit">
-                  {selectedCourse ? 'Обновить' : 'Добавить'}
+                  Добавить
                 </button>
                 <button
                   className='reject-btn'
@@ -682,6 +692,7 @@ const AdminCourseManagement = () => {
           </div>
         </div>
       )}
+
       {/* Модальное окно управления типами курсов */}
       {isTypeModalOpen && (
         <div className="modal">
@@ -790,6 +801,7 @@ const AdminCourseManagement = () => {
           </div>
         </div>
       )}
+
       {/* Таблица курсов */}
       <table className="course-table">
         <thead>
@@ -804,24 +816,99 @@ const AdminCourseManagement = () => {
         </thead>
         <tbody>
           {filteredCourses.map((course) => (
-            <tr key={course._id} onClick={() => handleCourseSelect(course)}>
-              <td>{course.title}</td>
-              <td className="course-description">{course.description}</td>
-              <td>{course.duration}</td>
-              <td>{course.price}</td>
-              <td>{course.type}</td>
-              <td>
-                <button
-                  className='reject-btn'
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteCourse(course._id);
-                  }}
-                >
-                  Удалить
-                </button>
-              </td>
-            </tr>
+            <React.Fragment key={course._id}>
+              <tr onClick={() => handleCourseSelect(course)}>
+                <td>{course.title}</td>
+                <td className="course-description">{course.description}</td>
+                <td>{course.duration}</td>
+                <td>{course.price}</td>
+                <td>{course.type}</td>
+                <td>
+                  <button
+                    className='reject-btn'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCourse(course._id);
+                    }}
+                  >
+                    Удалить
+                  </button>
+                </td>
+              </tr>
+              {selectedCourse && selectedCourse._id === course._id && (
+                <tr>
+                  <td colSpan="6">
+                    <form onSubmit={handleUpdateCourse} className="update-form">
+                      <input
+                        type="text"
+                        placeholder="Заголовок"
+                        value={courseTitle}
+                        onChange={(e) => setCourseTitle(e.target.value)}
+                        required
+                      />
+                      <textarea
+                        placeholder="Описание"
+                        value={courseDescription}
+                        onChange={(e) => setCourseDescription(e.target.value)}
+                        required
+                      />
+                      <input
+                        type="number"
+                        placeholder="Продолжительность (часы)"
+                        value={courseDuration}
+                        onChange={(e) => setCourseDuration(e.target.value)}
+                        required
+                      />
+
+                      <div className="price-selection">
+                        <label>Выберите стоимость:</label>
+                        <select
+                          value={coursePriceId}
+                          onChange={(e) => setCoursePriceId(e.target.value)}
+                          required
+                        >
+                          <option value="">-- Выберите стоимость --</option>
+                          {prices.map(price => (
+                            <option key={price._id} value={price._id}>
+                              {price.amount} руб. ({new Date(price.createdAt).toLocaleDateString()}) - {price.description}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Тип курса:</label>
+                        <select
+                          value={courseTypeId}
+                          onChange={(e) => setCourseTypeId(e.target.value)}
+                          required
+                        >
+                          <option value="">-- Выберите тип курса --</option>
+                          {courseTypes.map(type => (
+                            <option key={type._id} value={type._id}>
+                              {type.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="form-buttons">
+                        <button className='approve-btn' type="submit">
+                          Обновить курс
+                        </button>
+                        <button
+                          className='reject-btn'
+                          type="button"
+                          onClick={handleCloseUpdateForm}
+                        >
+                          Закрыть
+                        </button>
+                      </div>
+                    </form>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
           ))}
         </tbody>
       </table>

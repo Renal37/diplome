@@ -3,64 +3,30 @@ import './profile_edit_date.css';
 
 const ProfileEditDate = () => {
     const [userData, setUserData] = useState({
-        lastName: '',
-        firstName: '',
-        middleName: '',
+        lastname: '',
+        firstname: '',
+        middlename: '',
         education: '',
         phone: '',
-        birthDate: '',
-        birthPlace: '',
-        homeAddress: '',
-        workPlace: '',
-        jobTitle: '',
+        birthdate: '',
+        birthplace: '',
+        homeaddress: '',
+        workplace: '',
+        jobtitle: '',
         oldPassword: '',
         newPassword: '',
         confirmPassword: '',
-        agreeToProcessing: false,
+        agreetoprocessing: false,
     });
-    const [educations, setEducations] = useState([]); // Инициализируем пустым массивом
+
+    const [educations, setEducations] = useState([]);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [addressSuggestions, setAddressSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
 
-    // Загрузка данных пользователя при монтировании компонента
-    useEffect(() => {
-        const fetchUserData = async () => {
-            try {
-                const response = await fetch('http://localhost:5000/profile', {
-                    credentials: 'include', // Для отправки куки с токеном
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('Данные с сервера:', data); // Логируем данные для отладки
-
-                    // Обновляем состояние, сохраняя предыдущие значения
-                    setUserData((prevState) => ({
-                        ...prevState,
-                        lastName: data.lastname || '',
-                        firstName: data.firstname || '',
-                        middleName: data.middlename || '',
-                        education: data.education || '',
-                        phone: data.phone || '',
-                        birthDate: data.birthdate || '',
-                        birthPlace: data.birthplace || '',
-                        homeAddress: data.homeaddress || '',
-                        workPlace: data.workplace || '',
-                        jobTitle: data.jobtitle || '',
-                        agreeToProcessing: data.agreetoprocessing || false,
-                    }));
-                } else {
-                    setError('Ошибка при загрузке данных пользователя');
-                }
-            } catch (err) {
-                setError('Ошибка при загрузке данных пользователя');
-                console.error('Ошибка при загрузке данных:', err);
-            }
-        };
-
-        fetchUserData();
-    }, []);
-
+    // Загрузка данных пользователя и списка образований
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -83,55 +49,103 @@ const ProfileEditDate = () => {
                 });
                 if (eduResponse.ok) {
                     const eduData = await eduResponse.json();
-                    setEducations(eduData || []); // Гарантируем массив
+                    setEducations(eduData || []);
                 }
             } catch (err) {
                 console.error('Ошибка загрузки:', err);
+                setError('Ошибка при загрузке данных');
             }
         };
 
         fetchData();
     }, []);
 
+    // Функция для запроса подсказок адреса через DaData API
+    const fetchAddressSuggestions = async (query) => {
+        try {
+            const response = await fetch("http://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": "7a08000a1dd10d29451df5dfd0295c8076c7ad89"
+                },
+                body: JSON.stringify({
+                    query: query,
+                    count: 5,
+                    locations: [{ country: "*" }] // Можно уточнить поиск по стране/региону
+                }),
+            });
 
-    // Функция для валидации кириллицы
+            const data = await response.json();
+            setAddressSuggestions(data.suggestions || []);
+        } catch (err) {
+            console.error("Ошибка при получении подсказок адреса:", err);
+            setAddressSuggestions([]);
+        }
+    };
+
+    // Обработчик изменения адреса
+    const handleAddressChange = (e) => {
+        const { value } = e.target;
+        setUserData(prev => ({ ...prev, homeaddress: value }));
+
+        if (value.length > 2) {
+            fetchAddressSuggestions(value);
+            setShowSuggestions(true);
+        } else {
+            setShowSuggestions(false);
+        }
+    };
+
+    // Выбор подсказки адреса
+    const selectAddressSuggestion = (suggestion) => {
+        setUserData(prev => ({
+            ...prev,
+            homeaddress: suggestion.value
+        }));
+        setShowSuggestions(false);
+    };
+
+    // Валидация кириллицы
     const validateCyrillic = (text) => {
-        const cyrillicRegex = /^[а-яА-ЯёЁ\s-]+$/; // Разрешаем кириллицу, пробелы и дефисы
+        const cyrillicRegex = /^[а-яА-ЯёЁ\s-]+$/;
         return cyrillicRegex.test(text);
     };
 
-    // Функция для форматирования первой буквы в заглавную
+    // Форматирование первой буквы в заглавную
     const capitalizeFirstLetter = (text) => {
         return text
-            .split(' ') // Разделяем строку на слова
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Каждое слово начинаем с заглавной буквы
-            .join(' '); // Соединяем слова обратно в строку
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
     };
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
 
-        // Валидация для ФИО (только кириллица)
-        if (name === 'lastName' || name === 'firstName' || name === 'middleName') {
+        // Валидация для ФИО
+        if (name === 'lastname' || name === 'firstname' || name === 'middlename') {
             if (!validateCyrillic(value) && value !== '') {
                 setError('ФИО должно содержать только кириллицу');
                 return;
             }
         }
 
-        // Форматирование первой буквы в заглавную для ФИО
+        // Форматирование ФИО
         let formattedValue = value;
-        if (name === 'lastName' || name === 'firstName' || name === 'middleName') {
+        if (name === 'lastname' || name === 'firstname' || name === 'middlename') {
             formattedValue = capitalizeFirstLetter(value);
         }
 
-        setUserData((prevState) => ({
-            ...prevState,
+        setUserData(prev => ({
+            ...prev,
             [name]: type === 'checkbox' ? checked : formattedValue,
         }));
-        setError(''); // Сбрасываем ошибку при успешном вводе
+        setError('');
     };
 
+    // Валидация и форматирование телефона
     const validatePhone = (phone) => {
         const phoneRegex = /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/;
         return phoneRegex.test(phone);
@@ -139,14 +153,14 @@ const ProfileEditDate = () => {
 
     const handlePhoneChange = (e) => {
         const { value } = e.target;
-        let formattedValue = value.replace(/\D/g, ''); // Удаляем все нецифровые символы
+        let formattedValue = value.replace(/\D/g, '');
 
         if (formattedValue.length > 0) {
             formattedValue = `+7 (${formattedValue.substring(1, 4)}) ${formattedValue.substring(4, 7)}-${formattedValue.substring(7, 9)}-${formattedValue.substring(9, 11)}`;
         }
 
-        setUserData((prevState) => ({
-            ...prevState,
+        setUserData(prev => ({
+            ...prev,
             phone: formattedValue,
         }));
     };
@@ -157,46 +171,43 @@ const ProfileEditDate = () => {
         setSuccess('');
 
         // Валидация обязательных полей
-        if (!userData.lastName || !userData.firstName || !userData.birthDate || !userData.agreeToProcessing) {
+        if (!userData.lastname || !userData.firstname || !userData.birthdate || !userData.agreetoprocessing) {
             setError('Пожалуйста, заполните все обязательные поля');
             return;
         }
 
-        // Валидация номера телефона
+        // Валидация телефона
         if (!validatePhone(userData.phone)) {
             setError('Номер телефона должен быть в формате +7 (XXX) XXX-XX-XX');
             return;
         }
 
-        if (!userData.agreeToProcessing) {
+        if (!userData.agreetoprocessing) {
             setError('Необходимо согласие на обработку данных');
             return;
         }
+
         if (userData.newPassword && userData.newPassword !== userData.confirmPassword) {
             setError('Новый пароль и подтверждение пароля не совпадают');
             return;
         }
 
-        // Собираем fullName из отдельных полей
-        const fullName = `${userData.lastName} ${userData.firstName} ${userData.middleName}`.trim();
-
-        // Создаем объект для отправки только измененных данных
+        // Подготовка данных для отправки
         const updateData = {
-            fullName,
-            lastName: userData.lastName,
-            firstName: userData.firstName,
-            middleName: userData.middleName,
+            lastname: userData.lastname,
+            firstname: userData.firstname,
+            middlename: userData.middlename,
             education: userData.education,
             phone: userData.phone,
-            birthDate: userData.birthDate,
-            educationId: userData.educationId,
-            birthPlace: userData.birthPlace,
-            homeAddress: userData.homeAddress,
-            workPlace: userData.workPlace,
-            jobTitle: userData.jobTitle,
-            agreeToProcessing: userData.agreeToProcessing,
+            birthdate: userData.birthdate,
+            birthplace: userData.birthplace,
+            homeaddress: userData.homeaddress,
+            workplace: userData.workplace,
+            jobtitle: userData.jobtitle,
+            agreetoprocessing: userData.agreetoprocessing,
         };
-        // Добавляем пароль только если он был изменен
+
+        // Добавляем пароль, если он изменен
         if (userData.oldPassword && userData.newPassword) {
             updateData.oldPassword = userData.oldPassword;
             updateData.newPassword = userData.newPassword;
@@ -239,8 +250,8 @@ const ProfileEditDate = () => {
                             <label>Фамилия:</label>
                             <input
                                 type="text"
-                                name="lastName"
-                                value={userData.lastName}
+                                name="lastname"
+                                value={userData.lastname}
                                 onChange={handleChange}
                                 required
                             />
@@ -249,8 +260,8 @@ const ProfileEditDate = () => {
                             <label>Имя:</label>
                             <input
                                 type="text"
-                                name="firstName"
-                                value={userData.firstName}
+                                name="firstname"
+                                value={userData.firstname}
                                 onChange={handleChange}
                                 required
                             />
@@ -259,20 +270,19 @@ const ProfileEditDate = () => {
                             <label>Отчество:</label>
                             <input
                                 type="text"
-                                name="middleName"
-                                value={userData.middleName}
+                                name="middlename"
+                                value={userData.middlename}
                                 onChange={handleChange}
-                                required
                             />
                         </div>
                         <div className="form-group">
                             <label>Дата рождения:</label>
                             <input
                                 type="date"
-                                name="birthDate"
-                                value={userData.birthDate}
+                                name="birthdate"
+                                value={userData.birthdate}
                                 onChange={handleChange}
-                                max={today} // Ограничение на выбор даты
+                                max={today}
                                 required
                             />
                         </div>
@@ -280,8 +290,8 @@ const ProfileEditDate = () => {
                             <label>Место рождения:</label>
                             <input
                                 type="text"
-                                name="birthPlace"
-                                value={userData.birthPlace}
+                                name="birthplace"
+                                value={userData.birthplace}
                                 onChange={handleChange}
                             />
                         </div>
@@ -298,7 +308,7 @@ const ProfileEditDate = () => {
                                 })}
                             >
                                 <option value="">Выберите образование</option>
-                                {educations && educations.map(edu => (
+                                {educations.map(edu => (
                                     <option key={edu._id} value={edu._id}>
                                         {edu.name}
                                     </option>
@@ -306,20 +316,20 @@ const ProfileEditDate = () => {
                             </select>
                         </div>
                         <div className="form-group">
-                            <label>Место работы и занимая должность:</label>
+                            <label>Место работы и должность:</label>
                             <div className="form-group_input">
                                 <input
                                     placeholder='Место работы'
                                     type="text"
-                                    name="workPlace"
-                                    value={userData.workPlace}
+                                    name="workplace"
+                                    value={userData.workplace}
                                     onChange={handleChange}
                                 />
                                 <input
                                     placeholder='Должность'
                                     type="text"
-                                    name="jobTitle"
-                                    value={userData.jobTitle}
+                                    name="jobtitle"
+                                    value={userData.jobtitle}
                                     onChange={handleChange}
                                 />
                             </div>
@@ -338,24 +348,37 @@ const ProfileEditDate = () => {
                             <label>Домашний адрес (прописка):</label>
                             <input
                                 type="text"
-                                name="homeAddress"
-                                value={userData.homeAddress}
-                                onChange={handleChange}
+                                name="homeaddress"
+                                value={userData.homeaddress}
+                                onChange={handleAddressChange}
+                                placeholder="Начните вводить адрес"
                             />
+                            {showSuggestions && addressSuggestions.length > 0 && (
+                                <div className="address-suggestions">
+                                    {addressSuggestions.map((suggestion, index) => (
+                                        <div
+                                            key={index}
+                                            className="suggestion-item"
+                                            onClick={() => selectAddressSuggestion(suggestion)}
+                                        >
+                                            {suggestion.value}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div className="form-group">
                             <label>
                                 <input
                                     type="checkbox"
-                                    name="agreeToProcessing"
-                                    checked={userData.agreeToProcessing}
+                                    name="agreetoprocessing"
+                                    checked={userData.agreetoprocessing}
                                     onChange={handleChange}
                                     required
                                 />
                                 Согласен на обработку персональных данных
                             </label>
                         </div>
-                        {/* )} */}
                         {/* <div className="form-group">
                             <label>Старый пароль (для изменения пароля):</label>
                             <input
@@ -383,7 +406,11 @@ const ProfileEditDate = () => {
                                 onChange={handleChange}
                             />
                         </div>
-                        <button type="button" onClick={toggleShowPassword}>
+                        <button
+                            type="button"
+                            onClick={toggleShowPassword}
+                            className="show-password-btn"
+                        >
                             {showPassword ? "Скрыть пароль" : "Показать пароль"}
                         </button> */}
                     </div>
@@ -391,7 +418,9 @@ const ProfileEditDate = () => {
                 {error && <div className="error-message">{error}</div>}
                 {success && <div className="success-message">{success}</div>}
                 <div className="btn">
-                    <button type="submit" className="submit-button">Сохранить изменения</button>
+                    <button type="submit" className="submit-button">
+                        Сохранить изменения
+                    </button>
                 </div>
             </form>
         </div>
