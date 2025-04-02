@@ -689,7 +689,6 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var requestBody struct {
-		Reason  string             `json:"reason"`
 		OrderID primitive.ObjectID `json:"orderId"`
 	}
 	err = json.NewDecoder(r.Body).Decode(&requestBody)
@@ -698,10 +697,6 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if requestBody.Reason == "" {
-		http.Error(w, "Причина отчисления обязательна", http.StatusBadRequest)
-		return
-	}
 
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
@@ -709,7 +704,6 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 	update := bson.M{
 		"$set": bson.M{
 			"status":       "Отчисленный",
-			"expelReason":  requestBody.Reason,
 			"expelOrderId": requestBody.OrderID,
 			"expelDate":    time.Now(),
 		},

@@ -112,7 +112,7 @@ const AdminComponent = () => {
                 to="/admin/order"
                 className={`nav-link ${isActive('/admin/order') ? 'active' : ''}`}
               >
-                Добавление  
+                Добавление приказов  
               </Link>
             </li>
           </ul>

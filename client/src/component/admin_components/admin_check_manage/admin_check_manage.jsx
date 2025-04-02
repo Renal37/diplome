@@ -257,7 +257,7 @@ const AdminCoursesManagement = () => {
 
     const confirmExpel = async () => {
         if (!selectedOrderId) {
-            setError("Укажите причину отчисления");
+            setError("Выберите приказ об отчислении");
             return;
         }
 
@@ -266,7 +266,10 @@ const AdminCoursesManagement = () => {
                 `http://localhost:5000/admin/expel-registration/${selectedExpelRegistrationId}`,
                 {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
                     credentials: "include",
                     body: JSON.stringify({
                         orderId: selectedOrderId
@@ -274,29 +277,37 @@ const AdminCoursesManagement = () => {
                 }
             );
 
-            if (!response.ok) {
-                throw new Error('Ошибка при отчислении');
+            // Проверяем Content-Type перед парсингом
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error(text || 'Неизвестная ошибка сервера');
             }
 
             const data = await response.json();
 
-            if (data.success) {
-                setRegistrations(prev =>
-                    prev.map(reg =>
-                        reg._id === selectedExpelRegistrationId
-                            ? {
-                                ...reg,
-                                status: "Отчисленный",
-                                expelOrderId: selectedOrderId
-                            }
-                            : reg
-                    )
-                );
-                setSelectedExpelRegistrationId(null);
-                setSelectedOrderId(null);
-            } else {
-                setError(data.message || "Ошибка при отчислении");
+            if (!response.ok) {
+                throw new Error(data.error || 'Ошибка при отчислении');
             }
+
+            // Обновляем состояние
+            setRegistrations(prev =>
+                prev.map(reg =>
+                    reg._id === selectedExpelRegistrationId
+                        ? {
+                            ...reg,
+                            status: "Отчисленный",
+                            expelOrderId: selectedOrderId
+                        }
+                        : reg
+                )
+            );
+
+            // Закрываем модальное окно
+            setSelectedExpelRegistrationId(null);
+            setSelectedOrderId(null);
+            setError("");
+
         } catch (err) {
             console.error("Error expelling registration:", err);
             setError(err.message || "Ошибка при отчислении");
@@ -564,7 +575,7 @@ const AdminCoursesManagement = () => {
                             >
                                 <option value="">Выберите приказ</option>
                                 {orders && orders.map(order => (
-                                    <option key={order._id} value={order._id}>
+                                    <option key={order.id} value={order.id}>
                                         {order.number} от {new Date(order.date).toLocaleDateString()} ({order.orderType})
                                     </option>
                                 ))}

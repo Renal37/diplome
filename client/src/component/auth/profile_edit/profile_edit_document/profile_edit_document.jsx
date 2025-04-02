@@ -18,7 +18,7 @@ const ProfileEditDocument = () => {
         passportSeries: "",
         passportNumber: "",
         snils: "",
-        agreeToProcessing: false,
+        agreetoprocessing: false,
     });
     const [profile, setProfile] = useState(null);
 
@@ -36,6 +36,7 @@ const ProfileEditDocument = () => {
                 }
 
                 const data = await response.json();
+
                 setProfile(data);
             } catch (err) {
                 setError(err.message);
@@ -108,7 +109,7 @@ const ProfileEditDocument = () => {
                         passportSeries: data.passportdata ? data.passportdata.split(' ')[0] : '',
                         passportNumber: data.passportdata ? data.passportdata.split(' ')[1] : '',
                         snils: data.snils || '',
-                        agreeToProcessing: data.agreeToProcessing || false,
+                        agreetoprocessing: data.agreetoprocessing || false,
                     }));
                 } else {
                     setError('Ошибка при загрузке данных пользователя');
@@ -153,7 +154,7 @@ const ProfileEditDocument = () => {
             return;
         }
 
-        if (!userData.agreeToProcessing) {
+        if (!userData.agreetoprocessing) {
             setError("Необходимо согласие на обработку данных");
             return;
         }
@@ -165,7 +166,7 @@ const ProfileEditDocument = () => {
         const updateData = {
             passportData,
             snils: userData.snils,
-            agreeToProcessing: userData.agreeToProcessing,
+            agreetoprocessing: userData.agreetoprocessing,
         };
 
         try {
@@ -230,13 +231,13 @@ const ProfileEditDocument = () => {
                                 pattern="\d{3}-\d{3}-\d{3} \d{2}" // Паттерн для валидации
                             />
                         </div>
-                        {/* {!userData.agreeToProcessing && ( */}
+                        {/* {!userData.agreetoprocessing && ( */}
                         <div className="form-group">
                             <label>
                                 <input
                                     type="checkbox"
-                                    name="agreeToProcessing"
-                                    checked={userData.agreeToProcessing}
+                                    name="agreetoprocessing"
+                                    checked={userData.agreetoprocessing}
                                     onChange={handleChange}
                                 />
                                 Согласен на обработку персональных данных

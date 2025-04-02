@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/Renal37/handlers"
 	"github.com/gorilla/mux"
+
+	"net/http"
 )
 
 func registerRoutes(r *mux.Router) {
@@ -66,17 +68,26 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/delete-price/{id}", handlers.DeletePrice).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/bulk-update-prices", handlers.BulkUpdatePrices).Methods("POST", "OPTIONS")
 
-	// Добавьте эти маршруты в функцию registerRoutes
+	// Маршруты для типов курсов
 	r.HandleFunc("/admin/course-types", handlers.GetCourseTypes).Methods("GET")
 	r.HandleFunc("/admin/course-types/add", handlers.AddCourseType).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/course-types/update/{id}", handlers.UpdateCourseType).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/admin/course-types/delete/{id}", handlers.DeleteCourseType).Methods("DELETE", "OPTIONS")
 
-	// Добавьте эти маршруты в функцию registerRoutes
+	// Маршруты для типов приказов
 	r.HandleFunc("/admin/order-types", handlers.GetOrderTypes).Methods("GET")
 	r.HandleFunc("/admin/order-types/add", handlers.AddOrderType).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/order-types/update", handlers.UpdateOrderType).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/admin/order-types/delete", handlers.DeleteOrderType).Methods("DELETE", "OPTIONS")
+
+	// Маршруты для приказов
 	r.HandleFunc("/admin/orders", handlers.GetOrders).Methods("GET")
 	r.HandleFunc("/admin/orders/add", handlers.AddOrder).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/orders/update", handlers.UpdateOrder).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/admin/orders/delete", handlers.DeleteOrder).Methods("DELETE", "OPTIONS")
+	// Маршрут для доступа к файлам приказов
+	r.PathPrefix("/uploads/orders/").Handler(http.StripPrefix("/uploads/orders/",
+		http.FileServer(http.Dir("./uploads/orders/"))))
 
 	// Маршруты для проверки токена
 	r.HandleFunc("/check-token", handlers.CheckToken).Methods("POST", "OPTIONS")

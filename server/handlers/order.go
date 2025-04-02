@@ -3,7 +3,11 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Renal37/db"
@@ -57,52 +61,90 @@ func GetOrderTypes(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddOrder(w http.ResponseWriter, r *http.Request) {
-	var order struct {
-		Number      string `json:"number"`
-		Date        string `json:"date"` // Получаем как строку
-		OrderTypeID string `json:"orderTypeId"`
-		Description string `json:"description"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
+	// Ограничиваем размер файла (10MB)
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid data format: " + err.Error()})
+		json.NewEncoder(w).Encode(map[string]string{"error": "File too large, max 10MB"})
 		return
 	}
 
-	// Преобразуем orderTypeId в ObjectID
-	orderTypeID, err := primitive.ObjectIDFromHex(order.OrderTypeID)
+	// Получаем данные формы
+	number := r.FormValue("number")
+	dateStr := r.FormValue("date")
+	orderTypeID := r.FormValue("orderTypeId")
+	file, handler, err := r.FormFile("file")
+
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid orderTypeId format"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Error retrieving the file"})
+		return
+	}
+	defer file.Close()
+
+	// Проверяем тип файла
+	if !strings.HasSuffix(handler.Filename, ".pdf") {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Only PDF files are allowed"})
 		return
 	}
 
 	// Парсим дату
-	date, err := time.Parse("2006-01-02", order.Date)
+	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid date format, use YYYY-MM-DD"})
 		return
 	}
 
+	// Преобразуем orderTypeId в ObjectID
+	orderTypeObjID, err := primitive.ObjectIDFromHex(orderTypeID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid orderTypeId format"})
+		return
+	}
+
 	// Получаем тип приказа
 	orderTypeCollection := db.GetCollection(db.OrderTypesCollection)
 	var orderType models.OrderType
-	err = orderTypeCollection.FindOne(context.Background(), bson.M{"_id": orderTypeID}).Decode(&orderType)
+	err = orderTypeCollection.FindOne(context.Background(), bson.M{"_id": orderTypeObjID}).Decode(&orderType)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Order type not found"})
 		return
 	}
 
+	// Создаем директорию для файлов, если ее нет
+	uploadDir := "./uploads/orders"
+	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
+		os.MkdirAll(uploadDir, 0755)
+	}
+
+	// Генерируем уникальное имя файла
+	fileExt := filepath.Ext(handler.Filename)
+	newFileName := primitive.NewObjectID().Hex() + fileExt
+	filePath := filepath.Join(uploadDir, newFileName)
+
+	// Сохраняем файл
+	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Error saving file"})
+		return
+	}
+	defer f.Close()
+
+	io.Copy(f, file)
+
 	// Создаем полную модель Order
 	fullOrder := models.Order{
-		Number:      order.Number,
+		Number:      number,
 		Date:        date,
-		OrderTypeID: orderTypeID,
+		OrderTypeID: orderTypeObjID,
 		OrderType:   orderType.Name,
-		Description: order.Description,
+		FileURL:     "/uploads/orders/" + newFileName,
+		FileName:    handler.Filename,
 	}
 
 	collection := db.GetCollection(db.OrderCollection)
@@ -110,6 +152,8 @@ func AddOrder(w http.ResponseWriter, r *http.Request) {
 
 	_, err = collection.InsertOne(context.Background(), fullOrder)
 	if err != nil {
+		// Удаляем сохраненный файл в случае ошибки
+		os.Remove(filePath)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Error adding order: " + err.Error()})
 		return
@@ -139,6 +183,57 @@ func GetOrders(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(orders)
+}
+
+// Добавляем маршрут для просмотра файла приказа
+func ServeOrderFile(w http.ResponseWriter, r *http.Request) {
+	filePath := "." + r.URL.Path
+	http.ServeFile(w, r, filePath)
+}
+func DeleteOrderType(w http.ResponseWriter, r *http.Request) {
+	// Получаем ID из URL
+	idParam := r.URL.Query().Get("id")
+	if idParam == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Missing id parameter"})
+		return
+	}
+
+	orderTypeID, err := primitive.ObjectIDFromHex(idParam)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid order type ID format"})
+		return
+	}
+
+	// Получаем коллекции
+	orderCollection := db.GetCollection(db.OrderCollection)
+	orderTypeCollection := db.GetCollection(db.OrderTypesCollection)
+
+	// Удаляем все приказы этого типа
+	_, err = orderCollection.DeleteMany(context.Background(), bson.M{"orderTypeId": orderTypeID})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Error deleting related orders"})
+		return
+	}
+
+	// Удаляем сам тип приказа
+	result, err := orderTypeCollection.DeleteOne(context.Background(), bson.M{"_id": orderTypeID})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Error deleting order type"})
+		return
+	}
+
+	if result.DeletedCount == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Order type not found"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Order type and related orders deleted successfully"})
 }
 
 func UpdateOrderType(w http.ResponseWriter, r *http.Request) {
@@ -195,7 +290,6 @@ func UpdateOrderType(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updatedOrderType)
 }
-	
 
 func UpdateOrder(w http.ResponseWriter, r *http.Request) {
 	// Получаем ID из URL

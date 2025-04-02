@@ -16,6 +16,7 @@ const (
 var (
 	clientInstance *mongo.Client
 	clientOnce     sync.Once
+	client         *mongo.Client
 )
 
 // GetMongoClient возвращает экземпляр клиента MongoDB (синглтон)
@@ -23,7 +24,7 @@ func GetMongoClient() *mongo.Client {
 	clientOnce.Do(func() {
 		// В реальном проекте URI лучше брать из конфига
 		clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-		
+
 		var err error
 		clientInstance, err = mongo.Connect(context.Background(), clientOptions)
 		if err != nil {
@@ -35,7 +36,7 @@ func GetMongoClient() *mongo.Client {
 		if err != nil {
 			log.Fatalf("Failed to ping MongoDB: %v", err)
 		}
-		
+
 		log.Println("Successfully connected to MongoDB!")
 	})
 	return clientInstance
@@ -44,6 +45,11 @@ func GetMongoClient() *mongo.Client {
 // GetCollection возвращает коллекцию из базы данных
 func GetCollection(collectionName string) *mongo.Collection {
 	return GetMongoClient().Database(DatabaseName).Collection(collectionName)
+}
+
+// GetClient возвращает клиент MongoDB
+func GetClient() *mongo.Client {
+	return client
 }
 
 // CloseConnection закрывает соединение с MongoDB

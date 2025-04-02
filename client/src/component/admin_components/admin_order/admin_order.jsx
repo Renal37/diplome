@@ -7,36 +7,38 @@ const AdminOrders = () => {
     const [error, setError] = useState('');
     const [newOrder, setNewOrder] = useState({
         number: '',
-        date: new Date().toISOString().slice(0, 10), // Формат YYYY-MM-DD
+        date: new Date().toISOString().slice(0, 10),
         orderTypeId: '',
         description: ''
     });
     const [newOrderType, setNewOrderType] = useState('');
+    const [editingOrderType, setEditingOrderType] = useState(null);
+    const [editingOrder, setEditingOrder] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [typesRes, ordersRes] = await Promise.all([
-                    fetch('http://localhost:5000/admin/order-types', { credentials: 'include' }),
-                    fetch('http://localhost:5000/admin/orders', { credentials: 'include' })
-                ]);
-
-                const typesData = await typesRes.json();
-                const ordersData = await ordersRes.json();
-
-                setOrderTypes(typesData || []);
-                setOrders(ordersData || []);
-                console.log(typesData );
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchData();
     }, []);
+
+    const fetchData = async () => {
+        try {
+            const [typesRes, ordersRes] = await Promise.all([
+                fetch('http://localhost:5000/admin/order-types', { credentials: 'include' }),
+                fetch('http://localhost:5000/admin/orders', { credentials: 'include' })
+            ]);
+
+            const typesData = await typesRes.json();
+            const ordersData = await ordersRes.json();
+
+            setOrderTypes(typesData || []);
+            setOrders(ordersData || []);
+            console.log(ordersData);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleAddOrderType = async () => {
         if (!newOrderType.trim()) return;
@@ -75,21 +77,22 @@ const AdminOrders = () => {
             return;
         }
 
+        if (!newOrder.file) {
+            setError("Прикрепите файл приказа (PDF)");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('number', newOrder.number);
+        formData.append('date', newOrder.date);
+        formData.append('orderTypeId', newOrder.orderTypeId);
+        formData.append('file', newOrder.file);
+
         try {
             const response = await fetch('http://localhost:5000/admin/orders/add', {
                 method: 'POST',
-                mode: 'cors',
                 credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    number: newOrder.number,
-                    date: newOrder.date,
-                    orderTypeId: newOrder.orderTypeId,
-                    description: newOrder.description
-                }),
+                body: formData,
             });
 
             const data = await response.json();
@@ -103,7 +106,7 @@ const AdminOrders = () => {
                 number: '',
                 date: new Date().toISOString().slice(0, 10),
                 orderTypeId: '',
-                description: ''
+                file: null
             });
             setError('');
         } catch (error) {
@@ -111,6 +114,97 @@ const AdminOrders = () => {
             setError(error.message);
         }
     };
+
+    const handleUpdateOrderType = async () => {
+        if (!editingOrderType || !editingOrderType.name.trim()) return;
+
+        try {
+            const response = await fetch(`http://localhost:5000/admin/order-types/update?id=${editingOrderType.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ name: editingOrderType.name }),
+            });
+
+            const data = await response.json();
+            setOrderTypes(prev => prev.map(type =>
+                type.id === editingOrderType.id ? data : type
+            ));
+            setEditingOrderType(null);
+        } catch (error) {
+            console.error('Error updating order type:', error);
+            setError(error.message);
+        }
+    };
+
+    const handleDeleteOrderType = async (id) => {
+        if (!window.confirm('Удалить этот тип приказа и все связанные приказы?')) return;
+
+        try {
+            const response = await fetch(`http://localhost:5000/admin/order-types/delete?id=${id}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                throw new Error('Ошибка при удалении');
+            }
+
+            setOrderTypes(prev => prev.filter(type => type.id !== id));
+            setOrders(prev => prev.filter(order => order.orderTypeId !== id));
+        } catch (error) {
+            console.error('Error deleting order type:', error);
+            setError(error.message);
+        }
+    };
+
+    const handleUpdateOrder = async () => {
+        if (!editingOrder) return;
+
+        try {
+            const response = await fetch(`http://localhost:5000/admin/orders/update?id=${editingOrder.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    number: editingOrder.number,
+                    date: editingOrder.date,
+                    orderTypeId: editingOrder.orderTypeId,
+                    description: editingOrder.description
+                }),
+            });
+
+            const data = await response.json();
+            setOrders(prev => prev.map(order =>
+                order.id === editingOrder.id ? data : order
+            ));
+            setEditingOrder(null);
+        } catch (error) {
+            console.error('Error updating order:', error);
+            setError(error.message);
+        }
+    };
+
+    const handleDeleteOrder = async (id) => {
+        if (!window.confirm('Удалить этот приказ?')) return;
+
+        try {
+            const response = await fetch(`http://localhost:5000/admin/orders/delete?id=${id}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                throw new Error('Ошибка при удалении');
+            }
+
+            setOrders(prev => prev.filter(order => order.id !== id));
+        } catch (error) {
+            console.error('Error deleting order:', error);
+            setError(error.message);
+        }
+    };
+
     if (loading) return <div>Loading...</div>;
 
     return (
@@ -123,48 +217,75 @@ const AdminOrders = () => {
                 <div className="add-order-type">
                     <input
                         type="text"
-                        value={newOrderType}
-                        onChange={(e) => setNewOrderType(e.target.value)}
-                        placeholder="Новый тип приказа"
+                        value={editingOrderType ? editingOrderType.name : newOrderType}
+                        onChange={(e) => editingOrderType
+                            ? setEditingOrderType({ ...editingOrderType, name: e.target.value })
+                            : setNewOrderType(e.target.value)}
+                        placeholder={editingOrderType ? "Редактировать тип" : "Новый тип приказа"}
                     />
-                    <button onClick={handleAddOrderType}>Добавить</button>
+                    {editingOrderType ? (
+                        <>
+                            <button onClick={handleUpdateOrderType}>Сохранить</button>
+                            <button onClick={() => setEditingOrderType(null)}>Отмена</button>
+                        </>
+                    ) : (
+                        <button onClick={handleAddOrderType}>Добавить</button>
+                    )}
                 </div>
                 <ul>
                     {orderTypes.map(type => (
-                        <li key={type._id}>{type.name}</li>
+                        <li key={type.id}>
+                            {type.name}
+                            <button onClick={() => setEditingOrderType(type)}>✏️</button>
+                            <button onClick={() => handleDeleteOrderType(type.id)}>🗑️</button>
+                        </li>
                     ))}
                 </ul>
             </div>
 
             <div className="orders-section">
-                <h3>Создание приказа</h3>
+                <h3>{editingOrder ? "Редактирование приказа" : "Создание приказа"}</h3>
                 <div className="order-form">
                     <input
                         type="text"
-                        value={newOrder.number}
-                        onChange={(e) => setNewOrder({ ...newOrder, number: e.target.value })}
+                        value={editingOrder ? editingOrder.number : newOrder.number}
+                        onChange={(e) => editingOrder
+                            ? setEditingOrder({ ...editingOrder, number: e.target.value })
+                            : setNewOrder({ ...newOrder, number: e.target.value })}
                         placeholder="Номер приказа"
                     />
                     <input
                         type="date"
-                        value={newOrder.date}
-                        onChange={(e) => setNewOrder({ ...newOrder, date: e.target.value })}
+                        value={editingOrder ? editingOrder.date : newOrder.date}
+                        onChange={(e) => editingOrder
+                            ? setEditingOrder({ ...editingOrder, date: e.target.value })
+                            : setNewOrder({ ...newOrder, date: e.target.value })}
                     />
                     <select
-                        value={newOrder.orderTypeId}
-                        onChange={(e) => setNewOrder({ ...newOrder, orderTypeId: e.target.value })}
+                        value={editingOrder ? editingOrder.orderTypeId : newOrder.orderTypeId}
+                        onChange={(e) => editingOrder
+                            ? setEditingOrder({ ...editingOrder, orderTypeId: e.target.value })
+                            : setNewOrder({ ...newOrder, orderTypeId: e.target.value })}
                     >
                         <option value="">Выберите тип приказа</option>
                         {orderTypes.map(type => (
                             <option key={type.id} value={type.id}>{type.name}</option>
                         ))}
                     </select>
-                    <textarea
-                        value={newOrder.description}
-                        onChange={(e) => setNewOrder({ ...newOrder, description: e.target.value })}
-                        placeholder="Описание приказа"
+
+                    <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => setNewOrder({ ...newOrder, file: e.target.files[0] })}
                     />
-                    <button onClick={handleAddOrder}>Создать приказ</button>
+                    {editingOrder ? (
+                        <>
+                            <button onClick={handleUpdateOrder}>Сохранить</button>
+                            <button onClick={() => setEditingOrder(null)}>Отмена</button>
+                        </>
+                    ) : (
+                        <button onClick={handleAddOrder}>Создать приказ</button>
+                    )}
                 </div>
 
                 <h3>Список приказов</h3>
@@ -174,16 +295,31 @@ const AdminOrders = () => {
                             <th>Номер</th>
                             <th>Дата</th>
                             <th>Тип</th>
-                            <th>Описание</th>
+                            <th>Файл</th>
+                            <th>Действия</th>
                         </tr>
                     </thead>
                     <tbody>
                         {orders.map(order => (
-                            <tr key={order._id}>
+                            <tr key={order.id}>
                                 <td>{order.number}</td>
                                 <td>{new Date(order.date).toLocaleDateString()}</td>
                                 <td>{order.orderType}</td>
-                                <td>{order.description}</td>
+                                <td>
+                                    {order.fileUrl && (
+                                        <a
+                                            href={`http://localhost:5000${order.fileUrl}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            {order.fileName || "Просмотреть приказ"}
+                                        </a>
+                                    )}
+                                </td>
+                                <td>
+                                    <button onClick={() => setEditingOrder(order)}>✏️</button>
+                                    <button onClick={() => handleDeleteOrder(order.id)}>🗑️</button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
