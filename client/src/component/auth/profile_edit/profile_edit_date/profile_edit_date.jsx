@@ -68,12 +68,13 @@ const ProfileEditDate = () => {
                 headers: {
                     "Content-Type": "application/json",
                     "Accept": "application/json",
-                    "Authorization": "7a08000a1dd10d29451df5dfd0295c8076c7ad89"
+                    "Authorization": "Token 7a08000a1dd10d29451df5dfd0295c8076c7ad89"
                 },
                 body: JSON.stringify({
                     query: query,
                     count: 5,
-                    locations: [{ country: "*" }] // Можно уточнить поиск по стране/региону
+                    
+                    
                 }),
             });
 
@@ -344,28 +345,31 @@ const ProfileEditDate = () => {
                                 placeholder="+7 (XXX) XXX-XX-XX"
                             />
                         </div>
-                        <div className="form-group">
+                        <div className="form-group address-group">
                             <label>Домашний адрес (прописка):</label>
-                            <input
-                                type="text"
-                                name="homeaddress"
-                                value={userData.homeaddress}
-                                onChange={handleAddressChange}
-                                placeholder="Начните вводить адрес"
-                            />
-                            {showSuggestions && addressSuggestions.length > 0 && (
-                                <div className="address-suggestions">
-                                    {addressSuggestions.map((suggestion, index) => (
-                                        <div
-                                            key={index}
-                                            className="suggestion-item"
-                                            onClick={() => selectAddressSuggestion(suggestion)}
-                                        >
-                                            {suggestion.value}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                            <div className="address-input-container">
+                                <input
+                                    type="text"
+                                    name="homeaddress"
+                                    value={userData.homeaddress}
+                                    onChange={handleAddressChange}
+                                    placeholder="Начните вводить адрес"
+                                    autoComplete="off"
+                                />
+                                {showSuggestions && addressSuggestions.length > 0 && (
+                                    <div className="address-suggestions">
+                                        {addressSuggestions.map((suggestion, index) => (
+                                            <div
+                                                key={index}
+                                                className="suggestion-item"
+                                                onClick={() => selectAddressSuggestion(suggestion)}
+                                            >
+                                                {suggestion.value}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div className="form-group">
                             <label>
@@ -379,40 +383,6 @@ const ProfileEditDate = () => {
                                 Согласен на обработку персональных данных
                             </label>
                         </div>
-                        {/* <div className="form-group">
-                            <label>Старый пароль (для изменения пароля):</label>
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                name="oldPassword"
-                                value={userData.oldPassword}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Новый пароль:</label>
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                name="newPassword"
-                                value={userData.newPassword}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Подтвердите новый пароль:</label>
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                name="confirmPassword"
-                                value={userData.confirmPassword}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <button
-                            type="button"
-                            onClick={toggleShowPassword}
-                            className="show-password-btn"
-                        >
-                            {showPassword ? "Скрыть пароль" : "Показать пароль"}
-                        </button> */}
                     </div>
                 </div>
                 {error && <div className="error-message">{error}</div>}
