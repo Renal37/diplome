@@ -91,4 +91,7 @@ func registerRoutes(r *mux.Router) {
 
 	// Маршруты для проверки токена
 	r.HandleFunc("/check-token", handlers.CheckToken).Methods("POST", "OPTIONS")
+
+	// Маршруты для ИИ-ассистента
+	r.HandleFunc("/ai-assistant", handlers.AIAssistantHandler).Methods("POST", "OPTIONS")
 }

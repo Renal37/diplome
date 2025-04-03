@@ -12,6 +12,7 @@ import Profile_Edit from './component/auth/profile_edit/profile_edit_component.j
 import CourseRegistration from './component/course/ course_component.jsx';
 import Sveden from './component/sveden/sveden_component.jsx';
 import Document from './component/document/document_component.jsx';
+import AIAssistant from './component/ai/AIAssistant.jsx';
 
 const routes = [
   { path: "/", element: <Main_top_center /> },
@@ -26,7 +27,7 @@ const App = () => {
   return (
     <div>
       <Header />
-
+      <AIAssistant />
       <Routes>
         <Route path="/" element={<Main />}>
           {routes.map(({ path, element }) => (
