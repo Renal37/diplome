@@ -77,6 +77,7 @@ const AdminCoursesManagement = () => {
                 }
                 const data = await response.json();
                 setGroups(data.groups || []);
+
             } catch (error) {
                 console.error("Error fetching groups:", error);
                 setError("Ошибка при загрузке групп");
@@ -423,6 +424,7 @@ const AdminCoursesManagement = () => {
                     />
                     <div className="filter-section">
                         <label>Фильтр по статусу:</label>
+                        {/* // В списке фильтров */}
                         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                             <option value="all">Все</option>
                             <option value="Ожидание">Ожидание</option>
@@ -431,6 +433,7 @@ const AdminCoursesManagement = () => {
                             <option value="Отчисленный">Отчисленный</option>
                             <option value="Принят">Принят</option>
                             <option value="Оплаченный">Оплаченный</option>
+                            <option value="Завершил">Завершил</option>
                         </select>
                     </div>
                 </div>
@@ -449,6 +452,7 @@ const AdminCoursesManagement = () => {
                         <th>Пользователь</th>
                         <th>Группа</th>
                         <th>Статус</th>
+                        <th>Причина</th>
                         <th>Выборка</th>
                         <th>Действия</th>
 
@@ -496,6 +500,21 @@ const AdminCoursesManagement = () => {
                             </td>
                             <td>{registration.status}</td>
                             <td>
+                                {/* Отображаем причину отклонения или отчисления */}
+                                {registration.status === "Отклоненный" && registration.rejectReason && (
+                                    <div className="reason-text">
+                                        {registration.rejectReason}
+                                    </div>
+                                )}
+                                {registration.orderType !== "Unknown orderType"
+                                    && (
+                                        <div className="reason-text">
+                                            По приказу: {registration.orderType
+                                            }
+                                        </div>
+                                    )}
+                            </td>
+                            <td>
                                 <input
                                     type="checkbox"
                                     checked={selectedRegistrations.includes(registration._id)}
@@ -524,13 +543,13 @@ const AdminCoursesManagement = () => {
                                         <button className="approve-btn" onClick={() => handleViewPdf(registration._id)}>Проверить договор</button>
                                     </>
                                 )}
-                                {registration.status === "Одобренный" && !(registration.contractFilePath) && (
+                                {registration.status === "Одобренный" && !(registration.contractFilePath) || (registration.status === "Принят") && (
                                     <>
                                         <button className="reject-btn" onClick={() => handleReject(registration._id)}>Отклонить</button>
                                     </>
                                 )}
-                                {registration.status === "Принят" && registration.contractFilePath && (
-                                    <button className="reject-btn" onClick={() => handleExpel(registration._id)}>Отчислить</button>
+                                {registration.status === "Оплаченный" && registration.contractFilePath && (
+                                    <button className="reject-btn" onClick={() => handleExpel(registration._id)}>Приказы</button>
                                 )}
                                 {!(registration.status == "Ожидание") && !(registration.status === "Отклоненный" || registration.status === "Отчисленный") && (
                                     <>

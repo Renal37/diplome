@@ -154,6 +154,13 @@
 .qr-code-placeholder {
     margin: 20px 0;
 }
+.qr-code-placeholder h2{
+    font-size: 24px;
+}
+.qr-code-placeholder img{
+    width: 300px;
+    
+}
 
 .payment-modal-buttons button {
     margin: 10px;

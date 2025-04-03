@@ -280,6 +280,15 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		bson.M{
+			"$lookup": bson.M{
+				"from":         "orders",
+				"localField":   "expelOrderId",
+				"foreignField": "_id",
+				"as":           "order",
+			},
+		},
+
+		bson.M{
 			"$project": bson.M{
 				"courseTitle": bson.M{
 					"$ifNull": bson.A{
@@ -297,6 +306,14 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 				"contractFilePath": 1,
 				"groupId":          1,
 				"userId":           1,
+				"rejectReason":     1,
+				"expelOrderId":     1,
+				"orderType": bson.M{
+					"$ifNull": bson.A{
+						bson.M{"$arrayElemAt": bson.A{"$order.orderType", 0}},
+						"Unknown orderType",
+					},
+				},
 
 				"groupName": bson.M{
 					"$ifNull": bson.A{
@@ -697,16 +714,40 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
+
+	// Получаем тип приказа
+	orderCollection := db.GetCollection(db.OrderCollection)
+	var order models.Order
+	err = orderCollection.FindOne(context.Background(), bson.M{"_id": requestBody.OrderID}).Decode(&order)
+	if err != nil {
+		http.Error(w, "Приказ не найден", http.StatusBadRequest)
+		return
+	}
+
+	var newStatus string
+	if order.OrderType == "О выпуске обучающихся" {
+		newStatus = "Завершил"
+		
+	} else if order.OrderType == "О зачислении обучающихся" {
+		newStatus = "Проходит курс"
+	} else if order.OrderType == "Об отчислении обучающихся" {
+		newStatus = "Отчисленный"
+	} else {
+		newStatus = "Отчисленный" // дефолтный статус
+	}
 
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
 		"$set": bson.M{
-			"status":       "Отчисленный",
+			"status":       newStatus,
 			"expelOrderId": requestBody.OrderID,
 			"expelDate":    time.Now(),
 		},
+	}
+
+	if newStatus == "Завершил" {
+		update["$set"].(bson.M)["documentType"] = "Диплом"
 	}
 
 	_, err = collection.UpdateOne(context.Background(), filter, update)
