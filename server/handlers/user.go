@@ -240,7 +240,6 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection(db.UsersCollection)
 
 	// Создаём объект для обновления
-	// Создаём объект для обновления
 	update := bson.M{}
 
 	// Обновляем основные поля
@@ -345,25 +344,52 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		"message": "Профиль успешно обновлён",
 	})
 }
-
 func GetUser(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection(db.UsersCollection)
 
-	cursor, err := collection.Find(context.Background(), bson.M{})
+	pipeline := []bson.M{
+		{
+			"$lookup": bson.M{
+				"from":         db.EducationsCollection,
+				"localField":   "educationid",
+				"foreignField": "_id",
+				"as":           "education",
+			},
+		},
+		{
+			"$addFields": bson.M{
+				"education": bson.M{"$arrayElemAt": bson.A{"$education", 0}},
+			},
+		},
+		{
+			"$project": bson.M{
+				"educationid": 0,
+			},
+		},
+	}
+
+	cursor, err := collection.Aggregate(context.Background(), pipeline)
 	if err != nil {
-		http.Error(w, "Ошибка при получении курсов из базы данных", http.StatusInternalServerError)
+		http.Error(w, "Ошибка при получении пользователей из базы данных", http.StatusInternalServerError)
 		return
 	}
 	defer cursor.Close(context.Background())
 
 	var users []bson.M
 	if err = cursor.All(context.Background(), &users); err != nil {
-		http.Error(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
+		http.Error(w, "Ошибка при обработке данных пользователей", http.StatusInternalServerError)
 		return
 	}
 
 	for i := range users {
 		users[i]["_id"] = users[i]["_id"].(primitive.ObjectID).Hex()
+		if users[i]["education"] != nil {
+			education := users[i]["education"].(bson.M)
+			if education["_id"] != nil {
+				education["_id"] = education["_id"].(primitive.ObjectID).Hex()
+			}
+			users[i]["education"] = education
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

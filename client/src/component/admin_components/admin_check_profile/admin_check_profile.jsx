@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom"; // Импортируем useNavigate
+import { useLocation, useNavigate } from "react-router-dom";
 import "./admin_check_profile.css";
 
 const AdminCheckProfile = () => {
@@ -8,10 +8,9 @@ const AdminCheckProfile = () => {
     const [loginSearchQuery, setLoginSearchQuery] = useState("");
     const [showFullInfo, setShowFullInfo] = useState(false);
     const location = useLocation();
-    const navigate = useNavigate(); // Используем useNavigate
+    const navigate = useNavigate();
 
     useEffect(() => {
-        // Получаем логин из параметров URL
         const searchParams = new URLSearchParams(location.search);
         const username = searchParams.get("username");
         if (username) {
@@ -27,9 +26,10 @@ const AdminCheckProfile = () => {
         const fullName = [
             user.lastname || "",
             user.firstname || "",
-            user.middlename || ""
+            user.middleName || ""
         ].join(" ").toLowerCase();
         const login = user.username?.toLowerCase() || "";
+        console.log(user.education);
 
         return (
             (!fioSearchQuery || fullName.includes(fioSearchQuery.toLowerCase())) &&
@@ -77,9 +77,11 @@ const AdminCheckProfile = () => {
                                 <th>Место работы</th>
                                 <th>Должность</th>
                                 <th>Домашний адрес</th>
-                                <th>Номер</th>
+                                <th>Номер телефона</th>
                                 <th>Данные паспорта</th>
                                 <th>СНИЛС</th>
+                                {/* <th>Согласие на обработку</th>
+                                <th>Контракт загружен</th> */}
                             </>
                         )}
                     </tr>
@@ -99,20 +101,22 @@ const AdminCheckProfile = () => {
                                     <>
                                         <td>{user.birthdate || "Данные отсутствуют"}</td>
                                         <td>{user.birthplace || "Данные отсутствуют"}</td>
-                                        <td>{user.education || "Данные отсутствуют"}</td>
+                                        <td>{user.education?.name || "Данные отсутствуют"}</td>
                                         <td>{user.workplace || "Данные отсутствуют"}</td>
                                         <td>{user.jobtitle || "Данные отсутствуют"}</td>
                                         <td>{user.homeaddress || "Данные отсутствуют"}</td>
                                         <td>{user.phone || "Данные отсутствуют"}</td>
                                         <td>{user.passportdata || "Данные отсутствуют"}</td>
                                         <td>{user.snils || "Данные отсутствуют"}</td>
+                                        {/* <td>{user.agreetoprocessing ? "Да" : "Нет"}</td>
+                                        <td>{user.contractUploaded ? "Да" : "Нет"}</td> */}
                                     </>
                                 )}
                             </tr>
                         ))
                     ) : (
                         <tr>
-                            <td colSpan={showFullInfo ? 12 : 3} className="no-data-message">
+                            <td colSpan={showFullInfo ? 14 : 3} className="no-data-message">
                                 Нет данных для отображения
                             </td>
                         </tr>
