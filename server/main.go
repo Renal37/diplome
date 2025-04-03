@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -50,4 +51,13 @@ func setupRouter() *mux.Router {
 	registerRoutes(r)
 
 	return r
+}
+
+
+func init() {
+	// Загружаем .env файл из указанного пути
+	err := godotenv.Load(".env") // или "../../.env" в зависимости от структуры
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
 }

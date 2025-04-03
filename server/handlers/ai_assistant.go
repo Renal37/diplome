@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"sync"
 )
 
@@ -26,15 +25,7 @@ var (
 func initYandexGPT() error {
 	var initErr error
 	yandexGPTOnce.Do(func() {
-		iamToken := os.Getenv("YANDEX_IAM_TOKEN")
-		folderID := os.Getenv("YANDEX_FOLDER_ID")
-		
-		if iamToken == "" || folderID == "" {
-			initErr = fmt.Errorf("YANDEX_IAM_TOKEN or YANDEX_FOLDER_ID not set")
-			return
-		}
-
-		yandexGPTClient = NewYandexGPTClient(iamToken, folderID)
+		yandexGPTClient = NewYandexGPTClient() 
 	})
 	return initErr
 }
@@ -63,7 +54,7 @@ func AIAssistantHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prompt := fmt.Sprintf("Контекст: %s\nВопрос: %s\nОтветь кратко и по делу.", req.Context, req.Question)
-	
+
 	answer, err := yandexGPTClient.GenerateResponse(r.Context(), prompt)
 	if err != nil {
 		log.Printf("Yandex GPT error: %v", err)
