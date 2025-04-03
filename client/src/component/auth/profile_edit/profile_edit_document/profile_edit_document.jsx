@@ -111,6 +111,7 @@ const ProfileEditDocument = () => {
                         snils: data.snils || '',
                         agreetoprocessing: data.agreetoprocessing || false,
                     }));
+                    
                 } else {
                     setError('Ошибка при загрузке данных пользователя');
                 }
@@ -148,7 +149,7 @@ const ProfileEditDocument = () => {
         setError("");
         setSuccess("");
 
-        // Простая валидация
+        // Валидация СНИЛС
         if (!userData.snils.match(/^\d{3}-\d{3}-\d{3} \d{2}$/)) {
             setError("Неверный формат СНИЛСа (XXX-XXX-XXX XX)");
             return;
@@ -159,14 +160,11 @@ const ProfileEditDocument = () => {
             return;
         }
 
-        // Объединяем серию и номер паспорта
-        const passportData = `${userData.passportSeries} ${userData.passportNumber}`.trim();
-
-        // Создаем объект для отправки только измененных данных
+        // Подготовка данных для отправки
         const updateData = {
-            passportData,
+            passportData: `${userData.passportSeries} ${userData.passportNumber}`.trim(),
             snils: userData.snils,
-            agreetoprocessing: userData.agreetoprocessing,
+            agreeToProcessing: userData.agreetoprocessing,
         };
 
         try {
@@ -259,7 +257,7 @@ const ProfileEditDocument = () => {
                 <div className="download-cont">
                     <button
                         className="download-contract-button"
-                        onClick={() => handleDownloadContract(profile.ID)}
+                        onClick={() => handleDownloadContract(profile._id)}
                     >
                         Скачать согласие
                     </button>
@@ -274,7 +272,7 @@ const ProfileEditDocument = () => {
                         onChange={(e) => {
                             const file = e.target.files[0];
                             if (file) {
-                                handleUploadContract(profile.ID, file);
+                                handleUploadContract(profile._id, file);
                             }
                         }}
                     />

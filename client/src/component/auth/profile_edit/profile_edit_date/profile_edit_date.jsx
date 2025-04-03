@@ -26,20 +26,19 @@ const ProfileEditDate = () => {
     const [addressSuggestions, setAddressSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    // Загрузка данных пользователя и списка образований
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Загрузка данных пользователя
                 const userResponse = await fetch('http://localhost:5000/profile', {
                     credentials: 'include',
                 });
                 if (userResponse.ok) {
                     const userData = await userResponse.json();
+                    console.log('Данные пользователя:', userData); // Добавьте эту строку
                     setUserData(prev => ({
                         ...prev,
                         ...userData,
-                        educationId: userData.educationId?._id || userData.educationId || ''
+                        educationId: userData.education?._id || userData.educationId || ''
                     }));
                 }
 
@@ -60,6 +59,7 @@ const ProfileEditDate = () => {
         fetchData();
     }, []);
 
+
     // Функция для запроса подсказок адреса через DaData API
     const fetchAddressSuggestions = async (query) => {
         try {
@@ -73,8 +73,8 @@ const ProfileEditDate = () => {
                 body: JSON.stringify({
                     query: query,
                     count: 5,
-                    
-                    
+
+
                 }),
             });
 
@@ -167,10 +167,6 @@ const ProfileEditDate = () => {
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        setSuccess('');
-
         // Валидация обязательных полей
         if (!userData.lastname || !userData.firstname || !userData.birthdate || !userData.agreetoprocessing) {
             setError('Пожалуйста, заполните все обязательные поля');
@@ -188,24 +184,19 @@ const ProfileEditDate = () => {
             return;
         }
 
-        if (userData.newPassword && userData.newPassword !== userData.confirmPassword) {
-            setError('Новый пароль и подтверждение пароля не совпадают');
-            return;
-        }
-
         // Подготовка данных для отправки
         const updateData = {
-            lastname: userData.lastname,
-            firstname: userData.firstname,
-            middlename: userData.middlename,
-            education: userData.education,
+            lastName: userData.lastname,
+            firstName: userData.firstname,
+            middleName: userData.middlename,
+            educationId: userData.educationId, // Исправлено на educationId
             phone: userData.phone,
-            birthdate: userData.birthdate,
-            birthplace: userData.birthplace,
-            homeaddress: userData.homeaddress,
-            workplace: userData.workplace,
-            jobtitle: userData.jobtitle,
-            agreetoprocessing: userData.agreetoprocessing,
+            birthDate: userData.birthdate, // Исправлено на birthDate
+            birthPlace: userData.birthplace,
+            homeAddress: userData.homeaddress,
+            workPlace: userData.workplace,
+            jobTitle: userData.jobtitle,
+            agreeToProcessing: userData.agreetoprocessing,
         };
 
         // Добавляем пароль, если он изменен

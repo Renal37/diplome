@@ -37,7 +37,7 @@ const AdminCoursesManagement = () => {
         // Проверяем, что все выбранные заявки находятся в статусе "Ожидание"
         const allPending = selectedRegistrations.every(registrationId => {
             const registration = registrations.find(reg => reg._id === registrationId);
-            return registration.status === "Ожидание";
+            return registration?.status === "Ожидание";
         });
 
         if (!allPending) {
@@ -55,15 +55,40 @@ const AdminCoursesManagement = () => {
         return registration.status === "Ожидание";
     });
 
-    const handleMassDelete = () => {
+    const handleMassDelete = async () => {
         if (selectedRegistrations.length === 0) {
             setError("Выберите хотя бы одну заявку для удаления");
             return;
         }
 
-        selectedRegistrations.forEach(registrationId => {
-            handleDelete(registrationId);
-        });
+        try {
+            // Создаем массив промисов для каждого удаления
+            const deletePromises = selectedRegistrations.map(id =>
+                fetch(`http://localhost:5000/admin/delete-registration/${id}`, {
+                    method: "POST",
+                    credentials: "include",
+                }).then(res => res.json())
+            );
+
+            // Ждем завершения всех запросов
+            const results = await Promise.all(deletePromises);
+
+            // Проверяем результаты
+            const allSuccess = results.every(res => res.success);
+            if (!allSuccess) {
+                throw new Error("Некоторые заявки не удалены");
+            }
+
+            // Обновляем состояние
+            setRegistrations(prev =>
+                prev.filter(reg => !selectedRegistrations.includes(reg._id))
+            );
+            setSelectedRegistrations([]);
+
+        } catch (error) {
+            console.error("Ошибка массового удаления:", error);
+            setError(error.message || "Ошибка при удалении");
+        }
     };
     // Загрузка списка групп
     useEffect(() => {
