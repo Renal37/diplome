@@ -94,4 +94,7 @@ func registerRoutes(r *mux.Router) {
 
 	// Маршруты для ИИ-ассистента
 	r.HandleFunc("/ai-assistant", handlers.AIAssistantHandler).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/prompt", handlers.GetPrompt).Methods("GET")
+	r.HandleFunc("/admin/prompt/update", handlers.UpdatePrompt).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/admin/prompt/delete", handlers.DeletePrompt).Methods("DELETE", "OPTIONS")
 }

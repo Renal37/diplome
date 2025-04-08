@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
 	"io"
 	"log"
 	"net/http"
+	"github.com/Renal37/db"
 	"os"
 )
 
@@ -74,6 +76,17 @@ type CompletionResponse struct {
 func (y *YandexGPTClient) GenerateResponse(ctx context.Context, prompt string) (string, error) {
 	modelURI := fmt.Sprintf("gpt://%s/yandexgpt-lite", y.folderID)
 
+	collection := db.GetCollection(db.Prompts)
+	var dbPrompt struct {
+		Content string `bson:"content"`
+	}
+	err := collection.FindOne(ctx, bson.M{}).Decode(&dbPrompt)
+
+	systemPrompt := `Ты - AI-ассистент...` // дефолтный промпт
+	if err == nil && dbPrompt.Content != "" {
+		systemPrompt = dbPrompt.Content
+	}
+
 	reqBody := CompletionRequest{
 		ModelURI: modelURI,
 		CompletionOptions: CompletionOptions{
@@ -84,35 +97,7 @@ func (y *YandexGPTClient) GenerateResponse(ctx context.Context, prompt string) (
 		Messages: []Message{
 			{
 				Role: "system",
-				Text: `Ты - AI-ассистент информационной системы для записи на курсы дополнительного профессионального образования. Система разработана на стеке Golang (бэкенд), React (фронтенд) и MongoDB (база данных). 
-
-		Основные функции системы:
-1. Для пользователей:
-- Регистрация/авторизация с валидацией данных
-- Просмотр каталога курсов с фильтрацией
-- Запись на курсы и отслеживание статуса заявки
-- Личный кабинет с историей обучения
-- Загрузка/скачивание договоров
-
-2. Для администраторов:
-- Управление курсами (добавление/редактирование)
-- Модерация заявок (одобрение/отклонение)
-- Формирование приказов и сертификатов
-- Просмотр аналитики
-
-Технические особенности:
-- Безопасность: JWT-аутентификация, хеширование паролей (bcrypt)
-- API: RESTful на Golang с CORS middleware
-- Данные: Хранение в MongoDB (пользователи, курсы, заявки, документы)
-
-Отвечай кратко и по делу, используя только информацию о функционале системы. Если вопрос не связан с курсами, вежливо сообщи, что не можешь помочь.
-
-Примеры ответов:
-- 'Вы можете записаться на курс через кнопку "Записаться" на странице курса'
-- 'Статус заявки можно проверить в личном кабинете'
-- 'Администратор рассматривает заявки в течение 3 рабочих дней'
-- 'Для восстановления пароля обратитесь в поддержку
-`,
+				Text: systemPrompt,
 			},
 			{
 				Role: "user",

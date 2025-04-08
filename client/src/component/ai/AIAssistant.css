@@ -1,4 +1,4 @@
-/* Обновленные стили AI Assistant */
+/* Обновленные стили AI Assistant с синей цветовой гаммой */
 .ai-assistant {
     position: fixed;
     bottom: 25px;
@@ -18,7 +18,7 @@
 
 /* Заголовок */
 .ai-header {
-    background: linear-gradient(135deg, #3a4f6a 0%, #2c3e50 100%);
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
     color: white;
     padding: 16px 20px;
     display: flex;
@@ -27,10 +27,12 @@
     cursor: pointer;
     user-select: none;
     transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
 }
 
 .ai-header:hover {
-    background: linear-gradient(135deg, #425b7a 0%, #34495e 100%);
+    background: linear-gradient(135deg, #1a73e8 0%, #1565c0 100%);
 }
 
 .ai-title {
@@ -45,7 +47,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
     padding: 5px;
     transition: transform 0.3s ease;
@@ -69,7 +71,7 @@
 
 .ai-minimize-btn,
 .ai-close-btn {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.15);
     border: none;
     color: white;
     font-size: 16px;
@@ -81,11 +83,12 @@
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
+    pointer-events: auto;
 }
 
 .ai-minimize-btn:hover,
 .ai-close-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.3);
     transform: scale(1.1);
 }
 
@@ -95,6 +98,7 @@
     flex-direction: column;
     flex: 1;
     background: #f8fafc;
+    min-height: 0;
 }
 
 /* Сообщения */
@@ -106,16 +110,21 @@
     flex-direction: column;
     gap: 15px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    scrollbar-color: #1a73e8 transparent;
+    min-height: 0;
 }
 
 .ai-messages::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
 }
 
 .ai-messages::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
+    background-color: #1a73e8;
+    border-radius: 4px;
+}
+
+.ai-messages::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .ai-welcome {
@@ -138,21 +147,21 @@
 }
 
 .ai-example-btn {
-    background: rgba(46, 134, 222, 0.1);
+    background: rgba(26, 115, 232, 0.1);
     border: none;
     border-radius: 12px;
     padding: 10px 15px;
     font-size: 14px;
-    color: #2c3e50;
+    color: #1a73e8;
     cursor: pointer;
     text-align: left;
     transition: all 0.2s ease;
     backdrop-filter: blur(5px);
-    border: 1px solid rgba(46, 134, 222, 0.2);
+    border: 1px solid rgba(26, 115, 232, 0.2);
 }
 
 .ai-example-btn:hover {
-    background: rgba(46, 134, 222, 0.2);
+    background: rgba(26, 115, 232, 0.2);
     transform: translateY(-1px);
 }
 
@@ -165,6 +174,7 @@
     opacity: 0;
     animation: fadeIn 0.3s ease forwards;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    word-break: break-word;
 }
 
 @keyframes fadeIn {
@@ -180,7 +190,7 @@
 }
 
 .ai-message.user {
-    background: linear-gradient(135deg, #3a4f6a 0%, #2c3e50 100%);
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
     color: white;
     align-self: flex-end;
     border-bottom-right-radius: 5px;
@@ -232,7 +242,7 @@
 .ai-typing-indicator span {
     height: 8px;
     width: 8px;
-    background: #7f8c8d;
+    background: #1a73e8;
     border-radius: 50%;
     display: inline-block;
     animation: bounce 1.4s infinite ease-in-out;
@@ -285,13 +295,13 @@
 }
 
 .ai-input-form input:focus {
-    border-color: #3a4f6a;
-    box-shadow: 0 0 0 3px rgba(58, 79, 106, 0.1);
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
     background: white;
 }
 
 .ai-send-btn {
-    background: linear-gradient(135deg, #3a4f6a 0%, #2c3e50 100%);
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
     color: white;
     border: none;
     border-radius: 50%;
@@ -302,11 +312,11 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 10px rgba(44, 62, 80, 0.2);
+    box-shadow: 0 2px 10px rgba(26, 115, 232, 0.2);
 }
 
 .ai-send-btn:disabled {
-    background: #a0aec0;
+    background: #cbd5e0;
     cursor: not-allowed;
     transform: none !important;
     box-shadow: none;
@@ -314,7 +324,7 @@
 
 .ai-send-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.25);
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
 }
 
 .ai-send-btn svg {
@@ -342,8 +352,8 @@
 }
 
 .ai-reset-btn:hover:not(:disabled) {
-    color: #3a4f6a;
-    background: rgba(0, 0, 0, 0.03);
+    color: #1a73e8;
+    background: rgba(26, 115, 232, 0.05);
 }
 
 .ai-reset-btn:disabled {
@@ -378,7 +388,7 @@
         bottom: 0;
         right: 0;
         border-radius: 0;
-        max-height: 70vh;
+        max-height: 80vh;
         border-bottom-left-radius: 16px;
         border-bottom-right-radius: 16px;
     }
@@ -389,6 +399,7 @@
 
     .ai-messages {
         padding: 15px;
+        max-height: calc(80vh - 150px);
     }
 
     .ai-input-form {
@@ -403,6 +414,7 @@
     border-radius: 50%;
     overflow: hidden;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
 }
 
 .ai-assistant.minimized .ai-header {
@@ -412,6 +424,7 @@
     justify-content: center;
     align-items: center;
     padding: 0;
+    background: linear-gradient(135deg, #1a73e8 0%, #1565c0 100%);
 }
 
 .ai-assistant.minimized .ai-title,
@@ -423,4 +436,5 @@
     transform: none;
     width: 24px;
     height: 24px;
+    background: rgba(255, 255, 255, 0.2);
 }

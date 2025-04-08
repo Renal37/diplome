@@ -10,4 +10,5 @@ const (
 	CourseTypesCollection         = "course_types"
 	OrderTypesCollection          = "order_types"
 	OrderCollection               = "orders"
+	Prompts                       = "prompts"
 )
