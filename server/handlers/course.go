@@ -17,96 +17,117 @@ import (
 )
 
 func AddCourse(w http.ResponseWriter, r *http.Request) {
-	var course models.Course
+    var course models.Course
 
-	err := json.NewDecoder(r.Body).Decode(&course)
-	if err != nil {
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
-		return
-	}
+    err := json.NewDecoder(r.Body).Decode(&course)
+    if err != nil {
+        http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+        return
+    }
 
-	collection := db.GetCollection(db.CoursesCollection)
+    // Проверяем, что priceId и typeId являются валидными ObjectID
+    if course.PriceId.IsZero() || course.TypeId.IsZero() {
+        http.Error(w, "Неверный формат ID стоимости или типа курса", http.StatusBadRequest)
+        return
+    }
 
-	fullCourse := bson.M{
-		"title":       course.Title,
-		"description": course.Description,
-		"duration":    course.Duration,
-		"priceId":     course.PriceId,
-		"price":       course.Price,
-		"typeId":      course.TypeId,
-		"type":        course.Type,
-		"createdAt":   time.Now(),
-	}
+    collection := db.GetCollection(db.CoursesCollection)
 
-	_, err = collection.InsertOne(context.Background(), fullCourse)
-	if err != nil {
-		http.Error(w, "Ошибка при добавлении курса в базу данных", http.StatusInternalServerError)
-		return
-	}
+    fullCourse := bson.M{
+        "title":       course.Title,
+        "description": course.Description,
+        "duration":    course.Duration,
+        "priceId":     course.PriceId,
+        "price":       course.Price,
+        "typeId":      course.TypeId,
+        "type":        course.Type,
+        "createdAt":   time.Now(),
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"message": fmt.Sprintf("Курс '%s' успешно добавлен!", course.Title),
-	})
+    result, err := collection.InsertOne(context.Background(), fullCourse)
+    if err != nil {
+        http.Error(w, "Ошибка при добавлении курса в базу данных", http.StatusInternalServerError)
+        return
+    }
+
+    // Возвращаем полные данные о курсе, включая ID
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]interface{}{
+        "success": true,
+        "course": map[string]interface{}{
+            "_id":         result.InsertedID,
+            "title":       course.Title,
+            "description": course.Description,
+            "duration":    course.Duration,
+            "priceId":     course.PriceId,
+            "price":       course.Price,
+            "typeId":      course.TypeId,
+            "type":        course.Type,
+        },
+    })
 }
 
-// Update GetCourses handler to include type information
 func GetCourses(w http.ResponseWriter, r *http.Request) {
-	collection := db.GetCollection(db.CoursesCollection)
+    collection := db.GetCollection(db.CoursesCollection)
 
-	// Добавляем lookup для типов курсов
-	pipeline := bson.A{
-		bson.M{
-			"$lookup": bson.M{
-				"from":         db.CourseTypesCollection,
-				"localField":   "typeId",
-				"foreignField": "_id",
-				"as":           "courseType",
-			},
-		},
-		bson.M{
-			"$addFields": bson.M{
-				"type": bson.M{
-					"$ifNull": bson.A{
-						bson.M{"$arrayElemAt": bson.A{"$courseType.name", 0}},
-						"$type", // Используем старое значение, если тип не найден
-					},
-				},
-			},
-		},
-		bson.M{
-			"$project": bson.M{
-				"courseType": 0, // Убираем временное поле
-			},
-		},
-	}
+    // Используем агрегацию для получения полной информации о курсах
+    pipeline := bson.A{
+        bson.M{
+            "$lookup": bson.M{
+                "from":         db.PricesCollection,
+                "localField":   "priceId",
+                "foreignField": "_id",
+                "as":           "priceInfo",
+            },
+        },
+        bson.M{
+            "$lookup": bson.M{
+                "from":         db.CourseTypesCollection,
+                "localField":   "typeId",
+                "foreignField": "_id",
+                "as":           "typeInfo",
+            },
+        },
+        bson.M{
+            "$project": bson.M{
+                "title":       1,
+                "description": 1,
+                "duration":    1,
+                "price":       bson.M{"$arrayElemAt": bson.A{"$priceInfo.amount", 0}},
+                "priceId":     1,
+                "typeId":      1,
+                "type":        bson.M{"$arrayElemAt": bson.A{"$typeInfo.name", 0}},
+                "createdAt":   1,
+            },
+        },
+    }
 
-	cursor, err := collection.Aggregate(context.Background(), pipeline)
-	if err != nil {
-		http.Error(w, "Ошибка при получении курсов из базы данных", http.StatusInternalServerError)
-		return
-	}
-	defer cursor.Close(context.Background())
+    cursor, err := collection.Aggregate(context.Background(), pipeline)
+    if err != nil {
+        http.Error(w, "Ошибка при получении курсов из базы данных", http.StatusInternalServerError)
+        return
+    }
+    defer cursor.Close(context.Background())
 
-	var courses []bson.M
-	if err = cursor.All(context.Background(), &courses); err != nil {
-		http.Error(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
-		return
-	}
+    var courses []bson.M
+    if err = cursor.All(context.Background(), &courses); err != nil {
+        http.Error(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
+        return
+    }
 
-	for i := range courses {
-		courses[i]["_id"] = courses[i]["_id"].(primitive.ObjectID).Hex()
-		if courses[i]["priceId"] != nil {
-			courses[i]["priceId"] = courses[i]["priceId"].(primitive.ObjectID).Hex()
-		}
-		if courses[i]["typeId"] != nil {
-			courses[i]["typeId"] = courses[i]["typeId"].(primitive.ObjectID).Hex()
-		}
-	}
+    // Преобразуем ObjectID в строку для корректного отображения в JSON
+    for i := range courses {
+        courses[i]["_id"] = courses[i]["_id"].(primitive.ObjectID).Hex()
+        if courses[i]["priceId"] != nil {
+            courses[i]["priceId"] = courses[i]["priceId"].(primitive.ObjectID).Hex()
+        }
+        if courses[i]["typeId"] != nil {
+            courses[i]["typeId"] = courses[i]["typeId"].(primitive.ObjectID).Hex()
+        }
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(courses)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(courses)
 }
 
 func UpdateCourse(w http.ResponseWriter, r *http.Request) {

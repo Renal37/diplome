@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import './admin_course_management.css';
 
 const AdminCourseManagement = () => {
-  // Состояния для курсов
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courseTitle, setCourseTitle] = useState('');
@@ -11,93 +10,62 @@ const AdminCourseManagement = () => {
   const [coursePriceId, setCoursePriceId] = useState('');
   const [courseTypeId, setCourseTypeId] = useState('');
   const [courseTypes, setCourseTypes] = useState([]);
+  const [prices, setPrices] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
   const [editingTypeId, setEditingTypeId] = useState(null);
   const [editingTypeName, setEditingTypeName] = useState('');
-
-  // Состояния для стоимостей
-  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
-  const [prices, setPrices] = useState([]);
-  const [newPrice, setNewPrice] = useState({
-    amount: '',
-    description: ''
-  });
+  const [newPrice, setNewPrice] = useState({ amount: '', description: '' });
   const [selectedPrices, setSelectedPrices] = useState([]);
   const [percentIncrease, setPercentIncrease] = useState(0);
-
-  // Фильтрация
   const [filterType, setFilterType] = useState('Все');
 
   // Загрузка данных
-  const fetchCourses = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/courses');
-      const data = await response.json();
-      setCourses(data || []);
-    } catch (error) {
-      console.error('Ошибка при загрузке курсов:', error);
-      setCourses([]);
-    }
-  };
-
-  const fetchPrices = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/prices');
-      const data = await response.json();
-      setPrices(data || []);
-    } catch (error) {
-      console.error('Ошибка при загрузке цен:', error);
-      setPrices([]);
-    }
-  };
-
-  // Загрузка типов курсов
-  const fetchCourseTypes = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/admin/course-types', {
-        credentials: 'include',
-      });
-      const data = await response.json();
-      setCourseTypes(data || []);
-    } catch (error) {
-      console.error('Ошибка при загрузке типов курсов:', error);
-      setCourseTypes([]);
-    }
-  };
-
   useEffect(() => {
-    fetchCourses();
-    fetchPrices();
-    fetchCourseTypes();
+    const fetchData = async () => {
+      try {
+        const [coursesRes, pricesRes, typesRes] = await Promise.all([
+          fetch('http://localhost:5000/courses'),
+          fetch('http://localhost:5000/prices'),
+          fetch('http://localhost:5000/admin/course-types', { credentials: 'include' })
+        ]);
+
+        const coursesData = await coursesRes.json();
+        const pricesData = await pricesRes.json();
+        const typesData = await typesRes.json();
+
+        setCourses(coursesData || []);
+        setPrices(pricesData || []);
+        setCourseTypes(typesData || []);
+      } catch (error) {
+        console.error('Ошибка при загрузке данных:', error);
+        setCourses([]);
+        setPrices([]);
+        setCourseTypes([]);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  // Обработчик нажатия клавиши Escape
+  // Обработчик Escape
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
-        if (isModalOpen) {
-          setIsModalOpen(false);
-        }
-        if (isPriceModalOpen) {
-          setIsPriceModalOpen(false);
-        }
-        if (isTypeModalOpen) {
-          setIsTypeModalOpen(false);
-        }
-        if (selectedCourse) {
-          handleCloseUpdateForm();
-        }
+        if (isModalOpen) setIsModalOpen(false);
+        if (isPriceModalOpen) setIsPriceModalOpen(false);
+        if (isTypeModalOpen) setIsTypeModalOpen(false);
+        if (selectedCourse) handleCloseUpdateForm();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isModalOpen, isPriceModalOpen, isTypeModalOpen, selectedCourse]);
 
+  // Добавление курса
   const handleAddCourse = async (e) => {
     e.preventDefault();
     if (!coursePriceId || !courseTypeId) {
@@ -116,17 +84,15 @@ const AdminCourseManagement = () => {
     try {
       const response = await fetch('http://localhost:5000/add-course', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           title: courseTitle,
           description: courseDescription,
           duration: parseInt(courseDuration, 10),
-          priceId: coursePriceId,
+          priceId: selectedPrice._id,
           price: selectedPrice.amount,
-          typeId: courseTypeId,
+          typeId: selectedType._id,
           type: selectedType.name,
         }),
       });
@@ -147,10 +113,52 @@ const AdminCourseManagement = () => {
     }
   };
 
-  const handleDeleteCourse = async (courseId) => {
-    if (!window.confirm('Вы уверены, что хотите удалить этот курс?')) {
-      return;
+  // Обновление курса
+  const handleUpdateCourse = async (e) => {
+    e.preventDefault();
+    if (!selectedCourse) return;
+
+    try {
+      const selectedPrice = prices.find(price => price._id === coursePriceId);
+      const selectedType = courseTypes.find(type => type._id === courseTypeId);
+
+      if (!selectedPrice || !selectedType) {
+        alert('Выбранная стоимость или тип курса не найдены');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:5000/update-course/${selectedCourse._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: courseTitle,
+          description: courseDescription,
+          duration: parseInt(courseDuration, 10),
+          priceId: selectedPrice._id,
+          price: selectedPrice.amount,
+          typeId: selectedType._id,
+          type: selectedType.name,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Ошибка при обновлении курса');
+      }
+
+      alert('Курс успешно обновлен');
+      handleCloseUpdateForm();
+      fetchCourses();
+    } catch (error) {
+      console.error('Ошибка:', error);
+      alert(error.message);
     }
+  };
+
+  // Удаление курса
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm('Вы уверены, что хотите удалить этот курс?')) return;
 
     try {
       const response = await fetch(`http://localhost:5000/delete-course/${courseId}`, {
@@ -169,145 +177,14 @@ const AdminCourseManagement = () => {
     }
   };
 
-  const resetCourseForm = () => {
-    setCourseTitle('');
-    setCourseDescription('');
-    setCourseDuration('');
-    setCoursePriceId('');
-    setCourseTypeId('');
-    setSelectedCourse(null);
-  };
-
-  const handleAddPrice = async (e) => {
-    e.preventDefault();
-    if (!newPrice.amount || isNaN(newPrice.amount)) {
-      alert('Пожалуйста, введите корректную сумму');
-      return;
-    }
-
-    try {
-      const response = await fetch('http://localhost:5000/add-price', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: Number(newPrice.amount),
-          description: newPrice.description || "",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Ошибка при добавлении стоимости');
-      }
-
-      alert('Стоимость успешно добавлена');
-      setIsPriceModalOpen(false);
-      setNewPrice({ amount: '', description: '' });
-      fetchPrices();
-    } catch (error) {
-      console.error('Ошибка:', error);
-      alert(error.message);
-    }
-  };
-
-  const handleUpdatePrice = async (priceId, newAmount, newDescription) => {
-    try {
-      const response = await fetch(`http://localhost:5000/update-price/${priceId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: newAmount,
-          description: newDescription,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Ошибка при обновлении стоимости');
-      }
-
-      alert('Стоимость успешно обновлена');
-      fetchPrices();
-    } catch (error) {
-      console.error('Ошибка:', error);
-      alert(error.message);
-    }
-  };
-
-  const handleDeletePrice = async (priceId) => {
-    if (!window.confirm('Вы уверены, что хотите удалить эту стоимость?')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`http://localhost:5000/delete-price/${priceId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Ошибка при удалении стоимости');
-      }
-
-      alert('Стоимость успешно удалена');
-      fetchPrices();
-    } catch (error) {
-      console.error('Ошибка:', error);
-      alert(error.message);
-    }
-  };
-
-  const handleBulkUpdate = async () => {
-    if (selectedPrices.length === 0 || !percentIncrease) {
-      alert('Выберите стоимости и укажите процент');
-      return;
-    }
-
-    if (percentIncrease <= 0) {
-      alert('Процент должен быть положительным');
-      return;
-    }
-
-    try {
-      const response = await fetch('http://localhost:5000/bulk-update-prices', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceIds: selectedPrices,
-          percent: parseFloat(percentIncrease),
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Ошибка при массовом обновлении');
-      }
-
-      alert(`Успешно обновлено ${data.message}`);
-      setSelectedPrices([]);
-      setPercentIncrease(0);
-      fetchPrices();
-    } catch (error) {
-      console.error('Ошибка:', error);
-      alert(error.message);
-    }
-  };
-
+  // Работа с типами курсов
   const handleAddCourseType = async () => {
     if (!newTypeName.trim()) return;
 
     try {
       const response = await fetch('http://localhost:5000/admin/course-types/add', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ name: newTypeName }),
       });
@@ -326,20 +203,13 @@ const AdminCourseManagement = () => {
     }
   };
 
-  const startEditingType = (type) => {
-    setEditingTypeId(type._id);
-    setEditingTypeName(type.name);
-  };
-
   const handleUpdateCourseType = async () => {
     if (!editingTypeId || !editingTypeName.trim()) return;
 
     try {
       const response = await fetch(`http://localhost:5000/admin/course-types/update/${editingTypeId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ name: editingTypeName }),
       });
@@ -360,11 +230,6 @@ const AdminCourseManagement = () => {
       console.error('Ошибка:', err);
       alert(err.message);
     }
-  };
-
-  const cancelEditingType = () => {
-    setEditingTypeId(null);
-    setEditingTypeName('');
   };
 
   const handleDeleteCourseType = async (typeId) => {
@@ -388,48 +253,106 @@ const AdminCourseManagement = () => {
     }
   };
 
-  const handleUpdateCourse = async (e) => {
+  // Работа с ценами
+  const handleAddPrice = async (e) => {
     e.preventDefault();
-    if (!selectedCourse) return;
+    if (!newPrice.amount || isNaN(newPrice.amount)) {
+      alert('Пожалуйста, введите корректную сумму');
+      return;
+    }
 
     try {
-      const selectedPrice = prices.find(price => price._id === coursePriceId);
-      const selectedType = courseTypes.find(type => type._id === courseTypeId);
-
-      if (!selectedPrice || !selectedType) {
-        alert('Выбранная стоимость или тип курса не найдены');
-        return;
-      }
-
-      const response = await fetch(`http://localhost:5000/update-course/${selectedCourse._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+      const response = await fetch('http://localhost:5000/add-price', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: courseTitle,
-          description: courseDescription,
-          duration: parseInt(courseDuration, 10),
-          priceId: coursePriceId,
-          price: selectedPrice.amount,
-          typeId: courseTypeId,
-          type: selectedType.name,
+          amount: Number(newPrice.amount),
+          description: newPrice.description || "",
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Ошибка при обновлении курса');
+        throw new Error(data.error || 'Ошибка при добавлении стоимости');
       }
 
-      alert('Курс успешно обновлен');
-      handleCloseUpdateForm();
-      fetchCourses();
+      alert('Стоимость успешно добавлена');
+      setIsPriceModalOpen(false);
+      setNewPrice({ amount: '', description: '' });
+      fetchPrices();
     } catch (error) {
       console.error('Ошибка:', error);
       alert(error.message);
     }
+  };
+
+  const handleBulkUpdate = async () => {
+    if (selectedPrices.length === 0 || !percentIncrease) {
+      alert('Выберите стоимости и укажите процент');
+      return;
+    }
+
+    if (percentIncrease <= 0) {
+      alert('Процент должен быть положительным');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/bulk-update-prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceIds: selectedPrices,
+          percent: parseFloat(percentIncrease),
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка при массовом обновлении');
+      }
+
+      alert(`Успешно обновлено ${data.message}`);
+      setSelectedPrices([]);
+      setPercentIncrease(0);
+      fetchPrices();
+    } catch (error) {
+      console.error('Ошибка:', error);
+      alert(error.message);
+    }
+  };
+
+  // Вспомогательные функции
+  const fetchCourses = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/courses');
+      const data = await response.json();
+      setCourses(data || []);
+    } catch (error) {
+      console.error('Ошибка при загрузке курсов:', error);
+      setCourses([]);
+    }
+  };
+
+  const fetchPrices = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/prices');
+      const data = await response.json();
+      setPrices(data || []);
+    } catch (error) {
+      console.error('Ошибка при загрузке цен:', error);
+      setPrices([]);
+    }
+  };
+
+  const resetCourseForm = () => {
+    setCourseTitle('');
+    setCourseDescription('');
+    setCourseDuration('');
+    setCoursePriceId('');
+    setCourseTypeId('');
+    setSelectedCourse(null);
   };
 
   const handleCourseSelect = (course) => {
@@ -447,11 +370,7 @@ const AdminCourseManagement = () => {
 
   const handleCloseUpdateForm = () => {
     setSelectedCourse(null);
-    setCourseTitle('');
-    setCourseDescription('');
-    setCourseDuration('');
-    setCoursePriceId('');
-    setCourseTypeId('');
+    resetCourseForm();
   };
 
   const togglePriceSelection = (priceId) => {
@@ -460,6 +379,16 @@ const AdminCourseManagement = () => {
         ? prev.filter(id => id !== priceId)
         : [...prev, priceId]
     );
+  };
+
+  const startEditingType = (type) => {
+    setEditingTypeId(type._id);
+    setEditingTypeName(type.name);
+  };
+
+  const cancelEditingType = () => {
+    setEditingTypeId(null);
+    setEditingTypeName('');
   };
 
   const filteredCourses = filterType === 'Все'
@@ -532,7 +461,7 @@ const AdminCourseManagement = () => {
                   <option value="">-- Выберите стоимость --</option>
                   {prices.map(price => (
                     <option key={price._id} value={price._id}>
-                      {price.amount} руб. ({new Date(price.createdAt).toLocaleDateString()}) - {price.description}
+                      {price.amount} руб. - {price.description || 'Без описания'}
                     </option>
                   ))}
                 </select>
@@ -580,7 +509,6 @@ const AdminCourseManagement = () => {
           <div className="modal-content">
             <h2>Управление стоимостями</h2>
 
-            {/* Форма добавления новой стоимости */}
             <form onSubmit={handleAddPrice}>
               <input
                 type="number"
@@ -590,7 +518,7 @@ const AdminCourseManagement = () => {
                 required
               />
               <textarea
-                placeholder="Описание (например: 'Стоимость на 2023 год')"
+                placeholder="Описание"
                 value={newPrice.description}
                 onChange={(e) => setNewPrice({ ...newPrice, description: e.target.value })}
               />
@@ -608,7 +536,6 @@ const AdminCourseManagement = () => {
               </div>
             </form>
 
-            {/* Массовое обновление стоимостей */}
             <div className="bulk-update-section">
               <h3>Массовое обновление</h3>
               <div className="bulk-controls">
@@ -628,7 +555,6 @@ const AdminCourseManagement = () => {
               </div>
             </div>
 
-            {/* Таблица стоимостей */}
             <div className="price-list">
               <h3>История стоимостей</h3>
               {prices.length > 0 ? (
@@ -699,7 +625,6 @@ const AdminCourseManagement = () => {
           <div className="modal-content">
             <h2>Управление типами курсов</h2>
 
-            {/* Форма добавления нового типа */}
             <form onSubmit={(e) => {
               e.preventDefault();
               handleAddCourseType();
@@ -718,7 +643,6 @@ const AdminCourseManagement = () => {
               </div>
             </form>
 
-            {/* Список типов курсов с возможностью редактирования */}
             <div className="types-table-container">
               <h3>Список типов курсов</h3>
               {courseTypes.length === 0 ? (
@@ -786,7 +710,6 @@ const AdminCourseManagement = () => {
               )}
             </div>
 
-            {/* Кнопка закрытия модального окна */}
             <div className="modal-footer">
               <button
                 className='reject-btn'
@@ -870,7 +793,7 @@ const AdminCourseManagement = () => {
                           <option value="">-- Выберите стоимость --</option>
                           {prices.map(price => (
                             <option key={price._id} value={price._id}>
-                              {price.amount} руб. ({new Date(price.createdAt).toLocaleDateString()}) - {price.description}
+                              {price.amount} руб. - {price.description || 'Без описания'}
                             </option>
                           ))}
                         </select>
