@@ -6,21 +6,19 @@ import (
 	"log"
 	"net/http"
 	"time"
+
 	"github.com/Renal37/middleware"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Подключение к MongoDB
 	client := connectToMongoDB()
 	defer client.Disconnect(context.Background())
 
-	// Создание маршрутов
 	r := setupRouter()
-
 	fmt.Println("Server is running on port 5000")
 	log.Fatal(http.ListenAndServe(":5000", r))
 }
@@ -33,8 +31,6 @@ func connectToMongoDB() *mongo.Client {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Проверка подключения
 	err = client.Ping(ctx, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -46,18 +42,13 @@ func connectToMongoDB() *mongo.Client {
 func setupRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.Use(middleware.CorsMiddleware)
-
-	// Регистрация маршрутов
 	registerRoutes(r)
-
 	return r
 }
 
-
 func init() {
-	// Загружаем .env файл из указанного пути
-	err := godotenv.Load(".env") // или "../../.env" в зависимости от структуры
+	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		log.Printf("Warning: Could not load .env file: %v", err)
 	}
 }

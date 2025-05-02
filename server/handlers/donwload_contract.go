@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -13,8 +14,7 @@ import (
 
 	"github.com/Renal37/db"
 	"github.com/gorilla/mux"
-	"github.com/unidoc/unipdf/v3/core"
-	"github.com/unidoc/unipdf/v3/model"
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -28,6 +28,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Fetching registration data for courseId: %s", courseId.Hex())
 	registration, user, course, err := getRegistrationData(courseId)
 	if err != nil {
 		log.Printf("Error getting registration data: %v", err)
@@ -35,6 +36,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Generating PDF for courseId: %s", courseId.Hex())
 	pdfBytes, err := generateFilledContract(registration, user, course)
 	if err != nil {
 		log.Printf("Error generating PDF: %v", err)
@@ -42,9 +44,15 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("PDF generated successfully, sending response for courseId: %s", courseId.Hex())
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "attachment; filename=contract_"+courseId.Hex()+".pdf")
-	w.Write(pdfBytes)
+	_, err = w.Write(pdfBytes)
+	if err != nil {
+		log.Printf("Error writing PDF response: %v", err)
+		return
+	}
+	log.Printf("PDF response sent successfully for courseId: %s", courseId.Hex())
 }
 
 func getRegistrationData(courseId primitive.ObjectID) (bson.M, bson.M, bson.M, error) {
@@ -87,95 +95,94 @@ func getRegistrationData(courseId primitive.ObjectID) (bson.M, bson.M, bson.M, e
 }
 
 func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
-	// Открываем файл шаблона
-	file, err := os.Open("../server/document_donwload/ДОГОВОР_fix.pdf")
+	inputPath := "../server/document_donwload/ДОГОВОР_fix.pdf"
+	log.Printf("Opening PDF template at: %s", inputPath)
+
+	// Проверяем, существует ли файл шаблона
+	if _, err := os.Stat(inputPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("PDF template file does not exist: %s", inputPath)
+	}
+
+	// Открываем входной файл
+	inputFile, err := os.Open(inputPath)
 	if err != nil {
-		return nil, fmt.Errorf("could not open template file: %v", err)
+		return nil, fmt.Errorf("could not open PDF template: %v", err)
 	}
-	defer file.Close()
+	defer inputFile.Close()
 
-	// Создаем PDF reader
-	pdfReader, err := model.NewPdfReader(file)
+	// Формируем данные для заполнения формы с проверкой типов
+	formData := map[string]string{}
+	if lastName, ok := user["lastname"].(string); ok {
+		firstName, _ := user["firstname"].(string)
+		middleName, _ := user["middlename"].(string)
+		formData["FullName"] = fmt.Sprintf("%s %s %s", lastName, firstName, middleName)
+	} else {
+		return nil, fmt.Errorf("invalid or missing user lastName")
+	}
+
+	if title, ok := course["title"].(string); ok {
+		formData["CourseName"] = title
+	} else {
+		return nil, fmt.Errorf("invalid or missing course title")
+	}
+// ПОМЕНЯТЬ ЦЕНУ И ЧАСЫ НА INT
+	if duration, ok := course["duration"].(int); ok {
+		formData["CourseDuration"] = fmt.Sprintf("%d часов", duration)
+	} else {
+		return nil, fmt.Errorf("invalid or missing course duration")
+	}
+
+	if price, ok := course["price"].(float64); ok {
+		formData["CoursePrice"] = fmt.Sprintf("%.2f руб.", price)
+	} else {
+		return nil, fmt.Errorf("invalid or missing course price")
+	}
+
+	formData["SignDate"] = time.Now().Format("02.01.2006")
+
+	if address, ok := user["homeaddress"].(string); ok {
+		formData["Address"] = address
+	} else {
+		formData["Address"] = ""
+	}
+
+	if passport, ok := user["passportdata"].(string); ok {
+		formData["Passport"] = passport
+	} else {
+		formData["Passport"] = ""
+	}
+
+	// Создаем JSON-данные для формы
+	form := map[string]interface{}{
+		"Fields": formData,
+	}
+	formGroup := map[string]interface{}{
+		"Forms": []interface{}{form},
+	}
+
+	jsonData, err := json.Marshal(formGroup)
 	if err != nil {
-		return nil, fmt.Errorf("could not create PDF reader: %v", err)
+		return nil, fmt.Errorf("could not marshal form data to JSON: %v", err)
 	}
 
-	// Получаем форму из PDF
-	acroForm := pdfReader.AcroForm
-	if acroForm == nil {
-		return nil, fmt.Errorf("PDF template has no form fields")
-	}
+	log.Printf("Filling PDF form with JSON data: %s", string(jsonData))
 
-	// Заполняем поля формы
-	fields := acroForm.AllFields()
-	for _, field := range fields {
-		fieldName, err := field.FullName()
-		if err != nil {
-			continue
-		}
+	// Создаем io.Reader для JSON-данных
+	jsonReader := bytes.NewReader(jsonData)
 
-		var value string
-		switch fieldName {
-		case "FullName":
-			value = fmt.Sprintf("%s %s %s",
-				user["lastName"], user["firstName"], user["middleName"])
-		case "CourseName":
-			value = course["title"].(string)
-		case "CourseDuration":
-			value = fmt.Sprintf("%d часов", course["duration"])
-		case "CoursePrice":
-			value = fmt.Sprintf("%.2f руб.", course["price"])
-		case "SignDate":
-			value = time.Now().Format("02.01.2006")
-		case "Address":
-			if address, ok := user["address"].(string); ok {
-				value = address
-			}
-		case "Passport":
-			if passport, ok := user["passport"].(string); ok {
-				value = passport
-			}
-		}
-
-		// Устанавливаем значение поля
-		if value != "" {
-			field.V = core.MakeString(value)
-		}
-	}
-
-	// Создаем новый PDF writer
+	// Подготавливаем выходной буфер
 	var buf bytes.Buffer
-	writer := model.NewPdfWriter()
 
-	// Копируем все страницы из исходного PDF
-	numPages, err := pdfReader.GetNumPages()
+	// Заполняем форму
+	err = api.FillForm(inputFile, jsonReader, &buf, nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not get page count: %v", err)
+		return nil, fmt.Errorf("could not fill PDF form: %v", err)
 	}
 
-	for i := 1; i <= numPages; i++ {
-		page, err := pdfReader.GetPage(i)
-		if err != nil {
-			return nil, fmt.Errorf("could not get page %d: %v", i, err)
-		}
-
-		if err := writer.AddPage(page); err != nil {
-			return nil, fmt.Errorf("could not add page %d: %v", i, err)
-		}
-	}
-
-	// Устанавливаем заполненную форму
-	if err := writer.SetForms(acroForm); err != nil {
-		return nil, fmt.Errorf("could not set form: %v", err)
-	}
-
-	// Записываем в буфер
-	if err := writer.Write(&buf); err != nil {
-		return nil, fmt.Errorf("could not write PDF: %v", err)
-	}
-
+	log.Printf("PDF form filled successfully, size: %d bytes", buf.Len())
 	return buf.Bytes(), nil
 }
+
 func UploadContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	courseId, err := primitive.ObjectIDFromHex(vars["courseId"])
@@ -185,7 +192,6 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Подключение к MongoDB
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 	filter := bson.M{"_id": courseId}
 	var courseRegistration bson.M
@@ -196,7 +202,6 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получение файла из запроса
 	file, handler, err := r.FormFile("contract")
 	if err != nil {
 		log.Printf("Error retrieving file: %v", err)
@@ -205,7 +210,6 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Сохранение файла на диск
 	dir := "../server/document"
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		os.Mkdir(dir, 0755)
@@ -226,7 +230,6 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Обновление записи в базе данных
 	update := bson.M{
 		"$set": bson.M{
 			"contractUploaded": true,
@@ -240,7 +243,6 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ответ клиенту
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `{"message": "Договор успешно загружен!"}`)
@@ -270,7 +272,6 @@ func ApproveContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Возвращаем успешный ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `{"success": true}`)
@@ -285,10 +286,7 @@ func ViewContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Подключение к MongoDB
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
-
-	// Получаем путь к файлу договора
 	var registration bson.M
 	err = collection.FindOne(context.Background(), bson.M{"_id": registrationID}).Decode(&registration)
 	if err != nil {
@@ -304,17 +302,13 @@ func ViewContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверяем, существует ли файл на диске
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		log.Printf("File does not exist: %v", err)
 		http.Error(w, "Файл договора не найден на сервере", http.StatusNotFound)
 		return
 	}
 
-	// Устанавливаем заголовки для просмотра PDF
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "inline; filename=contract.pdf")
-
-	// Отправляем файл клиенту
 	http.ServeFile(w, r, filePath)
 }
