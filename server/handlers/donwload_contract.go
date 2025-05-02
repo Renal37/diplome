@@ -1,17 +1,20 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
-	"log"
-	"net/http"
-
 	"fmt"
 	"io"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Renal37/db"
 	"github.com/gorilla/mux"
+	"github.com/unidoc/unipdf/v3/core"
+	"github.com/unidoc/unipdf/v3/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -21,10 +24,30 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	courseId, err := primitive.ObjectIDFromHex(vars["courseId"])
 	if err != nil {
 		log.Printf("Invalid courseId: %v", err)
-		http.Error(w, "Неверный формат идентификатора курса", http.StatusBadRequest)
+		http.Error(w, "Invalid course ID format", http.StatusBadRequest)
 		return
 	}
 
+	registration, user, course, err := getRegistrationData(courseId)
+	if err != nil {
+		log.Printf("Error getting registration data: %v", err)
+		http.Error(w, "Error getting course data", http.StatusInternalServerError)
+		return
+	}
+
+	pdfBytes, err := generateFilledContract(registration, user, course)
+	if err != nil {
+		log.Printf("Error generating PDF: %v", err)
+		http.Error(w, "Error generating contract", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", "attachment; filename=contract_"+courseId.Hex()+".pdf")
+	w.Write(pdfBytes)
+}
+
+func getRegistrationData(courseId primitive.ObjectID) (bson.M, bson.M, bson.M, error) {
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 	pipeline := bson.A{
 		bson.M{"$match": bson.M{"_id": courseId}},
@@ -40,60 +63,118 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 			"foreignField": "_id",
 			"as":           "course",
 		}},
-		bson.M{"$project": bson.M{
-			"user":   1,
-			"course": 1,
-			"status": 1,
-		}},
 	}
 
-	cursor, err := collection.Aggregate(context.Background(), pipeline)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
 	if err != nil {
-		log.Printf("Aggregation error: %v", err)
-		http.Error(w, "Ошибка при получении данных", http.StatusInternalServerError)
-		return
+		return nil, nil, nil, fmt.Errorf("aggregation error: %v", err)
 	}
-	defer cursor.Close(context.Background())
+	defer cursor.Close(ctx)
 
-	var result []bson.M
-	if err = cursor.All(context.Background(), &result); err != nil || len(result) == 0 {
-		log.Println("No data found")
-		http.Error(w, "Данные не найдены", http.StatusNotFound)
-		return
+	var results []bson.M
+	if err = cursor.All(ctx, &results); err != nil || len(results) == 0 {
+		return nil, nil, nil, fmt.Errorf("no data found")
 	}
 
-	// Обработка данных пользователя
-	userArray, ok := result[0]["user"].(primitive.A)
-	if !ok || len(userArray) == 0 {
-		log.Println("User data not found or invalid format")
-		http.Error(w, "Данные пользователя не найдены", http.StatusNotFound)
-		return
-	}
-	// user := userArray[0].(primitive.M)
+	result := results[0]
+	user := result["user"].(primitive.A)[0].(primitive.M)
+	course := result["course"].(primitive.A)[0].(primitive.M)
 
-	// Обработка данных курса
-	courseArray, ok := result[0]["course"].(primitive.A)
-	if !ok || len(courseArray) == 0 {
-		log.Println("Course data not found or invalid format")
-		http.Error(w, "Данные курса не найдены", http.StatusNotFound)
-		return
-	}
-	// course := courseArray[0].(primitive.M)
+	return result, user, course, nil
+}
 
-	var usercourse []bson.M
-	if err = cursor.All(context.Background(), &usercourse); err != nil {
-		http.Error(w, "Ошибка при обработке данных заявок", http.StatusInternalServerError)
-		return
+func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
+	// Открываем файл шаблона
+	file, err := os.Open("../server/document_donwload/ДОГОВОР_fix.pdf")
+	if err != nil {
+		return nil, fmt.Errorf("could not open template file: %v", err)
+	}
+	defer file.Close()
+
+	// Создаем PDF reader
+	pdfReader, err := model.NewPdfReader(file)
+	if err != nil {
+		return nil, fmt.Errorf("could not create PDF reader: %v", err)
 	}
 
-	// Путь к шаблону PDF
-	templatePath := "../server/document_donwload/ДОГОВОР.pdf"
+	// Получаем форму из PDF
+	acroForm := pdfReader.AcroForm
+	if acroForm == nil {
+		return nil, fmt.Errorf("PDF template has no form fields")
+	}
 
-	// Отправка PDF-шаблона клиенту
-	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", "attachment; filename=contract_template.pdf")
-	w.Header().Set("Content-Type", "application/json")
-	http.ServeFile(w, r, templatePath)
+	// Заполняем поля формы
+	fields := acroForm.AllFields()
+	for _, field := range fields {
+		fieldName, err := field.FullName()
+		if err != nil {
+			continue
+		}
+
+		var value string
+		switch fieldName {
+		case "FullName":
+			value = fmt.Sprintf("%s %s %s",
+				user["lastName"], user["firstName"], user["middleName"])
+		case "CourseName":
+			value = course["title"].(string)
+		case "CourseDuration":
+			value = fmt.Sprintf("%d часов", course["duration"])
+		case "CoursePrice":
+			value = fmt.Sprintf("%.2f руб.", course["price"])
+		case "SignDate":
+			value = time.Now().Format("02.01.2006")
+		case "Address":
+			if address, ok := user["address"].(string); ok {
+				value = address
+			}
+		case "Passport":
+			if passport, ok := user["passport"].(string); ok {
+				value = passport
+			}
+		}
+
+		// Устанавливаем значение поля
+		if value != "" {
+			field.V = core.MakeString(value)
+		}
+	}
+
+	// Создаем новый PDF writer
+	var buf bytes.Buffer
+	writer := model.NewPdfWriter()
+
+	// Копируем все страницы из исходного PDF
+	numPages, err := pdfReader.GetNumPages()
+	if err != nil {
+		return nil, fmt.Errorf("could not get page count: %v", err)
+	}
+
+	for i := 1; i <= numPages; i++ {
+		page, err := pdfReader.GetPage(i)
+		if err != nil {
+			return nil, fmt.Errorf("could not get page %d: %v", i, err)
+		}
+
+		if err := writer.AddPage(page); err != nil {
+			return nil, fmt.Errorf("could not add page %d: %v", i, err)
+		}
+	}
+
+	// Устанавливаем заполненную форму
+	if err := writer.SetForms(acroForm); err != nil {
+		return nil, fmt.Errorf("could not set form: %v", err)
+	}
+
+	// Записываем в буфер
+	if err := writer.Write(&buf); err != nil {
+		return nil, fmt.Errorf("could not write PDF: %v", err)
+	}
+
+	return buf.Bytes(), nil
 }
 func UploadContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
