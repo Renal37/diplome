@@ -1,0 +1,22 @@
+{
+    "Fields": {
+      "FullName": "Мустафин Данил Дураков",
+      "CoursePrice": "2050 руб.",
+      "CourseTitle": "Подготовка специалистов",
+      "CourseDuration": "20 часов",
+      "DocumentId": "02",
+      "DocumentDay": "02",
+      "Adress": "Респ Татарстан, г Альметьевск, ул Ленина, д 171",
+      "PasportDate": "5567 567898",
+      "SNILS": "134-242-676 64",
+      "Phone": "+7 (987) 660-55-28",
+      "Email": "admin@gmail.com",
+      "HowGive": "",
+      "CourseEnd": "",
+      "Time": "",
+      "TimeDayStart": "",
+      "TimeMonthStart": "",
+      "TimeDayEnd": "",
+      "TimeMonthEnd": ""
+    }
+  }

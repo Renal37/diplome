@@ -95,7 +95,7 @@ func getRegistrationData(courseId primitive.ObjectID) (bson.M, bson.M, bson.M, e
 }
 
 func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
-	inputPath := "../server/document_donwload/ДОГОВОР.pdf"
+	inputPath := "../server/document_donwload/ДОГОВОРFullName.pdf"
 	log.Printf("Opening PDF template at: %s", inputPath)
 
 	// Проверяем, существует ли файл шаблона
@@ -112,6 +112,8 @@ func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
 
 	// Формируем данные для заполнения формы с проверкой типов
 	formData := map[string]string{}
+
+	// Основные поля из вывода pdfcpu form list
 	if lastName, ok := user["lastname"].(string); ok {
 		firstName, _ := user["firstname"].(string)
 		middleName, _ := user["middlename"].(string)
@@ -120,86 +122,82 @@ func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
 		return nil, fmt.Errorf("invalid or missing user lastName")
 	}
 
-	if title, ok := course["title"].(string); ok {
-		formData["CourseTitle"] = title
-	} else {
-		return nil, fmt.Errorf("invalid or missing course title")
-	}
+	// if title, ok := course["title"].(string); ok {
+	// 	formData["CourseTitle"] = title
+	// } else {
+	// 	return nil, fmt.Errorf("invalid or missing course title")
+	// }
 
-	// Обработка duration
-	var durationVal int
-	switch v := course["duration"].(type) {
-	case int:
-		durationVal = v
-	case float64:
-		durationVal = int(v)
-	case int32:
-		durationVal = int(v)
-	case int64:
-		durationVal = int(v)
-	default:
-		return nil, fmt.Errorf("invalid or missing course duration: got type %T", v)
-	}
-	formData["CoruseDuration"] = fmt.Sprintf("%d часов", durationVal)
+	// var durationVal int
+	// switch v := course["duration"].(type) {
+	// case int:
+	// 	durationVal = v
+	// case float64:
+	// 	durationVal = int(v)
+	// case int32:
+	// 	durationVal = int(v)
+	// case int64:
+	// 	durationVal = int(v)
+	// default:
+	// 	return nil, fmt.Errorf("invalid or missing course duration: got type %T", v)
+	// }
+	// formData["CoruseDuration"] = fmt.Sprintf("%d часов", durationVal)
 
-	// Обработка price
-	var priceVal float64
-	switch v := course["price"].(type) {
-	case int:
-		priceVal = float64(v)
-	case float64:
-		priceVal = v
-	case int32:
-		priceVal = float64(v)
-	case int64:
-		priceVal = float64(v)
-	default:
-		return nil, fmt.Errorf("invalid or missing course price: got type %T", v)
-	}
-	formData["CoursePrice"] = fmt.Sprintf("%.0f руб.", priceVal)
+	// var priceVal float64
+	// switch v := course["price"].(type) {
+	// case int:
+	// 	priceVal = float64(v)
+	// case float64:
+	// 	priceVal = v
+	// case int32:
+	// 	priceVal = float64(v)
+	// case int64:
+	// 	priceVal = float64(v)
+	// default:
+	// 	return nil, fmt.Errorf("invalid or missing course price: got type %T", v)
+	// }
+	// formData["CoursePrice"] = fmt.Sprintf("%.0f руб.", priceVal)
 
-	formData["document_day"] = time.Now().Format("02")
-	formData["DocumentId"] = time.Now().Format("02")
+	// formData["document_day"] = time.Now().Format("02")
+	// formData["DocumentId"] = time.Now().Format("02")
 
-	if address, ok := user["homeaddress"].(string); ok {
-		formData["Adress"] = address
-	} else {
-		formData["Adress"] = ""
-	}
+	// if address, ok := user["homeaddress"].(string); ok {
+	// 	formData["Adress"] = address
+	// } else {
+	// 	formData["Adress"] = ""
+	// }
 
-	if passport, ok := user["passportdata"].(string); ok {
-		formData["PasportDate"] = passport
-	} else {
-		formData["PasportDate"] = ""
-	}
+	// if passport, ok := user["passportdata"].(string); ok {
+	// 	formData["PasportDate"] = passport
+	// } else {
+	// 	formData["PasportDate"] = ""
+	// }
 
-	// Добавляем дополнительные поля из PDF для тестирования
-	formData["CourseEnd"] = "" // Пустое значение, если неизвестно
-	formData["Time"] = ""
-	formData["TimeDayStart"] = ""
-	formData["TimeMonthStart"] = ""
-	formData["TimeDayEnd"] = ""
-	formData["TimeMonthEnd"] = ""
-	formData["HowGive"] = ""
-	formData["SNILS"] = ""
+	// if snils, ok := user["snils"].(string); ok {
+	// 	formData["SNILS"] = snils
+	// } else {
+	// 	formData["SNILS"] = ""
+	// }
 
-	if snils, ok := user["snils"].(string); ok {
-		formData["SNILS"] = snils
-	} else {
-		formData["SNILS"] = ""
-	}
+	// if phone, ok := user["phone"].(string); ok {
+	// 	formData["Phone"] = phone
+	// } else {
+	// 	formData["Phone"] = ""
+	// }
 
-	if phone, ok := user["phone"].(string); ok {
-		formData["Phone"] = phone
-	} else {
-		formData["Phone"] = ""
-	}
+	// if email, ok := user["email"].(string); ok {
+	// 	formData["Email"] = email
+	// } else {
+	// 	formData["Email"] = ""
+	// }
 
-	if email, ok := user["email"].(string); ok {
-		formData["Email"] = email
-	} else {
-		formData["Email"] = ""
-	}
+	// formData["HowGive"] = ""
+	// formData["CourseEnd"] = ""
+	// formData["Time"] = ""
+	// formData["TimeDayStart"] = ""
+	// formData["TimeMonthStart"] = ""
+	// formData["TimeDayEnd"] = ""
+	// formData["TimeMonthEnd"] = ""
 
 	// Создаем JSON-данные для формы
 	form := map[string]interface{}{
