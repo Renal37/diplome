@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -14,47 +13,48 @@ import (
 
 	"github.com/Renal37/db"
 	"github.com/gorilla/mux"
-	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/signintech/gopdf"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
+// DownloadContract остается без изменений
 func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	courseId, err := primitive.ObjectIDFromHex(vars["courseId"])
 	if err != nil {
-		log.Printf("Invalid courseId: %v", err)
-		http.Error(w, "Invalid course ID format", http.StatusBadRequest)
+		log.Printf("Неверный courseId: %v", err)
+		http.Error(w, "Неверный формат идентификатора курса", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Fetching registration data for courseId: %s", courseId.Hex())
+	log.Printf("Получение данных регистрации для courseId: %s", courseId.Hex())
 	registration, user, course, err := getRegistrationData(courseId)
 	if err != nil {
-		log.Printf("Error getting registration data: %v", err)
-		http.Error(w, "Error getting course data", http.StatusInternalServerError)
+		log.Printf("Ошибка получения данных регистрации: %v", err)
+		http.Error(w, "Ошибка получения данных курса", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("Generating PDF for courseId: %s", courseId.Hex())
+	log.Printf("Генерация PDF для courseId: %s", courseId.Hex())
 	pdfBytes, err := generateFilledContract(registration, user, course)
 	if err != nil {
-		log.Printf("Error generating PDF: %v", err)
-		http.Error(w, "Error generating contract", http.StatusInternalServerError)
+		log.Printf("Ошибка генерации PDF: %v", err)
+		http.Error(w, "Ошибка генерации договора", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("PDF generated successfully, sending response for courseId: %s", courseId.Hex())
+	log.Printf("PDF успешно сгенерирован, отправка ответа для courseId: %s", courseId.Hex())
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "attachment; filename=contract_"+courseId.Hex()+".pdf")
 	_, err = w.Write(pdfBytes)
 	if err != nil {
-		log.Printf("Error writing PDF response: %v", err)
+		log.Printf("Ошибка записи ответа PDF: %v", err)
 		return
 	}
-	log.Printf("PDF response sent successfully for courseId: %s", courseId.Hex())
+	log.Printf("Ответ PDF успешно отправлен для courseId: %s", courseId.Hex())
 }
 
+// getRegistrationData остается без изменений
 func getRegistrationData(courseId primitive.ObjectID) (bson.M, bson.M, bson.M, error) {
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 	pipeline := bson.A{
@@ -78,13 +78,13 @@ func getRegistrationData(courseId primitive.ObjectID) (bson.M, bson.M, bson.M, e
 
 	cursor, err := collection.Aggregate(ctx, pipeline)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("aggregation error: %v", err)
+		return nil, nil, nil, fmt.Errorf("ошибка агрегации: %v", err)
 	}
 	defer cursor.Close(ctx)
 
 	var results []bson.M
 	if err = cursor.All(ctx, &results); err != nil || len(results) == 0 {
-		return nil, nil, nil, fmt.Errorf("no data found")
+		return nil, nil, nil, fmt.Errorf("данные не найдены")
 	}
 
 	result := results[0]
@@ -93,148 +93,163 @@ func getRegistrationData(courseId primitive.ObjectID) (bson.M, bson.M, bson.M, e
 
 	return result, user, course, nil
 }
+// Структура для координат полей (в пунктах, 1 пункт = 1/72 дюйма)
+type FieldPosition struct {
+	X, Y, Width float64
+}
+
+// Карта имен полей и их координат (заглушки, нужно уточнить)
+var fieldPositions = map[string]FieldPosition{
+	"FullName":      {X: 100, Y: 700, Width: 400},
+	"CourseTitle":   {X: 100, Y: 600, Width: 400},
+	"CourseDuration": {X: 100, Y: 580, Width: 100},
+	"CoursePrice":   {X: 100, Y: 560, Width: 100},
+	"DocumentId":    {X: 100, Y: 720, Width: 100},
+	"Adress":        {X: 100, Y: 200, Width: 400},
+	"PasportDate":   {X: 100, Y: 180, Width: 200},
+	"SNILS":         {X: 100, Y: 160, Width: 100},
+	"Phone":         {X: 100, Y: 140, Width: 100},
+	"Email":         {X: 100, Y: 120, Width: 200},
+}
 
 func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
-	inputPath := "../server/document_donwload/ДОГОВОРFullName.pdf"
-	log.Printf("Opening PDF template at: %s", inputPath)
+	inputPath := "../server/document_download/ДОГОВОР.pdf"
+	log.Printf("Открытие шаблона PDF по пути: %s", inputPath)
 
-	// Проверяем, существует ли файл шаблона
+	// Проверка существования файла шаблона
 	if _, err := os.Stat(inputPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("PDF template file does not exist: %s", inputPath)
+		return nil, fmt.Errorf("Файл шаблона PDF не существует: %s", inputPath)
 	}
 
-	// Открываем входной файл
-	inputFile, err := os.Open(inputPath)
+	// Инициализация gopdf
+	pdf := gopdf.New(gopdf.Config{PageSize: gopdf.A4})
+
+	// Импорт существующего PDF как шаблона
+	err := pdf.ImportPage(inputPath, 1, "/MediaBox")
 	if err != nil {
-		return nil, fmt.Errorf("could not open PDF template: %v", err)
+		return nil, fmt.Errorf("не удалось импортировать шаблон PDF: %v", err)
 	}
-	defer inputFile.Close()
 
-	// Формируем данные для заполнения формы с проверкой типов
-	formData := map[string]string{}
+	// Добавление новой страницы
+	pdf.AddPage()
 
-	// Основные поля из вывода pdfcpu form list
+	// Установка шрифта (замените путь на действительный TTF-шрифт с поддержкой кириллицы)
+	err = pdf.AddTTFFont("arial", "./fonts/arial.ttf")
+	if err != nil {
+		return nil, fmt.Errorf("не удалось загрузить шрифт: %v", err)
+	}
+	err = pdf.SetFont("arial", "", 12)
+	if err != nil {
+		return nil, fmt.Errorf("не удалось установить шрифт: %v", err)
+	}
+
+	// Подготовка данных для заполнения
+	data := make(map[string]string)
+
+	// Заполнение данных с проверкой типов
 	if lastName, ok := user["lastname"].(string); ok {
 		firstName, _ := user["firstname"].(string)
 		middleName, _ := user["middlename"].(string)
-		formData["FullName"] = fmt.Sprintf("%s %s %s", lastName, firstName, middleName)
+		data["FullName"] = fmt.Sprintf("%s %s %s", lastName, firstName, middleName)
 	} else {
-		return nil, fmt.Errorf("invalid or missing user lastName")
+		return nil, fmt.Errorf("недействительная или отсутствующая фамилия пользователя")
 	}
 
-	// if title, ok := course["title"].(string); ok {
-	// 	formData["CourseTitle"] = title
-	// } else {
-	// 	return nil, fmt.Errorf("invalid or missing course title")
-	// }
-
-	// var durationVal int
-	// switch v := course["duration"].(type) {
-	// case int:
-	// 	durationVal = v
-	// case float64:
-	// 	durationVal = int(v)
-	// case int32:
-	// 	durationVal = int(v)
-	// case int64:
-	// 	durationVal = int(v)
-	// default:
-	// 	return nil, fmt.Errorf("invalid or missing course duration: got type %T", v)
-	// }
-	// formData["CoruseDuration"] = fmt.Sprintf("%d часов", durationVal)
-
-	// var priceVal float64
-	// switch v := course["price"].(type) {
-	// case int:
-	// 	priceVal = float64(v)
-	// case float64:
-	// 	priceVal = v
-	// case int32:
-	// 	priceVal = float64(v)
-	// case int64:
-	// 	priceVal = float64(v)
-	// default:
-	// 	return nil, fmt.Errorf("invalid or missing course price: got type %T", v)
-	// }
-	// formData["CoursePrice"] = fmt.Sprintf("%.0f руб.", priceVal)
-
-	// formData["document_day"] = time.Now().Format("02")
-	// formData["DocumentId"] = time.Now().Format("02")
-
-	// if address, ok := user["homeaddress"].(string); ok {
-	// 	formData["Adress"] = address
-	// } else {
-	// 	formData["Adress"] = ""
-	// }
-
-	// if passport, ok := user["passportdata"].(string); ok {
-	// 	formData["PasportDate"] = passport
-	// } else {
-	// 	formData["PasportDate"] = ""
-	// }
-
-	// if snils, ok := user["snils"].(string); ok {
-	// 	formData["SNILS"] = snils
-	// } else {
-	// 	formData["SNILS"] = ""
-	// }
-
-	// if phone, ok := user["phone"].(string); ok {
-	// 	formData["Phone"] = phone
-	// } else {
-	// 	formData["Phone"] = ""
-	// }
-
-	// if email, ok := user["email"].(string); ok {
-	// 	formData["Email"] = email
-	// } else {
-	// 	formData["Email"] = ""
-	// }
-
-	// formData["HowGive"] = ""
-	// formData["CourseEnd"] = ""
-	// formData["Time"] = ""
-	// formData["TimeDayStart"] = ""
-	// formData["TimeMonthStart"] = ""
-	// formData["TimeDayEnd"] = ""
-	// formData["TimeMonthEnd"] = ""
-
-	// Создаем JSON-данные для формы
-	form := map[string]interface{}{
-		"Fields": formData,
-	}
-	formGroup := map[string]interface{}{
-		"Forms": []interface{}{form},
+	if title, ok := course["title"].(string); ok {
+		data["CourseTitle"] = title
+	} else {
+		return nil, fmt.Errorf("недействительное или отсутствующее название курса")
 	}
 
-	jsonData, err := json.Marshal(formGroup)
-	if err != nil {
-		return nil, fmt.Errorf("could not marshal form data to JSON: %v", err)
+	var durationVal int
+	switch v := course["duration"].(type) {
+	case int:
+		durationVal = v
+	case float64:
+		durationVal = int(v)
+	case int32:
+		durationVal = int(v)
+	case int64:
+		durationVal = int(v)
+	default:
+		return nil, fmt.Errorf("недействительная или отсутствующая длительность курса: получен тип %T", v)
+	}
+	data["CourseDuration"] = fmt.Sprintf("%d часов", durationVal)
+
+	var priceVal float64
+	switch v := course["price"].(type) {
+	case int:
+		priceVal = float64(v)
+	case float64:
+		priceVal = v
+	case int32:
+		priceVal = float64(v)
+	case int64:
+		priceVal = float64(v)
+	default:
+		return nil, fmt.Errorf("недействительная или отсутствующая цена курса: получен тип %T", v)
+	}
+	data["CoursePrice"] = fmt.Sprintf("%.0f руб.", priceVal)
+
+	data["DocumentId"] = time.Now().Format("02")
+
+	if address, ok := user["homeaddress"].(string); ok {
+		data["Adress"] = address
+	} else {
+		data["Adress"] = ""
 	}
 
-	log.Printf("Filling PDF form with JSON data: %s", string(jsonData))
+	if passport, ok := user["passportdata"].(string); ok {
+		data["PasportDate"] = passport
+	} else {
+		data["PasportDate"] = ""
+	}
 
-	// Создаем io.Reader для JSON-данных
-	jsonReader := bytes.NewReader(jsonData)
+	if snils, ok := user["snils"].(string); ok {
+		data["SNILS"] = snils
+	} else {
+		data["SNILS"] = ""
+	}
 
-	// Подготавливаем выходной буфер
+	if phone, ok := user["phone"].(string); ok {
+		data["Phone"] = phone
+	} else {
+		data["Phone"] = ""
+	}
+
+	if email, ok := user["email"].(string); ok {
+		data["Email"] = email
+	} else {
+		data["Email"] = ""
+	}
+
+	// Размещение текста по заданным координатам
+	for field, value := range data {
+		if pos, exists := fieldPositions[field]; exists {
+			pdf.SetX(pos.X)
+			pdf.SetY(pos.Y)
+			err = pdf.Text(value)
+			if err != nil {
+				return nil, fmt.Errorf("не удалось записать текст для %s: %v", field, err)
+			}
+		}
+	}
+
+	// Запись в буфер
 	var buf bytes.Buffer
-
-	// Заполняем форму
-	err = api.FillForm(inputFile, jsonReader, &buf, nil)
+	err = pdf.Write(&buf)
 	if err != nil {
-		return nil, fmt.Errorf("could not fill PDF form: %v", err)
+		return nil, fmt.Errorf("не удалось записать PDF: %v", err)
 	}
 
-	log.Printf("PDF form filled successfully, size: %d bytes", buf.Len())
+	log.Printf("PDF успешно сгенерирован, размер: %d байт", buf.Len())
 	return buf.Bytes(), nil
 }
-
 func UploadContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	courseId, err := primitive.ObjectIDFromHex(vars["courseId"])
 	if err != nil {
-		log.Printf("Invalid courseId: %v", err)
+		log.Printf("Неверный courseId: %v", err)
 		http.Error(w, "Неверный формат идентификатора курса", http.StatusBadRequest)
 		return
 	}
@@ -244,14 +259,14 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 	var courseRegistration bson.M
 	err = collection.FindOne(context.Background(), filter).Decode(&courseRegistration)
 	if err != nil {
-		log.Printf("Course not found: %v", err)
+		log.Printf("Курс не найден: %v", err)
 		http.Error(w, "Курс не найден", http.StatusNotFound)
 		return
 	}
 
 	file, handler, err := r.FormFile("contract")
 	if err != nil {
-		log.Printf("Error retrieving file: %v", err)
+		log.Printf("Ошибка получения файла: %v", err)
 		http.Error(w, "Ошибка при получении файла", http.StatusBadRequest)
 		return
 	}
@@ -264,7 +279,7 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 	filePath := filepath.Join(dir, handler.Filename)
 	dst, err := os.Create(filePath)
 	if err != nil {
-		log.Printf("Error creating file: %v", err)
+		log.Printf("Ошибка создания файла: %v", err)
 		http.Error(w, "Ошибка при сохранении файла", http.StatusInternalServerError)
 		return
 	}
@@ -272,7 +287,7 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(dst, file)
 	if err != nil {
-		log.Printf("Error saving file: %v", err)
+		log.Printf("Ошибка сохранения файла: %v", err)
 		http.Error(w, "Ошибка при сохранении файла", http.StatusInternalServerError)
 		return
 	}
@@ -285,7 +300,7 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		log.Printf("Error updating database: %v", err)
+		log.Printf("Ошибка обновления базы данных: %v", err)
 		http.Error(w, "Ошибка при обновлении данных", http.StatusInternalServerError)
 		return
 	}
@@ -299,7 +314,7 @@ func ApproveContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	contractId, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		log.Printf("Invalid contractId: %v", err)
+		log.Printf("Неверный contractId: %v", err)
 		http.Error(w, "Неверный формат идентификатора договора", http.StatusBadRequest)
 		return
 	}
@@ -309,7 +324,7 @@ func ApproveContract(w http.ResponseWriter, r *http.Request) {
 	update := bson.M{"$set": bson.M{"status": "Принят"}}
 	result, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		log.Printf("Error updating contract status: %v", err)
+		log.Printf("Ошибка обновления статуса договора: %v", err)
 		http.Error(w, "Ошибка при обновлении статуса договора", http.StatusInternalServerError)
 		return
 	}
@@ -328,7 +343,7 @@ func ViewContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		log.Printf("Invalid registration ID: %v", err)
+		log.Printf("Неверный registration ID: %v", err)
 		http.Error(w, "Неверный формат идентификатора заявки", http.StatusBadRequest)
 		return
 	}
@@ -337,20 +352,20 @@ func ViewContract(w http.ResponseWriter, r *http.Request) {
 	var registration bson.M
 	err = collection.FindOne(context.Background(), bson.M{"_id": registrationID}).Decode(&registration)
 	if err != nil {
-		log.Printf("Registration not found: %v", err)
+		log.Printf("Запись о регистрации не найдена: %v", err)
 		http.Error(w, "Запись о регистрации не найдена", http.StatusNotFound)
 		return
 	}
 
 	filePath, ok := registration["contractFilePath"].(string)
 	if !ok || filePath == "" {
-		log.Println("Contract file path not found")
+		log.Println("Путь к файлу договора не найден")
 		http.Error(w, "Файл договора не найден", http.StatusNotFound)
 		return
 	}
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		log.Printf("File does not exist: %v", err)
+		log.Printf("Файл не существует: %v", err)
 		http.Error(w, "Файл договора не найден на сервере", http.StatusNotFound)
 		return
 	}
