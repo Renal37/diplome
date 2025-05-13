@@ -13,10 +13,11 @@ import (
 
 	"github.com/Renal37/db"
 	"github.com/gorilla/mux"
-	"github.com/signintech/gopdf"
+	"github.com/jung-kurt/gofpdf"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
 // DownloadContract остается без изменений
 func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -93,27 +94,26 @@ func getRegistrationData(courseId primitive.ObjectID) (bson.M, bson.M, bson.M, e
 
 	return result, user, course, nil
 }
-// Структура для координат полей (в пунктах, 1 пункт = 1/72 дюйма)
+
 type FieldPosition struct {
 	X, Y, Width float64
 }
 
-// Карта имен полей и их координат (заглушки, нужно уточнить)
 var fieldPositions = map[string]FieldPosition{
-	"FullName":      {X: 100, Y: 700, Width: 400},
-	"CourseTitle":   {X: 100, Y: 600, Width: 400},
+	"FullName":       {X: 100, Y: 700, Width: 400},
+	"CourseTitle":    {X: 100, Y: 600, Width: 400},
 	"CourseDuration": {X: 100, Y: 580, Width: 100},
-	"CoursePrice":   {X: 100, Y: 560, Width: 100},
-	"DocumentId":    {X: 100, Y: 720, Width: 100},
-	"Adress":        {X: 100, Y: 200, Width: 400},
-	"PasportDate":   {X: 100, Y: 180, Width: 200},
-	"SNILS":         {X: 100, Y: 160, Width: 100},
-	"Phone":         {X: 100, Y: 140, Width: 100},
-	"Email":         {X: 100, Y: 120, Width: 200},
+	"CoursePrice":    {X: 100, Y: 560, Width: 100},
+	"DocumentId":     {X: 100, Y: 720, Width: 100},
+	"Adress":         {X: 100, Y: 200, Width: 400},
+	"PasportDate":    {X: 100, Y: 180, Width: 200},
+	"SNILS":          {X: 100, Y: 160, Width: 100},
+	"Phone":          {X: 100, Y: 140, Width: 100},
+	"Email":          {X: 100, Y: 120, Width: 200},
 }
 
 func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
-	inputPath := "../server/document_download/ДОГОВОР.pdf"
+	inputPath := "./document_download/ДОГОВОР.pdf"
 	log.Printf("Открытие шаблона PDF по пути: %s", inputPath)
 
 	// Проверка существования файла шаблона
@@ -121,32 +121,15 @@ func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
 		return nil, fmt.Errorf("Файл шаблона PDF не существует: %s", inputPath)
 	}
 
-	// Инициализация gopdf
-	pdf := gopdf.New(gopdf.Config{PageSize: gopdf.A4})
-
-	// Импорт существующего PDF как шаблона
-	err := pdf.ImportPage(inputPath, 1, "/MediaBox")
-	if err != nil {
-		return nil, fmt.Errorf("не удалось импортировать шаблон PDF: %v", err)
-	}
-
-	// Добавление новой страницы
+	// Инициализация gofpdf
+	pdf := gofpdf.New("P", "pt", "A4", "")
 	pdf.AddPage()
-
-	// Установка шрифта (замените путь на действительный TTF-шрифт с поддержкой кириллицы)
-	err = pdf.AddTTFFont("arial", "./fonts/arial.ttf")
-	if err != nil {
-		return nil, fmt.Errorf("не удалось загрузить шрифт: %v", err)
-	}
-	err = pdf.SetFont("arial", "", 12)
-	if err != nil {
-		return nil, fmt.Errorf("не удалось установить шрифт: %v", err)
-	}
+	pdf.AddUTF8Font("arial", "", "./fonts/arial.ttf")
+	pdf.SetFont("arial", "", 12)
 
 	// Подготовка данных для заполнения
 	data := make(map[string]string)
 
-	// Заполнение данных с проверкой типов
 	if lastName, ok := user["lastname"].(string); ok {
 		firstName, _ := user["firstname"].(string)
 		middleName, _ := user["middlename"].(string)
@@ -223,21 +206,17 @@ func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
 		data["Email"] = ""
 	}
 
-	// Размещение текста по заданным координатам
+	// Размещение текста по координатам
 	for field, value := range data {
 		if pos, exists := fieldPositions[field]; exists {
-			pdf.SetX(pos.X)
-			pdf.SetY(pos.Y)
-			err = pdf.Text(value)
-			if err != nil {
-				return nil, fmt.Errorf("не удалось записать текст для %s: %v", field, err)
-			}
+			pdf.SetXY(pos.X, pos.Y)
+			pdf.Write(0, value)
 		}
 	}
 
 	// Запись в буфер
 	var buf bytes.Buffer
-	err = pdf.Write(&buf)
+	err := pdf.Output(&buf)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось записать PDF: %v", err)
 	}
