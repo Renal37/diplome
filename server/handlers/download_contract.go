@@ -8,17 +8,18 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Renal37/db"
 	"github.com/gorilla/mux"
-	"github.com/jung-kurt/gofpdf"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// DownloadContract остается без изменений
+// DownloadContract - обработчик для скачивания договора
 func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	courseId, err := primitive.ObjectIDFromHex(vars["courseId"])
@@ -55,7 +56,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Ответ PDF успешно отправлен для courseId: %s", courseId.Hex())
 }
 
-// getRegistrationData остается без изменений
+// getRegistrationData - получение данных регистрации
 func getRegistrationData(courseId primitive.ObjectID) (bson.M, bson.M, bson.M, error) {
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 	pipeline := bson.A{
@@ -95,135 +96,200 @@ func getRegistrationData(courseId primitive.ObjectID) (bson.M, bson.M, bson.M, e
 	return result, user, course, nil
 }
 
+// FieldPosition - структура для координат полей
 type FieldPosition struct {
-	X, Y, Width float64
+	X, Y  float64
+	Page  int
+	Width float64
 }
 
+// fieldPositions - карта позиций полей в PDF
 var fieldPositions = map[string]FieldPosition{
-	"FullName":       {X: 100, Y: 700, Width: 400},
-	"CourseTitle":    {X: 100, Y: 600, Width: 400},
-	"CourseDuration": {X: 100, Y: 580, Width: 100},
-	"CoursePrice":    {X: 100, Y: 560, Width: 100},
-	"DocumentId":     {X: 100, Y: 720, Width: 100},
-	"Adress":         {X: 100, Y: 200, Width: 400},
-	"PasportDate":    {X: 100, Y: 180, Width: 200},
-	"SNILS":          {X: 100, Y: 160, Width: 100},
-	"Phone":          {X: 100, Y: 140, Width: 100},
-	"Email":          {X: 100, Y: 120, Width: 200},
+	"FullName":       {X: 120, Y: 680, Page: 4, Width: 400},
+	"CourseTitle":    {X: 150, Y: 500, Page: 1, Width: 300},
+	"CourseDuration": {X: 350, Y: 500, Page: 1, Width: 100},
+	"CoursePrice":    {X: 450, Y: 500, Page: 1, Width: 100},
+	"DocumentId":     {X: 300, Y: 750, Page: 1, Width: 100},
+	"Adress":         {X: 120, Y: 220, Page: 4, Width: 400},
+	"PasportDate":    {X: 120, Y: 200, Page: 4, Width: 200},
+	"SNILS":          {X: 120, Y: 180, Page: 4, Width: 100},
+	"Phone":          {X: 120, Y: 160, Page: 4, Width: 100},
+	"Email":          {X: 120, Y: 140, Page: 4, Width: 200},
 }
 
+// generateFilledContract - генерация заполненного PDF
 func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
-	inputPath := "./document_download/ДОГОВОР.pdf"
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("ошибка получения текущей директории: %v", err)
+	}
+	log.Printf("Текущая рабочая директория: %s", cwd)
+
+	inputPath := filepath.Join(cwd, "document_download", "ДОГОВОР.pdf")
 	log.Printf("Открытие шаблона PDF по пути: %s", inputPath)
 
-	// Проверка существования файла шаблона
 	if _, err := os.Stat(inputPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Файл шаблона PDF не существует: %s", inputPath)
+		return nil, fmt.Errorf("файл шаблона PDF не существует: %s", inputPath)
 	}
 
-	// Инициализация gofpdf
-	pdf := gofpdf.New("P", "pt", "A4", "")
-	pdf.AddPage()
-	pdf.AddUTF8Font("arial", "", "./fonts/arial.ttf")
-	pdf.SetFont("arial", "", 12)
+	// Подготовка данных
+	data := prepareContractData(user, course)
 
-	// Подготовка данных для заполнения
+	// Создание временного файла
+	outputPath := filepath.Join(os.TempDir(), fmt.Sprintf("contract_%d.pdf", time.Now().UnixNano()))
+	defer os.Remove(outputPath)
+
+	// Копирование исходного PDF
+	if err := copyFile(inputPath, outputPath); err != nil {
+		return nil, fmt.Errorf("не удалось скопировать PDF: %v", err)
+	}
+
+	// Добавление текста в PDF с помощью pdftk
+	if err := addTextWithPdftk(data, outputPath); err != nil {
+		return nil, fmt.Errorf("ошибка добавления текста в PDF: %v", err)
+	}
+
+	// Чтение результата
+	return os.ReadFile(outputPath)
+}
+
+// prepareContractData - подготовка данных для договора
+func prepareContractData(user, course bson.M) map[string]string {
 	data := make(map[string]string)
 
+	// ФИО
 	if lastName, ok := user["lastname"].(string); ok {
 		firstName, _ := user["firstname"].(string)
 		middleName, _ := user["middlename"].(string)
 		data["FullName"] = fmt.Sprintf("%s %s %s", lastName, firstName, middleName)
-	} else {
-		return nil, fmt.Errorf("недействительная или отсутствующая фамилия пользователя")
 	}
 
+	// Данные курса
 	if title, ok := course["title"].(string); ok {
 		data["CourseTitle"] = title
-	} else {
-		return nil, fmt.Errorf("недействительное или отсутствующее название курса")
 	}
 
-	var durationVal int
 	switch v := course["duration"].(type) {
-	case int:
-		durationVal = v
+	case int, int32, int64:
+		data["CourseDuration"] = fmt.Sprintf("%d часов", v)
 	case float64:
-		durationVal = int(v)
-	case int32:
-		durationVal = int(v)
-	case int64:
-		durationVal = int(v)
-	default:
-		return nil, fmt.Errorf("недействительная или отсутствующая длительность курса: получен тип %T", v)
+		data["CourseDuration"] = fmt.Sprintf("%.0f часов", v)
 	}
-	data["CourseDuration"] = fmt.Sprintf("%d часов", durationVal)
 
-	var priceVal float64
 	switch v := course["price"].(type) {
-	case int:
-		priceVal = float64(v)
+	case int, int32, int64:
+		data["CoursePrice"] = fmt.Sprintf("%d руб.", v)
 	case float64:
-		priceVal = v
-	case int32:
-		priceVal = float64(v)
-	case int64:
-		priceVal = float64(v)
-	default:
-		return nil, fmt.Errorf("недействительная или отсутствующая цена курса: получен тип %T", v)
+		data["CoursePrice"] = fmt.Sprintf("%.0f руб.", v)
 	}
-	data["CoursePrice"] = fmt.Sprintf("%.0f руб.", priceVal)
 
+	// Номер договора (текущий день)
 	data["DocumentId"] = time.Now().Format("02")
 
+	// Личные данные
 	if address, ok := user["homeaddress"].(string); ok {
 		data["Adress"] = address
-	} else {
-		data["Adress"] = ""
 	}
-
 	if passport, ok := user["passportdata"].(string); ok {
 		data["PasportDate"] = passport
-	} else {
-		data["PasportDate"] = ""
 	}
-
 	if snils, ok := user["snils"].(string); ok {
 		data["SNILS"] = snils
-	} else {
-		data["SNILS"] = ""
 	}
-
 	if phone, ok := user["phone"].(string); ok {
 		data["Phone"] = phone
-	} else {
-		data["Phone"] = ""
 	}
-
 	if email, ok := user["email"].(string); ok {
 		data["Email"] = email
-	} else {
-		data["Email"] = ""
 	}
 
-	// Размещение текста по координатам
+	// Логирование данных
 	for field, value := range data {
-		if pos, exists := fieldPositions[field]; exists {
-			pdf.SetXY(pos.X, pos.Y)
-			pdf.Write(0, value)
-		}
+		log.Printf("Поле %s: %s", field, value)
 	}
 
-	// Запись в буфер
-	var buf bytes.Buffer
-	err := pdf.Output(&buf)
-	if err != nil {
-		return nil, fmt.Errorf("не удалось записать PDF: %v", err)
-	}
-
-	log.Printf("PDF успешно сгенерирован, размер: %d байт", buf.Len())
-	return buf.Bytes(), nil
+	return data
 }
+
+// copyFile - копирование файла
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
+}
+
+// addTextWithPdftk - добавление текста с помощью pdftk
+func addTextWithPdftk(data map[string]string, pdfPath string) error {
+	// Проверяем наличие pdftk
+	if _, err := exec.LookPath("pdftk"); err != nil {
+		return fmt.Errorf("pdftk не найден, установите его: sudo apt install pdftk")
+	}
+
+	// Создаем временный файл для данных
+	dataPath := filepath.Join(os.TempDir(), fmt.Sprintf("data_%d.fdf", time.Now().UnixNano()))
+	defer os.Remove(dataPath)
+
+	// Генерируем FDF файл с данными
+	if err := generateFdfFile(data, dataPath); err != nil {
+		return fmt.Errorf("ошибка генерации FDF файла: %v", err)
+	}
+
+	// Выполняем команду pdftk для заполнения формы
+	outputPath := pdfPath + ".filled.pdf"
+	defer os.Remove(outputPath)
+
+	cmd := exec.Command("pdftk", pdfPath, "fill_form", dataPath, "output", outputPath, "flatten")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("ошибка выполнения pdftk: %v, stderr: %s", err, stderr.String())
+	}
+
+	// Заменяем оригинальный файл заполненным
+	if err := os.Rename(outputPath, pdfPath); err != nil {
+		return fmt.Errorf("ошибка замены файла: %v", err)
+	}
+
+	return nil
+}
+
+// generateFdfFile - генерация FDF файла для pdftk
+func generateFdfFile(data map[string]string, outputPath string) error {
+	var builder strings.Builder
+
+	builder.WriteString("%FDF-1.2\n")
+	builder.WriteString("1 0 obj\n")
+	builder.WriteString("<<\n")
+	builder.WriteString("/FDF << /Fields [\n")
+
+	for field, value := range data {
+		builder.WriteString(fmt.Sprintf("<< /T (%s) /V (%s) >>\n", field, value))
+	}
+
+	builder.WriteString("] >>\n")
+	builder.WriteString(">>\n")
+	builder.WriteString("endobj\n")
+	builder.WriteString("trailer\n")
+	builder.WriteString("<<\n")
+	builder.WriteString("/Root 1 0 R\n")
+	builder.WriteString(">>\n")
+	builder.WriteString("%%EOF\n")
+
+	return os.WriteFile(outputPath, []byte(builder.String()), 0644)
+}
+
+// UploadContract - загрузка договора
 func UploadContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	courseId, err := primitive.ObjectIDFromHex(vars["courseId"])
@@ -289,6 +355,7 @@ func UploadContract(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"message": "Договор успешно загружен!"}`)
 }
 
+// ApproveContract - утверждение договора
 func ApproveContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	contractId, err := primitive.ObjectIDFromHex(vars["id"])
@@ -318,6 +385,7 @@ func ApproveContract(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"success": true}`)
 }
 
+// ViewContract - просмотр договора
 func ViewContract(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
