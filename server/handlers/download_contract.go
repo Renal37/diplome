@@ -12,11 +12,14 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Renal37/db"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/unicode"
 )
 
 // DownloadContract - обработчик для скачивания договора
@@ -47,7 +50,7 @@ func DownloadContract(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("PDF успешно сгенерирован, отправка ответа для courseId: %s", courseId.Hex())
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", "attachment; filename=contract_"+courseId.Hex()+".pdf")
+	w.Header().Set("Content-Disposition", "attachment; filename=contract_" + courseId.Hex() + ".pdf")
 	_, err = w.Write(pdfBytes)
 	if err != nil {
 		log.Printf("Ошибка записи ответа PDF: %v", err)
@@ -104,6 +107,7 @@ type FieldPosition struct {
 }
 
 // fieldPositions - карта позиций полей в PDF
+// TODO: Синхронизировать имена полей с результатом `pdftk document_download/ДОГОВОР.pdf dump_data_fields`
 var fieldPositions = map[string]FieldPosition{
 	"FullName":       {X: 120, Y: 680, Page: 4, Width: 400},
 	"CourseTitle":    {X: 150, Y: 500, Page: 1, Width: 300},
@@ -117,7 +121,7 @@ var fieldPositions = map[string]FieldPosition{
 	"Email":          {X: 120, Y: 140, Page: 4, Width: 200},
 }
 
-// generateFilledContract - генерация заполненного PDF
+// generateFilledContract - генерация заполненного PDF с использованием pdftk
 func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -125,7 +129,7 @@ func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
 	}
 	log.Printf("Текущая рабочая директория: %s", cwd)
 
-	inputPath := filepath.Join(cwd, "document_download", "ДОГОВОР.pdf")
+	inputPath := filepath.Join(cwd, "document_download", "ДОГОВОРКИР.pdf")
 	log.Printf("Открытие шаблона PDF по пути: %s", inputPath)
 
 	if _, err := os.Stat(inputPath); os.IsNotExist(err) {
@@ -134,6 +138,9 @@ func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
 
 	// Подготовка данных
 	data := prepareContractData(user, course)
+	if len(data) == 0 {
+		return nil, fmt.Errorf("данные для PDF пусты")
+	}
 
 	// Создание временного файла
 	outputPath := filepath.Join(os.TempDir(), fmt.Sprintf("contract_%d.pdf", time.Now().UnixNano()))
@@ -150,23 +157,72 @@ func generateFilledContract(registration, user, course bson.M) ([]byte, error) {
 	}
 
 	// Чтение результата
-	return os.ReadFile(outputPath)
+	pdfBytes, err := os.ReadFile(outputPath)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка чтения PDF: %v", err)
+	}
+	log.Printf("PDF прочитан, размер: %d байт", len(pdfBytes))
+
+	return pdfBytes, nil
 }
 
-// prepareContractData - подготовка данных для договора
+// prepareContractData - подготовка данных для договора с исправлением кодировки
 func prepareContractData(user, course bson.M) map[string]string {
 	data := make(map[string]string)
+
+	// Функция для исправления кодировки
+	fixEncoding := func(s string) string {
+		if utf8.ValidString(s) {
+			log.Printf("Строка %q валидна для UTF-8", s)
+			return s
+		}
+		log.Printf("Строка %q невалидна для UTF-8, байты: % x", s)
+
+		// Попытка перекодировки из Windows-1251
+		reader := charmap.Windows1251.NewDecoder().Reader(strings.NewReader(s))
+		buf, err := io.ReadAll(reader)
+		if err == nil && utf8.Valid(buf) {
+			result := string(buf)
+			log.Printf("Успешно перекодировано из Windows-1251: %q (UTF-8 valid: %v)", result, utf8.ValidString(result))
+			return result
+		}
+		log.Printf("Не удалось перекодировать из Windows-1251: %v", err)
+
+		// Попытка перекодировки из ISO-8859-5
+		reader = charmap.ISO8859_5.NewDecoder().Reader(strings.NewReader(s))
+		buf, err = io.ReadAll(reader)
+		if err == nil && utf8.Valid(buf) {
+			result := string(buf)
+			log.Printf("Успешно перекодировано из ISO-8859-5: %q (UTF-8 valid: %v)", result, utf8.ValidString(result))
+			return result
+		}
+		log.Printf("Не удалось перекодировать из ISO-8859-5: %v", err)
+
+		// Попытка перекодировки из KOI8-R
+		reader = charmap.KOI8R.NewDecoder().Reader(strings.NewReader(s))
+		buf, err = io.ReadAll(reader)
+		if err == nil && utf8.Valid(buf) {
+			result := string(buf)
+			log.Printf("Успешно перекодировано из KOI8-R: %q (UTF-8 valid: %v)", result, utf8.ValidString(result))
+			return result
+		}
+		log.Printf("Не удалось перекодировать из KOI8-R: %v", err)
+
+		// Если ничего не помогло, возвращаем исходную строку
+		log.Printf("Перекодировка не удалась, возвращается исходная строка: %q", s)
+		return s
+	}
 
 	// ФИО
 	if lastName, ok := user["lastname"].(string); ok {
 		firstName, _ := user["firstname"].(string)
 		middleName, _ := user["middlename"].(string)
-		data["FullName"] = fmt.Sprintf("%s %s %s", lastName, firstName, middleName)
+		data["FullName"] = fixEncoding(fmt.Sprintf("%s %s %s", lastName, firstName, middleName))
 	}
 
 	// Данные курса
 	if title, ok := course["title"].(string); ok {
-		data["CourseTitle"] = title
+		data["CourseTitle"] = fixEncoding(title)
 	}
 
 	switch v := course["duration"].(type) {
@@ -188,24 +244,24 @@ func prepareContractData(user, course bson.M) map[string]string {
 
 	// Личные данные
 	if address, ok := user["homeaddress"].(string); ok {
-		data["Adress"] = address
+		data["Adress"] = fixEncoding(address)
 	}
 	if passport, ok := user["passportdata"].(string); ok {
-		data["PasportDate"] = passport
+		data["PasportDate"] = fixEncoding(passport)
 	}
 	if snils, ok := user["snils"].(string); ok {
-		data["SNILS"] = snils
+		data["SNILS"] = fixEncoding(snils)
 	}
 	if phone, ok := user["phone"].(string); ok {
-		data["Phone"] = phone
+		data["Phone"] = fixEncoding(phone)
 	}
 	if email, ok := user["email"].(string); ok {
-		data["Email"] = email
+		data["Email"] = fixEncoding(email)
 	}
 
 	// Логирование данных
 	for field, value := range data {
-		log.Printf("Поле %s: %s", field, value)
+		log.Printf("Поле %s: %s (UTF-8 valid: %v)", field, value, utf8.ValidString(value))
 	}
 
 	return data
@@ -215,18 +271,21 @@ func prepareContractData(user, course bson.M) map[string]string {
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("ошибка открытия исходного файла %s: %v", src, err)
 	}
 	defer in.Close()
 
 	out, err := os.Create(dst)
 	if err != nil {
-		return err
+		return fmt.Errorf("ошибка создания файла %s: %v", dst, err)
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, in)
-	return err
+	if err != nil {
+		return fmt.Errorf("ошибка копирования файла: %v", err)
+	}
+	return nil
 }
 
 // addTextWithPdftk - добавление текста с помощью pdftk
@@ -261,20 +320,31 @@ func addTextWithPdftk(data map[string]string, pdfPath string) error {
 		return fmt.Errorf("ошибка замены файла: %v", err)
 	}
 
+	log.Printf("pdftk успешно заполнил PDF: %s", pdfPath)
 	return nil
 }
 
-// generateFdfFile - генерация FDF файла для pdftk
+// generateFdfFile - генерация FDF файла для pdftk с поддержкой UTF-16BE
 func generateFdfFile(data map[string]string, outputPath string) error {
 	var builder strings.Builder
 
+	// Заголовок FDF с указанием кодировки
 	builder.WriteString("%FDF-1.2\n")
+	builder.WriteString("\x25\xE2\xE3\xCF\xD3\n") // BOM для UTF-16
 	builder.WriteString("1 0 obj\n")
 	builder.WriteString("<<\n")
 	builder.WriteString("/FDF << /Fields [\n")
 
+	// Преобразование текста в UTF-16BE
 	for field, value := range data {
-		builder.WriteString(fmt.Sprintf("<< /T (%s) /V (%s) >>\n", field, value))
+		if value == "" {
+			log.Printf("Поле %s пустое, пропускается", field)
+			continue
+		}
+		utf16Value := encodeToUTF16BE(value)
+		fdfEntry := fmt.Sprintf("<< /T (%s) /V <FEFF%s> >>\n", field, utf16Value)
+		builder.WriteString(fdfEntry)
+		log.Printf("Добавлено в FDF: %s", fdfEntry)
 	}
 
 	builder.WriteString("] >>\n")
@@ -286,7 +356,34 @@ func generateFdfFile(data map[string]string, outputPath string) error {
 	builder.WriteString(">>\n")
 	builder.WriteString("%%EOF\n")
 
-	return os.WriteFile(outputPath, []byte(builder.String()), 0644)
+	fdfContent := builder.String()
+	log.Printf("FDF файл создан, содержимое:\n%s", fdfContent)
+	err := os.WriteFile(outputPath, []byte(fdfContent), 0644)
+	if err != nil {
+		return fmt.Errorf("ошибка записи FDF файла %s: %v", outputPath, err)
+	}
+	log.Printf("FDF файл сохранён: %s", outputPath)
+	return nil
+}
+
+// encodeToUTF16BE - преобразование строки в UTF-16BE с HEX-кодировкой
+func encodeToUTF16BE(s string) string {
+	// Преобразуем строку в UTF-16
+	encoder := unicode.UTF16(unicode.BigEndian, unicode.UseBOM).NewEncoder()
+	utf16Bytes, err := encoder.Bytes([]byte(s))
+	if err != nil {
+		log.Printf("Ошибка кодирования строки %q в UTF-16BE: %v", s, err)
+		return ""
+	}
+
+	// Преобразуем в HEX-формат
+	var hexBuilder strings.Builder
+	for _, b := range utf16Bytes {
+		hexBuilder.WriteString(fmt.Sprintf("%02X", b))
+	}
+	result := hexBuilder.String()
+	log.Printf("Строка %q перекодирована в UTF-16BE: %s", s, result)
+	return result
 }
 
 // UploadContract - загрузка договора

@@ -1,0 +1,90 @@
+%FDF-1.2
+%‚„œ”
+1 0 obj
+
+<<
+/FDF 
+<<
+/Fields [
+<<
+/T (SNILS)
+/V ()
+>> 
+<<
+/T (Email)
+/V ()
+>> 
+<<
+/T (DocumentId)
+/V ()
+>> 
+<<
+/T (Time)
+/V ()
+>> 
+<<
+/T (CourseTitle)
+/V ()
+>> 
+<<
+/T (CoursePrice)
+/V ()
+>> 
+<<
+/T (CourseDuration)
+/V ()
+>> 
+<<
+/T (CourseEnd)
+/V ()
+>> 
+<<
+/T (TimeDayEnd)
+/V ()
+>> 
+<<
+/T (Phone)
+/V ()
+>> 
+<<
+/T (FullName)
+/V ()
+>> 
+<<
+/T (TimeMonthStart)
+/V ()
+>> 
+<<
+/T (Adress)
+/V ()
+>> 
+<<
+/T (TimeDayStart)
+/V ()
+>> 
+<<
+/T (HowGive)
+/V ()
+>> 
+<<
+/T (TimeMonthEnd)
+/V ()
+>> 
+<<
+/T (DocumentDay)
+/V ()
+>> 
+<<
+/T (PasportDate)
+/V ()
+>>]
+>>
+>>
+endobj
+
+trailer
+
+<<
+/Root 1 0 R
+>>
+%%EOF
