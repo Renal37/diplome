@@ -97,4 +97,7 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/admin/prompt", handlers.GetPrompt).Methods("GET")
 	r.HandleFunc("/admin/prompt/update", handlers.UpdatePrompt).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/admin/prompt/delete", handlers.DeletePrompt).Methods("DELETE", "OPTIONS")
+
+	r.HandleFunc("/user/contract-data/{courseId}", handlers.GetContractData).Methods("GET")
+	r.HandleFunc("/contract-template", handlers.GetContractTemplate).Methods("GET")
 }

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import "./check_course_component.css";
-import { PDFDocument } from "pdf-lib";
-
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import qr from "../../../assets/mustafin_qr.jpg";
+import ArialFont from "../../../assets/fonts/Arial.ttf";
 
 const CheckCourse = () => {
     const [courses, setCourses] = useState([]);
@@ -46,27 +46,113 @@ const CheckCourse = () => {
 
     const handleDownloadContract = async (courseId) => {
         try {
-            const response = await fetch(`http://localhost:5000/user/download-contract/${courseId}`, {
+            // 1. Получить данные договора
+            const dataResponse = await fetch(`http://localhost:5000/user/contract-data/${courseId}`, {
                 method: "GET",
                 credentials: "include",
             });
-            if (!response.ok) {
-                throw new Error("Ошибка при скачивании договора");
+            if (!dataResponse.ok) {
+                throw new Error("Ошибка при получении данных договора");
             }
-            const pdfBytes = await response.arrayBuffer();
+            const formData = await dataResponse.json();
+
+            // 2. Загрузить шаблон PDF
+            const pdfResponse = await fetch("http://localhost:5000/contract-template");
+            if (!pdfResponse.ok) {
+                throw new Error("Ошибка при загрузке шаблона PDF");
+            }
+            const pdfBytes = await pdfResponse.arrayBuffer();
+
+            // 3. Загрузить PDF в pdf-lib
             const pdfDoc = await PDFDocument.load(pdfBytes);
-            const updatedPdfBytes = await pdfDoc.save();
-            const blob = new Blob([updatedPdfBytes], { type: "application/pdf" });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.style.display = "none";
-            a.href = url;
-            a.download = "contract.pdf";
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            alert("Вы скачали договор, теперь заполните его и отправьте нам!");
+            const form = pdfDoc.getForm();
+
+            // 4. Загрузить шрифт Arial
+            let font;
+            try {
+                const fontResponse = await fetch(ArialFont);
+                if (!fontResponse.ok) {
+                    throw new Error("Не удалось загрузить шрифт Arial");
+                }
+                const fontBytes = await fontResponse.arrayBuffer();
+                font = await pdfDoc.embedFont(fontBytes, { subset: true });
+                console.log("Шрифт Arial успешно загружен");
+            } catch (fontError) {
+                console.warn("Не удалось загрузить Arial, использую Helvetica:", fontError);
+                font = await pdfDoc.embedFont(StandardFonts.Helvetica); // Helvetica как запасной вариант
+            }
+            // 5. Заполнить поля формы
+            try {
+                // Логируем доступные поля для отладки
+                const fieldNames = form.getFields().map(field => field.getName());
+                console.log("Доступные поля формы:", fieldNames);
+
+                // Карта полей (основана на полях из PDF)
+                const fieldMap = {
+                    FullName: ["FullName"],
+                    CourseTitle: ["CourseTitle"],
+                    CourseDuration: ["CourseDuration"],
+                    CoursePrice: ["CoursePrice"],
+                    DocumentId: ["DocumentId"],
+                    Adress: ["Adress"],
+                    PasportDate: ["PasportDate"],
+                    SNILS: ["SNILS"],
+                    Phone: ["Phone"],
+                    Email: ["Email"],
+                    DocumentDay: ["DocumentDay"], // Новое поле
+                    CourseEnd: ["CourseEnd"],     // Новое поле
+                    Time: ["Time"],               // Новое поле
+                    TimeDayStart: ["TimeDayStart"],
+                    TimeMonthStart: ["TimeMonthStart"],
+                    TimeDayEnd: ["TimeDayEnd"],
+                    TimeMonthEnd: ["TimeMonthEnd"],
+                    HowGive: ["HowGive"],         // Новое поле
+                };
+                for (const [key, value] of Object.entries(formData)) {
+                    const possibleNames = fieldMap[key] || [key];
+                    let fieldFilled = false;
+                    for (const fieldName of possibleNames) {
+                        try {
+                            const field = form.getTextField(fieldName);
+                            if (field) {
+                                field.setText(value);
+                                // Обновляем внешний вид поля с кастомным шрифтом
+                                field.updateAppearances(font);
+                                field.enableMultiline(); // На случай длинного текста
+                                console.log(`Заполнено поле ${fieldName}: ${value}`);
+                                fieldFilled = true;
+                                break;
+                            }
+                        } catch (fieldError) {
+                            console.warn(`Ошибка при заполнении поля ${fieldName}:`, fieldError.message);
+                        }
+                    }
+                    if (!fieldFilled) {
+                        console.warn(`Поле для ключа ${key} не найдено среди ${possibleNames.join(", ")}`);
+                    }
+                }
+
+                // 6. Сохранить PDF
+                form.flatten(); // Зафиксировать поля
+                const updatedPdfBytes = await pdfDoc.save();
+
+                // 7. Скачать PDF
+                const blob = new Blob([updatedPdfBytes], { type: "application/pdf" });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.style.display = "none";
+                a.href = url;
+                a.download = `contract_${courseId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+
+                alert("Договор успешно скачан! Заполните его и отправьте нам!");
+            } catch (formError) {
+                throw new Error(`Ошибка при обработке формы PDF: ${formError.message}`);
+            }
         } catch (err) {
+            console.error("Ошибка:", err);
             alert(err.message);
         }
     };
@@ -85,7 +171,6 @@ const CheckCourse = () => {
             }
             const data = await response.json();
             alert(data.message || "Договор успешно загружен!");
-            // Обновляем состояние курсов после успешной загрузки
             setCourses((prevCourses) =>
                 prevCourses.map((course) =>
                     course._id === courseId ? { ...course, contractUploaded: true } : course
@@ -102,14 +187,11 @@ const CheckCourse = () => {
                 method: "DELETE",
                 credentials: "include",
             });
-
             if (!response.ok) {
                 throw new Error("Ошибка при отзыве заявки");
             }
-
             const data = await response.json();
             if (data.success) {
-                // Обновляем список курсов после успешного отзыва заявки
                 setCourses((prevCourses) => prevCourses.filter(course => course._id !== registrationId));
                 alert("Заявка успешно отозвана!");
             } else {
@@ -136,14 +218,11 @@ const CheckCourse = () => {
                 method: "POST",
                 credentials: "include",
             });
-
             if (!response.ok) {
                 throw new Error("Ошибка при оплате курса");
             }
-
             const data = await response.json();
             if (data.success) {
-                // Обновляем статус курса в списке
                 setCourses((prevCourses) =>
                     prevCourses.map((course) =>
                         course._id === selectedCourse._id ? { ...course, status: "Оплаченный" } : course
@@ -161,7 +240,6 @@ const CheckCourse = () => {
 
     return (
         <div className="check-course-container">
-            {/* Навигация по статусам курсов */}
             <div className="profile_course_navs">
                 <button
                     onClick={() => setSelectedStatus("all")}
@@ -201,7 +279,6 @@ const CheckCourse = () => {
                 </button>
             </div>
 
-            {/* Список курсов */}
             <div className="course-list-container">
                 <h2 className="course-list-title">Список курсов:</h2>
                 {loading && <p className="loading">Загрузка...</p>}
@@ -215,7 +292,6 @@ const CheckCourse = () => {
                             <li key={index} className="course-item">
                                 <span className="course-title">Название: {course.courseTitle}</span>
                                 <span className="course-status">Статус: {course.status}</span>
-                                {/* Отображение группы, если она есть */}
                                 {course.groupId && (
                                     <span className="course-group">
                                         Группа: {course.groupName}
@@ -282,13 +358,11 @@ const CheckCourse = () => {
                 )}
             </div>
 
-            {/* Модальное окно для оплаты */}
             {isModalOpen && (
                 <div className="payment-modal">
                     <div className="payment-modal-content">
                         <h2>Оплата курса: {selectedCourse.courseTitle}</h2>
                         <div className="qr-code-placeholder">
-                            {/* Здесь можно вставить реальный QR-код */}
                             <img src={qr} alt="QR Code" />
                         </div>
                         <div className="payment-modal-buttons">
