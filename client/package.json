@@ -12,6 +12,7 @@
     "dependencies": {
         "@fortawesome/free-solid-svg-icons": "^6.7.2",
         "@fortawesome/react-fontawesome": "github:fortawesome/react-fontawesome",
+        "@pdf-lib/fontkit": "^1.1.1",
         "@react-pdf/renderer": "^4.2.1",
         "@vitejs/plugin-react": "^4.4.1",
         "axios": "^1.7.9",

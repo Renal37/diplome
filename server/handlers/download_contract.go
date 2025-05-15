@@ -82,7 +82,7 @@ func GetContractTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pdfPath := filepath.Join(cwd, "document_download", "ДОГОВОР123.pdf")
+	pdfPath := filepath.Join(cwd, "document_download", "ДОГОВОР.pdf")
 	if _, err := os.Stat(pdfPath); os.IsNotExist(err) {
 		log.Printf("Файл шаблона PDF не существует: %s", pdfPath)
 		http.Error(w, "Шаблон PDF не найден", http.StatusNotFound)
@@ -90,7 +90,7 @@ func GetContractTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", "inline; filename=ДОГОВОР123.pdf")
+	w.Header().Set("Content-Disposition", "inline; filename=ДОГОВОР.pdf")
 	http.ServeFile(w, r, pdfPath)
 	log.Printf("Шаблон PDF успешно отправлен")
 }
@@ -185,6 +185,9 @@ func prepareContractData(user, course bson.M) map[string]string {
 	if email, ok := user["email"].(string); ok {
 		data["Email"] = email
 	}
+	if passportissuedby, ok := user["passportissuedby"].(string); ok {
+		data["HowGive"] = passportissuedby
+	}
 
 	// Новые поля (заглушки, замени на реальные данные из базы)
 	data["CourseEnd"] = "31.12.2025" // Дата окончания курса
@@ -193,7 +196,6 @@ func prepareContractData(user, course bson.M) map[string]string {
 	data["TimeMonthStart"] = "05"    // Месяц начала
 	data["TimeDayEnd"] = "31"        // День окончания
 	data["TimeMonthEnd"] = "12"      // Месяц окончания
-	data["HowGive"] = "Очно"         // Формат обучения
 
 	// Логирование данных
 	for field, value := range data {

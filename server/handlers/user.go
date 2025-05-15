@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -76,7 +77,6 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetProfile(w http.ResponseWriter, r *http.Request) {
-	// Получаем токен из куки
 	cookie, err := r.Cookie("token")
 	if err != nil {
 		if err == http.ErrNoCookie {
@@ -87,7 +87,6 @@ func GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Парсим токен
 	tokenStr := cookie.Value
 	claims := &utils.Claims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
@@ -99,17 +98,13 @@ func GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Преобразуем ID пользователя в ObjectID
 	userID, err := primitive.ObjectIDFromHex(claims.UserID)
 	if err != nil {
 		http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
 		return
 	}
 
-	// Получаем коллекцию пользователей
 	collection := db.GetCollection(db.UsersCollection)
-
-	// Создаем pipeline для агрегации
 	pipeline := []bson.M{
 		{
 			"$match": bson.M{"_id": userID},
@@ -129,13 +124,12 @@ func GetProfile(w http.ResponseWriter, r *http.Request) {
 		},
 		{
 			"$project": bson.M{
-				"password":    0, // Исключаем пароль из результатов
+				"password":    0,
 				"educationid": 0,
 			},
 		},
 	}
 
-	// Выполняем агрегацию
 	cursor, err := collection.Aggregate(context.Background(), pipeline)
 	if err != nil {
 		http.Error(w, "Ошибка при получении данных пользователя", http.StatusInternalServerError)
@@ -143,7 +137,6 @@ func GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cursor.Close(context.Background())
 
-	// Декодируем результат
 	var userData bson.M
 	if cursor.Next(context.Background()) {
 		if err := cursor.Decode(&userData); err != nil {
@@ -155,22 +148,19 @@ func GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Преобразуем ObjectID в строку для удобства фронтенда
 	if userData["_id"] != nil {
 		userData["_id"] = userData["_id"].(primitive.ObjectID).Hex()
-	}
-	if userData["educationId"] != nil {
-		userData["educationId"] = userData["educationId"].(primitive.ObjectID).Hex()
 	}
 	if userData["education"] != nil {
 		education := userData["education"].(bson.M)
 		if education["_id"] != nil {
 			education["_id"] = education["_id"].(primitive.ObjectID).Hex()
 		}
-		userData["education"] = education // Добавьте эту строку, если ее нет
+		userData["education"] = education
 	}
 
-	// Отправляем данные пользователя
+	log.Println("Данные пользователя:", userData)
+
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(userData); err != nil {
 		http.Error(w, "Ошибка при формировании ответа", http.StatusInternalServerError)
@@ -190,7 +180,6 @@ func LogoutUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 func UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	// Получаем и парсим данные запроса
 	var updateData struct {
 		LastName          string `json:"lastName,omitempty"`
 		FirstName         string `json:"firstName,omitempty"`
@@ -203,6 +192,8 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		WorkPlace         string `json:"workPlace,omitempty"`
 		JobTitle          string `json:"jobTitle,omitempty"`
 		PassportData      string `json:"passportData,omitempty"`
+		PassportIssuedBy  string `json:"passportIssuedBy,omitempty"`
+		PassportIssueDate string `json:"passportIssueDate,omitempty"` // Новое поле
 		Snils             string `json:"snils,omitempty"`
 		OldPassword       string `json:"oldPassword,omitempty"`
 		NewPassword       string `json:"newPassword,omitempty"`
@@ -214,7 +205,6 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получаем ID пользователя из токена
 	cookie, err := r.Cookie("token")
 	if err != nil {
 		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
@@ -238,11 +228,8 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	collection := db.GetCollection(db.UsersCollection)
-
-	// Создаём объект для обновления
 	update := bson.M{}
 
-	// Обновляем основные поля
 	if updateData.LastName != "" {
 		update["lastname"] = updateData.LastName
 	}
@@ -273,12 +260,17 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	if updateData.PassportData != "" {
 		update["passportdata"] = updateData.PassportData
 	}
+	if updateData.PassportIssuedBy != "" {
+		update["passportissuedby"] = updateData.PassportIssuedBy
+	}
+	if updateData.PassportIssueDate != "" {
+		update["passportissuedate"] = updateData.PassportIssueDate // Новое поле
+	}
 	if updateData.Snils != "" {
 		update["snils"] = updateData.Snils
 	}
 	update["agreetoprocessing"] = updateData.AgreeToProcessing
 
-	// Обработка образования
 	if updateData.EducationID != "" {
 		educationID, err := primitive.ObjectIDFromHex(updateData.EducationID)
 		if err != nil {
@@ -288,7 +280,6 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		update["educationid"] = educationID
 	}
 
-	// Обработка пароля
 	if updateData.OldPassword != "" && updateData.NewPassword != "" {
 		var user models.User
 		if err := collection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user); err != nil {
@@ -310,7 +301,6 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		update["password"] = string(hashedPassword)
 	}
 
-	// Выполняем обновление
 	result, err := collection.UpdateOne(
 		context.Background(),
 		bson.M{"_id": userID},
@@ -324,17 +314,6 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	if result.MatchedCount == 0 {
 		http.Error(w, "Пользователь не найден", http.StatusNotFound)
-		return
-	}
-	// Выполняем обновление
-	_, err = collection.UpdateOne(
-		context.Background(),
-		bson.M{"_id": userID},
-		bson.M{"$set": update},
-	)
-
-	if err != nil {
-		http.Error(w, "Ошибка при обновлении профиля: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

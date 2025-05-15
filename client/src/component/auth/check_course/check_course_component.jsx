@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import "./check_course_component.css";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, PDFTextField } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import qr from "../../../assets/mustafin_qr.jpg";
 import ArialFont from "../../../assets/fonts/Arial.ttf";
 
@@ -44,7 +45,7 @@ const CheckCourse = () => {
         fetchCourses(selectedStatus);
     }, [selectedStatus]);
 
-    const handleDownloadContract = async (courseId) => {
+   const handleDownloadContract = async (courseId) => {
         try {
             // 1. Получить данные договора
             const dataResponse = await fetch(`http://localhost:5000/user/contract-data/${courseId}`, {
@@ -67,7 +68,8 @@ const CheckCourse = () => {
             const pdfDoc = await PDFDocument.load(pdfBytes);
             const form = pdfDoc.getForm();
 
-            // 4. Загрузить шрифт Arial
+            // 4. Регистрация fontkit и загрузка шрифта Arial
+            pdfDoc.registerFontkit(fontkit);
             let font;
             try {
                 const fontResponse = await fetch(ArialFont);
@@ -78,16 +80,14 @@ const CheckCourse = () => {
                 font = await pdfDoc.embedFont(fontBytes, { subset: true });
                 console.log("Шрифт Arial успешно загружен");
             } catch (fontError) {
-                console.warn("Не удалось загрузить Arial, использую Helvetica:", fontError);
-                font = await pdfDoc.embedFont(StandardFonts.Helvetica); // Helvetica как запасной вариант
+                throw new Error(`Не удалось загрузить шрифт Arial: ${fontError.message}`);
             }
+
             // 5. Заполнить поля формы
             try {
-                // Логируем доступные поля для отладки
                 const fieldNames = form.getFields().map(field => field.getName());
                 console.log("Доступные поля формы:", fieldNames);
 
-                // Карта полей (основана на полях из PDF)
                 const fieldMap = {
                     FullName: ["FullName"],
                     CourseTitle: ["CourseTitle"],
@@ -99,15 +99,16 @@ const CheckCourse = () => {
                     SNILS: ["SNILS"],
                     Phone: ["Phone"],
                     Email: ["Email"],
-                    DocumentDay: ["DocumentDay"], // Новое поле
-                    CourseEnd: ["CourseEnd"],     // Новое поле
-                    Time: ["Time"],               // Новое поле
+                    DocumentDay: ["DocumentDay"],
+                    CourseEnd: ["CourseEnd"],
+                    Time: ["Time"],
                     TimeDayStart: ["TimeDayStart"],
                     TimeMonthStart: ["TimeMonthStart"],
                     TimeDayEnd: ["TimeDayEnd"],
                     TimeMonthEnd: ["TimeMonthEnd"],
-                    HowGive: ["HowGive"],         // Новое поле
+                    HowGive: ["HowGive"],
                 };
+
                 for (const [key, value] of Object.entries(formData)) {
                     const possibleNames = fieldMap[key] || [key];
                     let fieldFilled = false;
@@ -115,16 +116,18 @@ const CheckCourse = () => {
                         try {
                             const field = form.getTextField(fieldName);
                             if (field) {
+                                console.log(`Попытка заполнить поле ${fieldName} значением: ${value}`);
                                 field.setText(value);
-                                // Обновляем внешний вид поля с кастомным шрифтом
-                                field.updateAppearances(font);
-                                field.enableMultiline(); // На случай длинного текста
-                                console.log(`Заполнено поле ${fieldName}: ${value}`);
+                                field.updateAppearances(font); // Удаляем { encoding: "unicode" }
+                                field.enableMultiline();
+                                console.log(`Успешно заполнено поле ${fieldName}: ${value}`);
                                 fieldFilled = true;
                                 break;
+                            } else {
+                                console.warn(`Поле ${fieldName} не найдено в форме`);
                             }
                         } catch (fieldError) {
-                            console.warn(`Ошибка при заполнении поля ${fieldName}:`, fieldError.message);
+                            console.warn(`Ошибка при заполнении поля ${fieldName}: ${fieldError.message}`);
                         }
                     }
                     if (!fieldFilled) {
@@ -132,8 +135,19 @@ const CheckCourse = () => {
                     }
                 }
 
+                // Применяем шрифт ко всем текстовым полям
+                form.getFields().forEach(field => {
+                    if (field instanceof PDFTextField) {
+                        try {
+                            field.updateAppearances(font); // Удаляем { encoding: "unicode" }
+                        } catch (appearanceError) {
+                            console.warn(`Ошибка при обновлении внешнего вида поля ${field.getName()}: ${appearanceError.message}`);
+                        }
+                    }
+                });
+
                 // 6. Сохранить PDF
-                form.flatten(); // Зафиксировать поля
+                form.flatten();
                 const updatedPdfBytes = await pdfDoc.save();
 
                 // 7. Скачать PDF
