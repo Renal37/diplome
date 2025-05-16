@@ -285,6 +285,7 @@ func GetCourseByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(course)
 }
+
 func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		CourseID primitive.ObjectID `json:"courseId"`
@@ -292,8 +293,81 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 	}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат данных", http.StatusBadRequest)
 		return
+	}
+
+	fmt.Printf("Полученные данные: CourseID=%s, UserID=%s\n", request.CourseID.Hex(), request.UserID.Hex())
+
+	// Проверяем, что пользователь существует и профиль заполнен
+	userCollection := db.GetCollection(db.UsersCollection)
+	var user models.User
+	err = userCollection.FindOne(context.Background(), bson.M{"_id": request.UserID}).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeJSONError(w, "Пользователь не найден", http.StatusNotFound)
+		} else {
+			writeJSONError(w, "Ошибка при получении пользователя", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Проверка обязательных полей пользователя
+	requiredFields := map[string]string{
+		"lastname":          "Фамилия не заполнена",
+		"firstname":         "Имя не заполнено",
+		"middlename":        "Отчество не заполнено",
+		"birthdate":         "Дата рождения не указана",
+		"birthplace":        "Место рождения не указано",
+		"educationid":       "Образование не указано",
+		"email":             "Email не указан",
+		"homeaddress":       "Домашний адрес не указан",
+		"jobtitle":          "Должность не указана",
+		"passportdata":      "Паспортные данные не указаны",
+		"phone":             "Телефон не указан",
+		"snils":             "СНИЛС не указан",
+		"workplace":         "Место работы не указано",
+		"passportissuedby":  "Кем выдан паспорт не указано",
+		"passportissuedate": "Дата выдачи паспорта не указана",
+		"agreetoprocessing": "Согласие на обработку данных не получено",
+		"contractuploaded":  "Соглашение не загружено",
+	}
+
+	userMap := bson.M{
+		"lastname":          user.LastName,
+		"firstname":         user.FirstName,
+		"middlename":        user.MiddleName,
+		"birthdate":         user.BirthDate,
+		"birthplace":        user.BirthPlace,
+		"educationid":       user.EducationID,
+		"email":             user.Email,
+		"homeaddress":       user.HomeAddress,
+		"jobtitle":          user.JobTitle,
+		"passportdata":      user.PassportData,
+		"phone":             user.Phone,
+		"snils":             user.SNILS,
+		"workplace":         user.WorkPlace,
+		"passportissuedby":  user.PassportIssuedBy,
+		"passportissuedate": user.PassportIssueDate,
+		"agreetoprocessing": user.AgreeToProcessing,
+		"contractuploaded":  user.ContractUploaded,
+	}
+
+	for field, message := range requiredFields {
+		if field == "agreetoprocessing" || field == "contractuploaded" {
+			if !userMap[field].(bool) {
+				writeJSONError(w, message, http.StatusBadRequest)
+				return
+			}
+		} else if field == "educationid" {
+			if userMap[field].(primitive.ObjectID).IsZero() {
+				writeJSONError(w, message, http.StatusBadRequest)
+				return
+			}
+		} else if userMap[field] == "" {
+			writeJSONError(w, message, http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Проверяем, что курс существует и даты регистрации актуальны
@@ -302,25 +376,66 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 	err = courseCollection.FindOne(context.Background(), bson.M{"_id": request.CourseID}).Decode(&course)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			http.Error(w, "Курс не найден", http.StatusNotFound)
+			writeJSONError(w, "Курс не найден", http.StatusNotFound)
 		} else {
-			http.Error(w, "Ошибка при получении курса", http.StatusInternalServerError)
+			writeJSONError(w, "Ошибка при получении курса", http.StatusInternalServerError)
 		}
 		return
 	}
 
 	currentTime := time.Now()
+	fmt.Printf("currentTime: %v, registrationStart: %v, registrationEnd: %v\n",
+		currentTime, course.RegistrationStart, course.RegistrationEnd)
 	if currentTime.Before(course.RegistrationStart) {
-		http.Error(w, "Регистрация на курс еще не началась", http.StatusBadRequest)
+		writeJSONError(w, "Регистрация на курс ещё не началась", http.StatusBadRequest)
 		return
 	}
 	if currentTime.After(course.RegistrationEnd) {
-		http.Error(w, "Регистрация на курс уже закончилась", http.StatusBadRequest)
+		writeJSONError(w, "Регистрация на курс уже закончилась", http.StatusBadRequest)
 		return
 	}
 
-	collection := db.GetCollection(db.CourseRegistrationsCollection)
+	// Проверка уровня образования для курсов типа "Профессиональная переподготовка"
+	if course.Type == "Профессиональная переподготовка" {
+		educationCollection := db.GetCollection(db.EducationsCollection)
+		var education bson.M
+		err = educationCollection.FindOne(context.Background(), bson.M{"_id": user.EducationID}).Decode(&education)
+		if err != nil {
+			writeJSONError(w, "Ошибка при получении данных об образовании", http.StatusInternalServerError)
+			return
+		}
+		educationName := education["name"].(string)
+		allowedEducations := []string{
+			"Среднее профессиональное",
+			"Высшее",
+			"Высшее образование",
+		}
+		isAllowed := false
+		for _, allowed := range allowedEducations {
+			if educationName == allowed {
+				isAllowed = true
+				break
+			}
+		}
+		if !isAllowed {
+			writeJSONError(w,
+				"Для записи на этот курс требуется среднее профессиональное или высшее образование",
+				http.StatusBadRequest)
+			return
+		}
+	}
 
+	// Проверка, не зарегистрирован ли пользователь уже на этот курс
+	registrationCollection := db.GetCollection(db.CourseRegistrationsCollection)
+	var existingRegistration bson.M
+	err = registrationCollection.FindOne(context.Background(),
+		bson.M{"courseId": request.CourseID, "userId": request.UserID}).Decode(&existingRegistration)
+	if err == nil {
+		writeJSONError(w, "Вы уже зарегистрированы на этот курс", http.StatusBadRequest)
+		return
+	}
+
+	// Регистрация пользователя на курс
 	registration := bson.M{
 		"courseId":          request.CourseID,
 		"userId":            request.UserID,
@@ -330,9 +445,9 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		"registrationEnd":   course.RegistrationEnd,
 	}
 
-	_, err = collection.InsertOne(context.Background(), registration)
+	_, err = registrationCollection.InsertOne(context.Background(), registration)
 	if err != nil {
-		http.Error(w, "Ошибка при записи на курс", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при записи на курс", http.StatusInternalServerError)
 		return
 	}
 
