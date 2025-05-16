@@ -9,6 +9,8 @@ const AdminCourseManagement = () => {
   const [courseDuration, setCourseDuration] = useState('');
   const [coursePriceId, setCoursePriceId] = useState('');
   const [courseTypeId, setCourseTypeId] = useState('');
+  const [registrationStart, setRegistrationStart] = useState('');
+  const [registrationEnd, setRegistrationEnd] = useState('');
   const [courseTypes, setCourseTypes] = useState([]);
   const [prices, setPrices] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,6 +23,9 @@ const AdminCourseManagement = () => {
   const [selectedPrices, setSelectedPrices] = useState([]);
   const [percentIncrease, setPercentIncrease] = useState(0);
   const [filterType, setFilterType] = useState('Все');
+
+  // Текущая дата для ограничения input (16 мая 2025 года)
+  const today = new Date().toISOString().split('T')[0];
 
   // Загрузка данных
   useEffect(() => {
@@ -68,8 +73,40 @@ const AdminCourseManagement = () => {
   // Добавление курса
   const handleAddCourse = async (e) => {
     e.preventDefault();
-    if (!coursePriceId || !courseTypeId) {
+    if (!coursePriceId || !courseTypeId || !registrationStart || !registrationEnd) {
       alert('Пожалуйста, заполните все обязательные поля');
+      return;
+    }
+
+    const registrationStartDate = new Date(registrationStart);
+    const registrationEndDate = new Date(registrationEnd);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0); // Сбрасываем время до полуночи
+
+    // Отладочная информация
+    console.log('Отправка данных:');
+    console.log('registrationStart:', registrationStart);
+    console.log('registrationEnd:', registrationEnd);
+    console.log('registrationStartDate:', registrationStartDate.toISOString());
+    console.log('registrationEndDate:', registrationEndDate.toISOString());
+    console.log('todayDate:', todayDate.toISOString());
+    console.log('registrationStartDate < todayDate:', registrationStartDate < todayDate);
+    console.log('registrationEndDate < registrationStartDate:', registrationEndDate < registrationStartDate);
+
+    if (isNaN(registrationStartDate.getTime()) || isNaN(registrationEndDate.getTime())) {
+      alert('Некорректная дата начала или окончания регистрации');
+      return;
+    }
+
+    // Проверяем, что дата начала регистрации не раньше текущей даты
+    if (registrationStartDate < todayDate) {
+      alert('Дата начала регистрации не может быть раньше сегодняшней даты (16 мая 2025 года)');
+      return;
+    }
+
+    // Проверяем, что дата окончания регистрации не раньше даты начала
+    if (registrationEndDate < registrationStartDate) {
+      alert('Дата окончания регистрации не может быть раньше даты начала');
       return;
     }
 
@@ -81,28 +118,40 @@ const AdminCourseManagement = () => {
       return;
     }
 
+    const courseData = {
+      title: courseTitle,
+      description: courseDescription,
+      duration: parseInt(courseDuration, 10),
+      priceId: selectedPrice._id,
+      price: selectedPrice.amount,
+      typeId: selectedType._id,
+      type: selectedType.name,
+      registrationStart: registrationStartDate.toISOString(),
+      registrationEnd: registrationEndDate.toISOString(),
+    };
+
+    console.log('Отправляемый JSON:', JSON.stringify(courseData, null, 2));
+
     try {
       const response = await fetch('http://localhost:5000/add-course', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          title: courseTitle,
-          description: courseDescription,
-          duration: parseInt(courseDuration, 10),
-          priceId: selectedPrice._id,
-          price: selectedPrice.amount,
-          typeId: selectedType._id,
-          type: selectedType.name,
-        }),
+        body: JSON.stringify(courseData),
       });
 
-      const data = await response.json();
-
+      let errorMessage = 'Ошибка при добавлении курса';
       if (!response.ok) {
-        throw new Error(data.error || 'Ошибка при добавлении курса');
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = await response.text() || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
+      const data = await response.json();
       alert('Курс успешно добавлен');
       setIsModalOpen(false);
       resetCourseForm();
@@ -118,33 +167,82 @@ const AdminCourseManagement = () => {
     e.preventDefault();
     if (!selectedCourse) return;
 
+    if (!coursePriceId || !courseTypeId || !registrationStart || !registrationEnd) {
+      alert('Пожалуйста, заполните все обязательные поля');
+      return;
+    }
+
+    const registrationStartDate = new Date(registrationStart);
+    const registrationEndDate = new Date(registrationEnd);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0); // Сбрасываем время до полуночи
+
+    // Отладочная информация
+    console.log('Отправка данных:');
+    console.log('registrationStart:', registrationStart);
+    console.log('registrationEnd:', registrationEnd);
+    console.log('registrationStartDate:', registrationStartDate.toISOString());
+    console.log('registrationEndDate:', registrationEndDate.toISOString());
+    console.log('todayDate:', todayDate.toISOString());
+    console.log('registrationStartDate < todayDate:', registrationStartDate < todayDate);
+    console.log('registrationEndDate < registrationStartDate:', registrationEndDate < registrationStartDate);
+
+    if (isNaN(registrationStartDate.getTime()) || isNaN(registrationEndDate.getTime())) {
+      alert('Некорректная дата начала или окончания регистрации');
+      return;
+    }
+
+    // Проверяем, что дата начала регистрации не раньше текущей даты
+    if (registrationStartDate < todayDate) {
+      alert('Дата начала регистрации не может быть раньше сегодняшней даты (16 мая 2025 года)');
+      return;
+    }
+
+    // Проверяем, что дата окончания регистрации не раньше даты начала
+    if (registrationEndDate < registrationStartDate) {
+      alert('Дата окончания регистрации не может быть раньше даты начала');
+      return;
+    }
+
+    const selectedPrice = prices.find(price => price._id === coursePriceId);
+    const selectedType = courseTypes.find(type => type._id === courseTypeId);
+
+    if (!selectedPrice || !selectedType) {
+      alert('Выбранная стоимость или тип курса не найдены');
+      return;
+    }
+
+    const courseData = {
+      title: courseTitle,
+      description: courseDescription,
+      duration: parseInt(courseDuration, 10),
+      priceId: selectedPrice._id,
+      price: selectedPrice.amount,
+      typeId: selectedType._id,
+      type: selectedType.name,
+      registrationStart: registrationStartDate.toISOString(),
+      registrationEnd: registrationEndDate.toISOString(),
+    };
+
+    console.log('Отправляемый JSON:', JSON.stringify(courseData, null, 2));
+
     try {
-      const selectedPrice = prices.find(price => price._id === coursePriceId);
-      const selectedType = courseTypes.find(type => type._id === courseTypeId);
-
-      if (!selectedPrice || !selectedType) {
-        alert('Выбранная стоимость или тип курса не найдены');
-        return;
-      }
-
       const response = await fetch(`http://localhost:5000/update-course/${selectedCourse._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          title: courseTitle,
-          description: courseDescription,
-          duration: parseInt(courseDuration, 10),
-          priceId: selectedPrice._id,
-          price: selectedPrice.amount,
-          typeId: selectedType._id,
-          type: selectedType.name,
-        }),
+        body: JSON.stringify(courseData),
       });
 
+      let errorMessage = 'Ошибка при обновлении курса';
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Ошибка при обновлении курса');
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = await response.text() || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       alert('Курс успешно обновлен');
@@ -352,6 +450,8 @@ const AdminCourseManagement = () => {
     setCourseDuration('');
     setCoursePriceId('');
     setCourseTypeId('');
+    setRegistrationStart('');
+    setRegistrationEnd('');
     setSelectedCourse(null);
   };
 
@@ -366,6 +466,8 @@ const AdminCourseManagement = () => {
     setCourseDuration(course.duration);
     setCoursePriceId(course.priceId || '');
     setCourseTypeId(course.typeId || '');
+    setRegistrationStart(course.registrationStart ? new Date(course.registrationStart).toISOString().split('T')[0] : '');
+    setRegistrationEnd(course.registrationEnd ? new Date(course.registrationEnd).toISOString().split('T')[0] : '');
   };
 
   const handleCloseUpdateForm = () => {
@@ -450,7 +552,22 @@ const AdminCourseManagement = () => {
                 onChange={(e) => setCourseDuration(e.target.value)}
                 required
               />
-
+              <input
+                type="date"
+                placeholder="Дата начала регистрации"
+                value={registrationStart}
+                onChange={(e) => setRegistrationStart(e.target.value)}
+                min={today}
+                required
+              />
+              <input
+                type="date"
+                placeholder="Дата окончания регистрации"
+                value={registrationEnd}
+                onChange={(e) => setRegistrationEnd(e.target.value)}
+                min={registrationStart || today}
+                required
+              />
               <div className="price-selection">
                 <label>Выберите стоимость:</label>
                 <select
@@ -734,6 +851,8 @@ const AdminCourseManagement = () => {
             <th>Продолжительность (часы)</th>
             <th>Стоимость (руб.)</th>
             <th>Тип</th>
+            <th>Начало регистрации</th>
+            <th>Окончание регистрации</th>
             <th>Действия</th>
           </tr>
         </thead>
@@ -746,6 +865,8 @@ const AdminCourseManagement = () => {
                 <td>{course.duration}</td>
                 <td>{course.price}</td>
                 <td>{course.type}</td>
+                <td>{course.registrationStart ? new Date(course.registrationStart).toLocaleDateString() : '-'}</td>
+                <td>{course.registrationEnd ? new Date(course.registrationEnd).toLocaleDateString() : '-'}</td>
                 <td>
                   <button
                     className='reject-btn'
@@ -760,7 +881,7 @@ const AdminCourseManagement = () => {
               </tr>
               {selectedCourse && selectedCourse._id === course._id && (
                 <tr>
-                  <td colSpan="6">
+                  <td colSpan="8">
                     <form onSubmit={handleUpdateCourse} className="update-form">
                       <input
                         type="text"
@@ -782,7 +903,22 @@ const AdminCourseManagement = () => {
                         onChange={(e) => setCourseDuration(e.target.value)}
                         required
                       />
-
+                      <input
+                        type="date"
+                        placeholder="Дата начала регистрации"
+                        value={registrationStart}
+                        onChange={(e) => setRegistrationStart(e.target.value)}
+                        min={today}
+                        required
+                      />
+                      <input
+                        type="date"
+                        placeholder="Дата окончания регистрации"
+                        value={registrationEnd}
+                        onChange={(e) => setRegistrationEnd(e.target.value)}
+                        min={registrationStart || today}
+                        required
+                      />
                       <div className="price-selection">
                         <label>Выберите стоимость:</label>
                         <select

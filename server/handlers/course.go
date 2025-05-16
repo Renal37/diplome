@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/Renal37/db"
 	"github.com/Renal37/models"
 	"github.com/Renal37/utils"
@@ -12,136 +15,192 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"net/http"
-	"time"
 )
 
+// writeJSONError отправляет JSON-ошибку с указанным сообщением и кодом состояния
+func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
 func AddCourse(w http.ResponseWriter, r *http.Request) {
-    var course models.Course
+	var course models.Course
 
-    err := json.NewDecoder(r.Body).Decode(&course)
-    if err != nil {
-        http.Error(w, "Неверный формат данных", http.StatusBadRequest)
-        return
-    }
+	err := json.NewDecoder(r.Body).Decode(&course)
+	if err != nil {
+		writeJSONError(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
 
-    // Проверяем, что priceId и typeId являются валидными ObjectID
-    if course.PriceId.IsZero() || course.TypeId.IsZero() {
-        http.Error(w, "Неверный формат ID стоимости или типа курса", http.StatusBadRequest)
-        return
-    }
+	// Отладка входных данных
+	fmt.Printf("Полученные данные: %+v\n", course)
 
-    collection := db.GetCollection(db.CoursesCollection)
+	// Проверяем, что priceId и typeId являются валидными ObjectID
+	if course.PriceId.IsZero() || course.TypeId.IsZero() {
+		writeJSONError(w, "Неверный формат ID стоимости или типа курса", http.StatusBadRequest)
+		return
+	}
 
-    fullCourse := bson.M{
-        "title":       course.Title,
-        "description": course.Description,
-        "duration":    course.Duration,
-        "priceId":     course.PriceId,
-        "price":       course.Price,
-        "typeId":      course.TypeId,
-        "type":        course.Type,
-        "createdAt":   time.Now(),
-    }
+	// Проверяем, что даты регистрации валидны
+	if course.RegistrationStart.IsZero() || course.RegistrationEnd.IsZero() {
+		writeJSONError(w, "Даты начала и окончания регистрации обязательны", http.StatusBadRequest)
+		return
+	}
 
-    result, err := collection.InsertOne(context.Background(), fullCourse)
-    if err != nil {
-        http.Error(w, "Ошибка при добавлении курса в базу данных", http.StatusInternalServerError)
-        return
-    }
+	// Проверяем, что дата окончания регистрации не раньше даты начала
+	if course.RegistrationEnd.Before(course.RegistrationStart) {
+		writeJSONError(w, "Дата окончания регистрации не может быть раньше даты начала", http.StatusBadRequest)
+		return
+	}
 
-    // Возвращаем полные данные о курсе, включая ID
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(map[string]interface{}{
-        "success": true,
-        "course": map[string]interface{}{
-            "_id":         result.InsertedID,
-            "title":       course.Title,
-            "description": course.Description,
-            "duration":    course.Duration,
-            "priceId":     course.PriceId,
-            "price":       course.Price,
-            "typeId":      course.TypeId,
-            "type":        course.Type,
-        },
-    })
+	// Проверяем, что дата начала регистрации не раньше текущей даты
+	today := time.Now().Truncate(24 * time.Hour)
+	fmt.Printf("course.RegistrationStart: %v, course.RegistrationEnd: %v, today: %v\n",
+		course.RegistrationStart, course.RegistrationEnd, today)
+	if course.RegistrationStart.Before(today) {
+		writeJSONError(w, "Дата начала регистрации не может быть раньше сегодняшней даты", http.StatusBadRequest)
+		return
+	}
+
+	collection := db.GetCollection(db.CoursesCollection)
+
+	fullCourse := bson.M{
+		"title":             course.Title,
+		"description":       course.Description,
+		"duration":          course.Duration,
+		"priceId":           course.PriceId,
+		"price":             course.Price,
+		"typeId":            course.TypeId,
+		"type":              course.Type,
+		"createdAt":         time.Now(),
+		"registrationStart": course.RegistrationStart,
+		"registrationEnd":   course.RegistrationEnd,
+	}
+
+	result, err := collection.InsertOne(context.Background(), fullCourse)
+	if err != nil {
+		writeJSONError(w, "Ошибка при добавлении курса в базу данных", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"course": map[string]interface{}{
+			"_id":               result.InsertedID,
+			"title":             course.Title,
+			"description":       course.Description,
+			"duration":          course.Duration,
+			"priceId":           course.PriceId,
+			"price":             course.Price,
+			"typeId":            course.TypeId,
+			"type":              course.Type,
+			"registrationStart": course.RegistrationStart,
+			"registrationEnd":   course.RegistrationEnd,
+		},
+	})
 }
 
 func GetCourses(w http.ResponseWriter, r *http.Request) {
-    collection := db.GetCollection(db.CoursesCollection)
+	collection := db.GetCollection(db.CoursesCollection)
 
-    // Используем агрегацию для получения полной информации о курсах
-    pipeline := bson.A{
-        bson.M{
-            "$lookup": bson.M{
-                "from":         db.PricesCollection,
-                "localField":   "priceId",
-                "foreignField": "_id",
-                "as":           "priceInfo",
-            },
-        },
-        bson.M{
-            "$lookup": bson.M{
-                "from":         db.CourseTypesCollection,
-                "localField":   "typeId",
-                "foreignField": "_id",
-                "as":           "typeInfo",
-            },
-        },
-        bson.M{
-            "$project": bson.M{
-                "title":       1,
-                "description": 1,
-                "duration":    1,
-                "price":       bson.M{"$arrayElemAt": bson.A{"$priceInfo.amount", 0}},
-                "priceId":     1,
-                "typeId":      1,
-                "type":        bson.M{"$arrayElemAt": bson.A{"$typeInfo.name", 0}},
-                "createdAt":   1,
-            },
-        },
-    }
+	pipeline := bson.A{
+		bson.M{
+			"$lookup": bson.M{
+				"from":         db.PricesCollection,
+				"localField":   "priceId",
+				"foreignField": "_id",
+				"as":           "priceInfo",
+			},
+		},
+		bson.M{
+			"$lookup": bson.M{
+				"from":         db.CourseTypesCollection,
+				"localField":   "typeId",
+				"foreignField": "_id",
+				"as":           "typeInfo",
+			},
+		},
+		bson.M{
+			"$project": bson.M{
+				"title":             1,
+				"description":       1,
+				"duration":          1,
+				"price":             bson.M{"$arrayElemAt": bson.A{"$priceInfo.amount", 0}},
+				"priceId":           1,
+				"typeId":            1,
+				"type":              bson.M{"$arrayElemAt": bson.A{"$typeInfo.name", 0}},
+				"createdAt":         1,
+				"registrationStart": 1,
+				"registrationEnd":   1,
+			},
+		},
+	}
 
-    cursor, err := collection.Aggregate(context.Background(), pipeline)
-    if err != nil {
-        http.Error(w, "Ошибка при получении курсов из базы данных", http.StatusInternalServerError)
-        return
-    }
-    defer cursor.Close(context.Background())
+	cursor, err := collection.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		writeJSONError(w, "Ошибка при получении курсов из базы данных", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
 
-    var courses []bson.M
-    if err = cursor.All(context.Background(), &courses); err != nil {
-        http.Error(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
-        return
-    }
+	var courses []bson.M
+	if err = cursor.All(context.Background(), &courses); err != nil {
+		writeJSONError(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
+		return
+	}
 
-    // Преобразуем ObjectID в строку для корректного отображения в JSON
-    for i := range courses {
-        courses[i]["_id"] = courses[i]["_id"].(primitive.ObjectID).Hex()
-        if courses[i]["priceId"] != nil {
-            courses[i]["priceId"] = courses[i]["priceId"].(primitive.ObjectID).Hex()
-        }
-        if courses[i]["typeId"] != nil {
-            courses[i]["typeId"] = courses[i]["typeId"].(primitive.ObjectID).Hex()
-        }
-    }
+	for i := range courses {
+		courses[i]["_id"] = courses[i]["_id"].(primitive.ObjectID).Hex()
+		if courses[i]["priceId"] != nil {
+			courses[i]["priceId"] = courses[i]["priceId"].(primitive.ObjectID).Hex()
+		}
+		if courses[i]["typeId"] != nil {
+			courses[i]["typeId"] = courses[i]["typeId"].(primitive.ObjectID).Hex()
+		}
+	}
 
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(courses)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(courses)
 }
 
 func UpdateCourse(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
 
 	var course models.Course
 	err = json.NewDecoder(r.Body).Decode(&course)
 	if err != nil {
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+
+	// Отладка входных данных
+	fmt.Printf("Полученные данные: %+v\n", course)
+
+	// Проверяем даты регистрации
+	if course.RegistrationStart.IsZero() || course.RegistrationEnd.IsZero() {
+		writeJSONError(w, "Даты начала и окончания регистрации обязательны", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем, что дата окончания регистрации не раньше даты начала
+	if course.RegistrationEnd.Before(course.RegistrationStart) {
+		writeJSONError(w, "Дата окончания регистрации не может быть раньше даты начала", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем, что дата начала регистрации не раньше текущей даты
+	today := time.Now().Truncate(24 * time.Hour)
+	fmt.Printf("course.RegistrationStart: %v, course.RegistrationEnd: %v, today: %v\n",
+		course.RegistrationStart, course.RegistrationEnd, today)
+	if course.RegistrationStart.Before(today) {
+		writeJSONError(w, "Дата начала регистрации не может быть раньше сегодняшней даты", http.StatusBadRequest)
 		return
 	}
 
@@ -150,28 +209,33 @@ func UpdateCourse(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{"_id": id}
 	update := bson.M{
 		"$set": bson.M{
-			"title":       course.Title,
-			"description": course.Description,
-			"duration":    course.Duration,
-			"price":       course.Price,
-			"type":        course.Type,
+			"title":             course.Title,
+			"description":       course.Description,
+			"duration":          course.Duration,
+			"price":             course.Price,
+			"type":              course.Type,
+			"priceId":           course.PriceId,
+			"typeId":            course.TypeId,
+			"registrationStart": course.RegistrationStart,
+			"registrationEnd":   course.RegistrationEnd,
 		},
 	}
 
 	_, err = collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, "Ошибка при обновлении курса в базе данных", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при обновлении курса в базе данных", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Fprintf(w, "Курс '%s' успешно обновлен!", course.Title)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": fmt.Sprintf("Курс '%s' успешно обновлен!", course.Title)})
 }
 
 func DeleteCourse(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
 
@@ -179,7 +243,7 @@ func DeleteCourse(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{"_id": id}
 	_, err = courseCollection.DeleteOne(context.Background(), filter)
 	if err != nil {
-		http.Error(w, "Ошибка при удалении курса из базы данных", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при удалении курса из базы данных", http.StatusInternalServerError)
 		return
 	}
 
@@ -187,12 +251,15 @@ func DeleteCourse(w http.ResponseWriter, r *http.Request) {
 	registrationCollection := db.GetCollection(db.CourseRegistrationsCollection)
 	_, err = registrationCollection.DeleteMany(context.Background(), bson.M{"courseId": id})
 	if err != nil {
-		http.Error(w, "Ошибка при удалении заявок на курс", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при удалении заявок на курс", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Fprintf(w, "Курс и все связанные заявки успешно удалены!")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Курс и все связанные заявки успешно удалены!"})
 }
+
+// ... остальные функции остаются без изменений ...
 func GetCourseByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	courseID, err := primitive.ObjectIDFromHex(vars["id"])
@@ -228,13 +295,39 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
 		return
 	}
+
+	// Проверяем, что курс существует и даты регистрации актуальны
+	courseCollection := db.GetCollection(db.CoursesCollection)
+	var course models.Course
+	err = courseCollection.FindOne(context.Background(), bson.M{"_id": request.CourseID}).Decode(&course)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			http.Error(w, "Курс не найден", http.StatusNotFound)
+		} else {
+			http.Error(w, "Ошибка при получении курса", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	currentTime := time.Now()
+	if currentTime.Before(course.RegistrationStart) {
+		http.Error(w, "Регистрация на курс еще не началась", http.StatusBadRequest)
+		return
+	}
+	if currentTime.After(course.RegistrationEnd) {
+		http.Error(w, "Регистрация на курс уже закончилась", http.StatusBadRequest)
+		return
+	}
+
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
 	registration := bson.M{
-		"courseId":     request.CourseID,
-		"userId":       request.UserID,
-		"status":       "Ожидание",
-		"registerDate": time.Now().Format("2006-01-02"), // Добавляем текущую дату
+		"courseId":          request.CourseID,
+		"userId":            request.UserID,
+		"status":            "Ожидание",
+		"registerDate":      time.Now().Format("2006-01-02"),
+		"registrationStart": course.RegistrationStart,
+		"registrationEnd":   course.RegistrationEnd,
 	}
 
 	_, err = collection.InsertOne(context.Background(), registration)
@@ -749,7 +842,7 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 	var newStatus string
 	if order.OrderType == "О выпуске обучающихся" {
 		newStatus = "Завершил"
-		
+
 	} else if order.OrderType == "О зачислении обучающихся" {
 		newStatus = "Проходит курс"
 	} else if order.OrderType == "Об отчислении обучающихся" {
