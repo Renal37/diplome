@@ -2,36 +2,90 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"github.com/Renal37/db"
 
+	"github.com/Renal37/db"
+	"github.com/Renal37/models"
+	"github.com/Renal37/utils"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	
 )
 
-func DownloadDocument(w http.ResponseWriter, r *http.Request) {
-	// Путь к шаблону PDF
-	templatePath := "../server/document_donwload/согласие на обработку ПД совершеннолетнего студента.pdf"
+func FillConsent(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		log.Printf("Токен отсутствует: %v", err)
+		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+		return
+	}
 
-	// Проверяем, существует ли файл по указанному пути
+	claims := &utils.Claims{}
+	token, err := jwt.ParseWithClaims(cookie.Value, claims, func(token *jwt.Token) (interface{}, error) {
+		return utils.JwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		log.Printf("Неверный токен: %v", err)
+		http.Error(w, "Неверный токен", http.StatusUnauthorized)
+		return
+	}
+
+	userID, err := primitive.ObjectIDFromHex(claims.UserID)
+	if err != nil {
+		log.Printf("Неверный формат ID пользователя: %v", err)
+		http.Error(w, "Неверный формат ID пользователя", http.StatusBadRequest)
+		return
+	}
+
+	userCollection := db.GetCollection(db.UsersCollection)
+	var user models.User
+	err = userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		log.Printf("Пользователь не найден: %v", err)
+		http.Error(w, "Пользователь не найден", http.StatusNotFound)
+		return
+	}
+
+	consentData := map[string]interface{}{
+		"FullName":          fmt.Sprintf("%s %s %s", user.LastName, user.FirstName, user.MiddleName),
+		"PassportData":      user.PassportData,
+		"PassportIssuedBy":  user.PassportIssuedBy,
+		"PassportIssueDate": user.PassportIssueDate,
+		"HomeAddress":       user.HomeAddress,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(consentData); err != nil {
+		log.Printf("Ошибка при формировании ответа: %v", err)
+		http.Error(w, "Ошибка при формировании ответа", http.StatusInternalServerError)
+	}
+}
+func DownloadDocument(w http.ResponseWriter, r *http.Request) {
+	templatePath := "./document_download/согласие1.pdf"
 	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+		log.Printf("Файл не найден: %v", err)
 		http.Error(w, "Файл не найден", http.StatusNotFound)
 		return
 	}
 
-	// Устанавливаем заголовки для скачивания файла
+	fileBytes, err := os.ReadFile(templatePath)
+	if err != nil {
+		log.Printf("Ошибка при чтении файла: %v", err)
+		http.Error(w, "Ошибка при чтении файла", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "attachment; filename=согласие на обработку данных.pdf")
-
-	// Отправляем файл клиенту
-	http.ServeFile(w, r, templatePath)
+	w.Write(fileBytes)
 }
 func UploadDocument(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

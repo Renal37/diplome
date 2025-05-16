@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/Renal37/handlers"
 	"github.com/gorilla/mux"
-
 	"net/http"
 )
 
@@ -52,6 +51,7 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/user/download-document", handlers.DownloadDocument).Methods("GET")
 	r.HandleFunc("/user/upload-document/{userId}", handlers.UploadDocument).Methods("POST")
 	r.HandleFunc("/user/view-consent/{userId}", handlers.ViewConsent).Methods("GET")
+	r.HandleFunc("/user/fill-consent", handlers.FillConsent).Methods("GET") // Новый маршрут
 
 	// Маршруты для групп
 	r.HandleFunc("/groups", handlers.GetGroups).Methods("GET")
@@ -85,7 +85,6 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/admin/orders/add", handlers.AddOrder).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/orders/update", handlers.UpdateOrder).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/admin/orders/delete", handlers.DeleteOrder).Methods("DELETE", "OPTIONS")
-	// Маршрут для доступа к файлам приказов
 	r.PathPrefix("/uploads/orders/").Handler(http.StripPrefix("/uploads/orders/",
 		http.FileServer(http.Dir("./uploads/orders/"))))
 
@@ -101,3 +100,4 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/user/contract-data/{courseId}", handlers.GetContractData).Methods("GET")
 	r.HandleFunc("/contract-template", handlers.GetContractTemplate).Methods("GET")
 }
+	
