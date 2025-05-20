@@ -11,6 +11,7 @@ const AdminCourseManagement = () => {
   const [courseTypeId, setCourseTypeId] = useState('');
   const [registrationStart, setRegistrationStart] = useState('');
   const [registrationEnd, setRegistrationEnd] = useState('');
+  const [courseMaxStudents, setCourseMaxStudents] = useState(''); // Новое состояние для maxStudents
   const [courseTypes, setCourseTypes] = useState([]);
   const [prices, setPrices] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,7 +25,7 @@ const AdminCourseManagement = () => {
   const [percentIncrease, setPercentIncrease] = useState(0);
   const [filterType, setFilterType] = useState('Все');
 
-  // Текущая дата для ограничения input (16 мая 2025 года)
+  // Текущая дата для ограничения input
   const today = new Date().toISOString().split('T')[0];
 
   // Загрузка данных
@@ -73,8 +74,8 @@ const AdminCourseManagement = () => {
   // Добавление курса
   const handleAddCourse = async (e) => {
     e.preventDefault();
-    if (!coursePriceId || !courseTypeId || !registrationStart || !registrationEnd) {
-      alert('Пожалуйста, заполните все обязательные поля');
+    if (!coursePriceId || !courseTypeId || !registrationStart || !registrationEnd || !courseMaxStudents) {
+      alert('Пожалуйста, заполните все обязательные поля, включая максимальное количество студентов');
       return;
     }
 
@@ -82,31 +83,25 @@ const AdminCourseManagement = () => {
     const registrationEndDate = new Date(registrationEnd);
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0); // Сбрасываем время до полуночи
-
-    // Отладочная информация
-    console.log('Отправка данных:');
-    console.log('registrationStart:', registrationStart);
-    console.log('registrationEnd:', registrationEnd);
-    console.log('registrationStartDate:', registrationStartDate.toISOString());
-    console.log('registrationEndDate:', registrationEndDate.toISOString());
-    console.log('todayDate:', todayDate.toISOString());
-    console.log('registrationStartDate < todayDate:', registrationStartDate < todayDate);
-    console.log('registrationEndDate < registrationStartDate:', registrationEndDate < registrationStartDate);
+    const maxStudents = parseInt(courseMaxStudents, 10);
 
     if (isNaN(registrationStartDate.getTime()) || isNaN(registrationEndDate.getTime())) {
       alert('Некорректная дата начала или окончания регистрации');
       return;
     }
 
-    // Проверяем, что дата начала регистрации не раньше текущей даты
     if (registrationStartDate < todayDate) {
-      alert('Дата начала регистрации не может быть раньше сегодняшней даты (16 мая 2025 года)');
+      alert('Дата начала регистрации не может быть раньше сегодняшней даты');
       return;
     }
 
-    // Проверяем, что дата окончания регистрации не раньше даты начала
     if (registrationEndDate < registrationStartDate) {
       alert('Дата окончания регистрации не может быть раньше даты начала');
+      return;
+    }
+
+    if (isNaN(maxStudents) || maxStudents < 1) {
+      alert('Максимальное количество студентов должно быть положительным числом');
       return;
     }
 
@@ -128,9 +123,9 @@ const AdminCourseManagement = () => {
       type: selectedType.name,
       registrationStart: registrationStartDate.toISOString(),
       registrationEnd: registrationEndDate.toISOString(),
+      studentsCount: 0,
+      maxStudents: maxStudents, // Добавляем maxStudents
     };
-
-    console.log('Отправляемый JSON:', JSON.stringify(courseData, null, 2));
 
     try {
       const response = await fetch('http://localhost:5000/add-course', {
@@ -167,40 +162,39 @@ const AdminCourseManagement = () => {
     e.preventDefault();
     if (!selectedCourse) return;
 
-    if (!coursePriceId || !courseTypeId || !registrationStart || !registrationEnd) {
-      alert('Пожалуйста, заполните все обязательные поля');
+    if (!coursePriceId || !courseTypeId || !registrationStart || !registrationEnd || !courseMaxStudents) {
+      alert('Пожалуйста, заполните все обязательные поля, включая максимальное количество студентов');
       return;
     }
 
     const registrationStartDate = new Date(registrationStart);
     const registrationEndDate = new Date(registrationEnd);
     const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0); // Сбрасываем время до полуночи
-
-    // Отладочная информация
-    console.log('Отправка данных:');
-    console.log('registrationStart:', registrationStart);
-    console.log('registrationEnd:', registrationEnd);
-    console.log('registrationStartDate:', registrationStartDate.toISOString());
-    console.log('registrationEndDate:', registrationEndDate.toISOString());
-    console.log('todayDate:', todayDate.toISOString());
-    console.log('registrationStartDate < todayDate:', registrationStartDate < todayDate);
-    console.log('registrationEndDate < registrationStartDate:', registrationEndDate < registrationStartDate);
+    todayDate.setHours(0, 0, 0, 0);
+    const maxStudents = parseInt(courseMaxStudents, 10);
 
     if (isNaN(registrationStartDate.getTime()) || isNaN(registrationEndDate.getTime())) {
       alert('Некорректная дата начала или окончания регистрации');
       return;
     }
 
-    // Проверяем, что дата начала регистрации не раньше текущей даты
     if (registrationStartDate < todayDate) {
-      alert('Дата начала регистрации не может быть раньше сегодняшней даты (16 мая 2025 года)');
+      alert('Дата начала регистрации не может быть раньше сегодняшней даты');
       return;
     }
 
-    // Проверяем, что дата окончания регистрации не раньше даты начала
     if (registrationEndDate < registrationStartDate) {
       alert('Дата окончания регистрации не может быть раньше даты начала');
+      return;
+    }
+
+    if (isNaN(maxStudents) || maxStudents < 1) {
+      alert('Максимальное количество студентов должно быть положительным числом');
+      return;
+    }
+
+    if (maxStudents < selectedCourse.studentsCount) {
+      alert('Максимальное количество студентов не может быть меньше текущего количества зарегистрированных');
       return;
     }
 
@@ -222,9 +216,9 @@ const AdminCourseManagement = () => {
       type: selectedType.name,
       registrationStart: registrationStartDate.toISOString(),
       registrationEnd: registrationEndDate.toISOString(),
+      studentsCount: selectedCourse.studentsCount,
+      maxStudents: maxStudents, // Добавляем maxStudents
     };
-
-    console.log('Отправляемый JSON:', JSON.stringify(courseData, null, 2));
 
     try {
       const response = await fetch(`http://localhost:5000/update-course/${selectedCourse._id}`, {
@@ -452,6 +446,7 @@ const AdminCourseManagement = () => {
     setCourseTypeId('');
     setRegistrationStart('');
     setRegistrationEnd('');
+    setCourseMaxStudents(''); // Сбрасываем maxStudents
     setSelectedCourse(null);
   };
 
@@ -468,6 +463,7 @@ const AdminCourseManagement = () => {
     setCourseTypeId(course.typeId || '');
     setRegistrationStart(course.registrationStart ? new Date(course.registrationStart).toISOString().split('T')[0] : '');
     setRegistrationEnd(course.registrationEnd ? new Date(course.registrationEnd).toISOString().split('T')[0] : '');
+    setCourseMaxStudents(course.maxStudents || ''); // Устанавливаем maxStudents
   };
 
   const handleCloseUpdateForm = () => {
@@ -566,6 +562,14 @@ const AdminCourseManagement = () => {
                 value={registrationEnd}
                 onChange={(e) => setRegistrationEnd(e.target.value)}
                 min={registrationStart || today}
+                required
+              />
+              <input
+                type="number"
+                placeholder="Максимальное кол-во студентов"
+                value={courseMaxStudents}
+                onChange={(e) => setCourseMaxStudents(e.target.value)}
+                min="1"
                 required
               />
               <div className="price-selection">
@@ -853,6 +857,7 @@ const AdminCourseManagement = () => {
             <th>Тип</th>
             <th>Начало регистрации</th>
             <th>Окончание регистрации</th>
+            <th>Студентов (тек./макс.)</th>
             <th>Действия</th>
           </tr>
         </thead>
@@ -867,6 +872,7 @@ const AdminCourseManagement = () => {
                 <td>{course.type}</td>
                 <td>{course.registrationStart ? new Date(course.registrationStart).toLocaleDateString() : '-'}</td>
                 <td>{course.registrationEnd ? new Date(course.registrationEnd).toLocaleDateString() : '-'}</td>
+                <td>{course.studentsCount || 0}/{course.maxStudents || '∞'}</td>
                 <td>
                   <button
                     className='reject-btn'
@@ -881,7 +887,7 @@ const AdminCourseManagement = () => {
               </tr>
               {selectedCourse && selectedCourse._id === course._id && (
                 <tr>
-                  <td colSpan="8">
+                  <td colSpan="9">
                     <form onSubmit={handleUpdateCourse} className="update-form">
                       <input
                         type="text"
@@ -917,6 +923,14 @@ const AdminCourseManagement = () => {
                         value={registrationEnd}
                         onChange={(e) => setRegistrationEnd(e.target.value)}
                         min={registrationStart || today}
+                        required
+                      />
+                      <input
+                        type="number"
+                        placeholder="Максимальное кол-во студентов"
+                        value={courseMaxStudents}
+                        onChange={(e) => setCourseMaxStudents(e.target.value)}
+                        min={course.studentsCount || 1}
                         required
                       />
                       <div className="price-selection">

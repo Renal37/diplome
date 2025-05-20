@@ -36,19 +36,27 @@ func AddCourse(w http.ResponseWriter, r *http.Request) {
 	// Отладка входных данных
 	fmt.Printf("Полученные данные: %+v\n", course)
 
-	// Проверяем, что priceId и typeId являются валидными ObjectID
+	// Проверяем обязательные поля
+	if course.Title == "" || course.Description == "" {
+		writeJSONError(w, "Заголовок и описание обязательны", http.StatusBadRequest)
+		return
+	}
+	if course.Duration < 1 {
+		writeJSONError(w, "Продолжительность должна быть положительной", http.StatusBadRequest)
+		return
+	}
+	if course.MaxStudents < 1 {
+		writeJSONError(w, "Максимальное количество студентов должно быть положительным", http.StatusBadRequest)
+		return
+	}
 	if course.PriceId.IsZero() || course.TypeId.IsZero() {
 		writeJSONError(w, "Неверный формат ID стоимости или типа курса", http.StatusBadRequest)
 		return
 	}
-
-	// Проверяем, что даты регистрации валидны
 	if course.RegistrationStart.IsZero() || course.RegistrationEnd.IsZero() {
 		writeJSONError(w, "Даты начала и окончания регистрации обязательны", http.StatusBadRequest)
 		return
 	}
-
-	// Проверяем, что дата окончания регистрации не раньше даты начала
 	if course.RegistrationEnd.Before(course.RegistrationStart) {
 		writeJSONError(w, "Дата окончания регистрации не может быть раньше даты начала", http.StatusBadRequest)
 		return
@@ -63,6 +71,32 @@ func AddCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Проверка существования priceId
+	priceCollection := db.GetCollection(db.PricesCollection)
+	var price bson.M
+	err = priceCollection.FindOne(context.Background(), bson.M{"_id": course.PriceId}).Decode(&price)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeJSONError(w, "Цена не найдена", http.StatusBadRequest)
+		} else {
+			writeJSONError(w, "Ошибка при проверке цены", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Проверка существования typeId
+	typeCollection := db.GetCollection(db.CourseTypesCollection)
+	var courseType bson.M
+	err = typeCollection.FindOne(context.Background(), bson.M{"_id": course.TypeId}).Decode(&courseType)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeJSONError(w, "Тип курса не найден", http.StatusBadRequest)
+		} else {
+			writeJSONError(w, "Ошибка при проверке типа курса", http.StatusInternalServerError)
+		}
+		return
+	}
+
 	collection := db.GetCollection(db.CoursesCollection)
 
 	fullCourse := bson.M{
@@ -70,12 +104,14 @@ func AddCourse(w http.ResponseWriter, r *http.Request) {
 		"description":       course.Description,
 		"duration":          course.Duration,
 		"priceId":           course.PriceId,
-		"price":             course.Price,
+		"price":             price["amount"],
 		"typeId":            course.TypeId,
-		"type":              course.Type,
+		"type":              courseType["name"],
 		"createdAt":         time.Now(),
 		"registrationStart": course.RegistrationStart,
 		"registrationEnd":   course.RegistrationEnd,
+		"studentsCount":     0,
+		"maxStudents":       course.MaxStudents,
 	}
 
 	result, err := collection.InsertOne(context.Background(), fullCourse)
@@ -88,16 +124,18 @@ func AddCourse(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"course": map[string]interface{}{
-			"_id":               result.InsertedID,
+			"_id":               result.InsertedID.(primitive.ObjectID).Hex(),
 			"title":             course.Title,
 			"description":       course.Description,
 			"duration":          course.Duration,
-			"priceId":           course.PriceId,
-			"price":             course.Price,
-			"typeId":            course.TypeId,
-			"type":              course.Type,
+			"priceId":           course.PriceId.Hex(),
+			"price":             price["amount"],
+			"typeId":            course.TypeId.Hex(),
+			"type":              courseType["name"],
 			"registrationStart": course.RegistrationStart,
 			"registrationEnd":   course.RegistrationEnd,
+			"studentsCount":     0,
+			"maxStudents":       course.MaxStudents,
 		},
 	})
 }
@@ -134,6 +172,8 @@ func GetCourses(w http.ResponseWriter, r *http.Request) {
 				"createdAt":         1,
 				"registrationStart": 1,
 				"registrationEnd":   1,
+				"studentsCount":     1,
+				"maxStudents":       1,
 			},
 		},
 	}
@@ -183,13 +223,27 @@ func UpdateCourse(w http.ResponseWriter, r *http.Request) {
 	// Отладка входных данных
 	fmt.Printf("Полученные данные: %+v\n", course)
 
-	// Проверяем даты регистрации
+	// Проверяем обязательные поля
+	if course.Title == "" || course.Description == "" {
+		writeJSONError(w, "Заголовок и описание обязательны", http.StatusBadRequest)
+		return
+	}
+	if course.Duration < 1 {
+		writeJSONError(w, "Продолжительность должна быть положительной", http.StatusBadRequest)
+		return
+	}
+	if course.MaxStudents < 1 {
+		writeJSONError(w, "Максимальное количество студентов должно быть положительным", http.StatusBadRequest)
+		return
+	}
+	if course.PriceId.IsZero() || course.TypeId.IsZero() {
+		writeJSONError(w, "Неверный формат ID стоимости или типа курса", http.StatusBadRequest)
+		return
+	}
 	if course.RegistrationStart.IsZero() || course.RegistrationEnd.IsZero() {
 		writeJSONError(w, "Даты начала и окончания регистрации обязательны", http.StatusBadRequest)
 		return
 	}
-
-	// Проверяем, что дата окончания регистрации не раньше даты начала
 	if course.RegistrationEnd.Before(course.RegistrationStart) {
 		writeJSONError(w, "Дата окончания регистрации не может быть раньше даты начала", http.StatusBadRequest)
 		return
@@ -206,18 +260,64 @@ func UpdateCourse(w http.ResponseWriter, r *http.Request) {
 
 	collection := db.GetCollection(db.CoursesCollection)
 
+	// Получаем текущий курс для проверки studentsCount
+	var currentCourse models.Course
+	err = collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&currentCourse)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeJSONError(w, "Курс не найден", http.StatusNotFound)
+		} else {
+			writeJSONError(w, "Ошибка при получении курса", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Проверяем, что maxStudents не меньше текущего studentsCount
+	if course.MaxStudents < currentCourse.StudentsCount {
+		writeJSONError(w, "Максимальное количество студентов не может быть меньше текущего количества", http.StatusBadRequest)
+		return
+	}
+
+	// Проверка существования priceId
+	priceCollection := db.GetCollection(db.PricesCollection)
+	var price bson.M
+	err = priceCollection.FindOne(context.Background(), bson.M{"_id": course.PriceId}).Decode(&price)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeJSONError(w, "Цена не найдена", http.StatusBadRequest)
+		} else {
+			writeJSONError(w, "Ошибка при проверке цены", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Проверка существования typeId
+	typeCollection := db.GetCollection(db.CourseTypesCollection)
+	var courseType bson.M
+	err = typeCollection.FindOne(context.Background(), bson.M{"_id": course.TypeId}).Decode(&courseType)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeJSONError(w, "Тип курса не найден", http.StatusBadRequest)
+		} else {
+			writeJSONError(w, "Ошибка при проверке типа курса", http.StatusInternalServerError)
+		}
+		return
+	}
+
 	filter := bson.M{"_id": id}
 	update := bson.M{
 		"$set": bson.M{
 			"title":             course.Title,
 			"description":       course.Description,
 			"duration":          course.Duration,
-			"price":             course.Price,
-			"type":              course.Type,
 			"priceId":           course.PriceId,
+			"price":             price["amount"],
 			"typeId":            course.TypeId,
+			"type":              courseType["name"],
 			"registrationStart": course.RegistrationStart,
 			"registrationEnd":   course.RegistrationEnd,
+			"studentsCount":     currentCourse.StudentsCount,
+			"maxStudents":       course.MaxStudents,
 		},
 	}
 
@@ -257,33 +357,6 @@ func DeleteCourse(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Курс и все связанные заявки успешно удалены!"})
-}
-
-// ... остальные функции остаются без изменений ...
-func GetCourseByID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	courseID, err := primitive.ObjectIDFromHex(vars["id"])
-	if err != nil {
-		http.Error(w, "Неверный формат идентификатора курса", http.StatusBadRequest)
-		return
-	}
-
-	collection := db.GetCollection(db.CoursesCollection)
-
-	var course models.Course
-	filter := bson.M{"_id": courseID}
-	err = collection.FindOne(context.Background(), filter).Decode(&course)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			http.Error(w, "Курс не найден", http.StatusNotFound)
-		} else {
-			http.Error(w, "Ошибка при получении курса", http.StatusInternalServerError)
-		}
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(course)
 }
 
 func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
@@ -383,6 +456,12 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Проверка maxStudents
+	if course.StudentsCount >= course.MaxStudents {
+		writeJSONError(w, "Курс достиг максимального количества студентов", http.StatusBadRequest)
+		return
+	}
+
 	currentTime := time.Now()
 	fmt.Printf("currentTime: %v, registrationStart: %v, registrationEnd: %v\n",
 		currentTime, course.RegistrationStart, course.RegistrationEnd)
@@ -435,6 +514,20 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Начинаем транзакцию для атомарного обновления
+	session, err := db.GetMongoClient().StartSession()
+	if err != nil {
+		writeJSONError(w, "Ошибка при создании сессии", http.StatusInternalServerError)
+		return
+	}
+	defer session.EndSession(context.Background())
+
+	err = session.StartTransaction()
+	if err != nil {
+		writeJSONError(w, "Ошибка при старте транзакции", http.StatusInternalServerError)
+		return
+	}
+
 	// Регистрация пользователя на курс
 	registration := bson.M{
 		"courseId":          request.CourseID,
@@ -447,38 +540,192 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 
 	_, err = registrationCollection.InsertOne(context.Background(), registration)
 	if err != nil {
+		session.AbortTransaction(context.Background())
 		writeJSONError(w, "Ошибка при записи на курс", http.StatusInternalServerError)
 		return
 	}
 
+	// Увеличиваем studentsCount
+	_, err = courseCollection.UpdateOne(context.Background(),
+		bson.M{"_id": request.CourseID},
+		bson.M{"$inc": bson.M{"studentsCount": 1}},
+	)
+	if err != nil {
+		session.AbortTransaction(context.Background())
+		writeJSONError(w, "Ошибка при обновлении количества студентов", http.StatusInternalServerError)
+		return
+	}
+
+	err = session.CommitTransaction(context.Background())
+	if err != nil {
+		session.AbortTransaction(context.Background())
+		writeJSONError(w, "Ошибка при фиксации транзакции", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
-func ApproveCourseRegistration(w http.ResponseWriter, r *http.Request) {
+
+func DeleteRegistration(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
-	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
-	filter := bson.M{"_id": registrationID}
-	update := bson.M{
-		"$set": bson.M{
-			"status": "Пройдено",
-		},
+	// Получаем информацию о регистрации
+	registrationCollection := db.GetCollection(db.CourseRegistrationsCollection)
+	var registration bson.M
+	err = registrationCollection.FindOne(context.Background(), bson.M{"_id": registrationID}).Decode(&registration)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeJSONError(w, "Заявка не найдена", http.StatusNotFound)
+			return
+		}
+		writeJSONError(w, "Ошибка при получении заявки", http.StatusInternalServerError)
+		return
 	}
 
-	_, err = collection.UpdateOne(context.Background(), filter, update)
+	courseID := registration["courseId"].(primitive.ObjectID)
+
+	// Начинаем транзакцию
+	session, err := db.GetMongoClient().StartSession()
 	if err != nil {
-		http.Error(w, "Ошибка при одобрении заявки", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при создании сессии", http.StatusInternalServerError)
+		return
+	}
+	defer session.EndSession(context.Background())
+
+	err = session.StartTransaction()
+	if err != nil {
+		writeJSONError(w, "Ошибка при старте транзакции", http.StatusInternalServerError)
+		return
+	}
+
+	// Удаляем заявку
+	_, err = registrationCollection.DeleteOne(context.Background(), bson.M{"_id": registrationID})
+	if err != nil {
+		session.AbortTransaction(context.Background())
+		writeJSONError(w, "Ошибка при удалении заявки", http.StatusInternalServerError)
+		return
+	}
+
+	// Уменьшаем studentsCount
+	courseCollection := db.GetCollection(db.CoursesCollection)
+	_, err = courseCollection.UpdateOne(context.Background(),
+		bson.M{"_id": courseID},
+		bson.M{"$inc": bson.M{"studentsCount": -1}},
+	)
+	if err != nil {
+		session.AbortTransaction(context.Background())
+		writeJSONError(w, "Ошибка при обновлении количества студентов", http.StatusInternalServerError)
+		return
+	}
+
+	err = session.CommitTransaction(context.Background())
+	if err != nil {
+		session.AbortTransaction(context.Background())
+		writeJSONError(w, "Ошибка при фиксации транзакции", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
+
+func WithdrawRegistration(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		return
+	}
+
+	// Получаем ID пользователя из токена
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		writeJSONError(w, "Токен отсутствует", http.StatusUnauthorized)
+		return
+	}
+
+	claims := &utils.Claims{}
+	token, err := jwt.ParseWithClaims(cookie.Value, claims, func(token *jwt.Token) (interface{}, error) {
+		return utils.JwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		writeJSONError(w, "Неверный токен", http.StatusUnauthorized)
+		return
+	}
+
+	userID, err := primitive.ObjectIDFromHex(claims.UserID)
+	if err != nil {
+		writeJSONError(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
+		return
+	}
+
+	// Получаем информацию о регистрации
+	registrationCollection := db.GetCollection(db.CourseRegistrationsCollection)
+	var registration bson.M
+	err = registrationCollection.FindOne(context.Background(), bson.M{"_id": registrationID, "userId": userID}).Decode(&registration)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeJSONError(w, "Заявка не найдена или не принадлежит пользователю", http.StatusNotFound)
+			return
+		}
+		writeJSONError(w, "Ошибка при получении заявки", http.StatusInternalServerError)
+		return
+	}
+
+	courseID := registration["courseId"].(primitive.ObjectID)
+
+	// Начинаем транзакцию
+	session, err := db.GetMongoClient().StartSession()
+	if err != nil {
+		writeJSONError(w, "Ошибка при создании сессии", http.StatusInternalServerError)
+		return
+	}
+	defer session.EndSession(context.Background())
+
+	err = session.StartTransaction()
+	if err != nil {
+		writeJSONError(w, "Ошибка при старте транзакции", http.StatusInternalServerError)
+		return
+	}
+
+	// Удаляем заявку
+	_, err = registrationCollection.DeleteOne(context.Background(), bson.M{"_id": registrationID, "userId": userID})
+	if err != nil {
+		session.AbortTransaction(context.Background())
+		writeJSONError(w, "Ошибка при удалении заявки", http.StatusInternalServerError)
+		return
+	}
+
+	// Уменьшаем studentsCount
+	courseCollection := db.GetCollection(db.CoursesCollection)
+	_, err = courseCollection.UpdateOne(context.Background(),
+		bson.M{"_id": courseID},
+		bson.M{"$inc": bson.M{"studentsCount": -1}},
+	)
+	if err != nil {
+		session.AbortTransaction(context.Background())
+		writeJSONError(w, "Ошибка при обновлении количества студентов", http.StatusInternalServerError)
+		return
+	}
+
+	err = session.CommitTransaction(context.Background())
+	if err != nil {
+		session.AbortTransaction(context.Background())
+		writeJSONError(w, "Ошибка при фиксации транзакции", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
 func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
@@ -516,19 +763,18 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 				"as":           "order",
 			},
 		},
-
 		bson.M{
 			"$project": bson.M{
 				"courseTitle": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$course.title", 0}},
-						"Unknown Course", // Значение по умолчанию, если курс не найден
+						"Unknown Course",
 					},
 				},
 				"userName": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$user.username", 0}},
-						"Unknown User", // Значение по умолчанию, если пользователь не найден
+						"Unknown User",
 					},
 				},
 				"status":           1,
@@ -543,14 +789,12 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 						"Unknown orderType",
 					},
 				},
-
 				"groupName": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$group.groupName", 0}},
 						"Unknown group",
 					},
 				},
-
 				"userEmail": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$user.email", 0}},
@@ -632,14 +876,14 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 
 	cursor, err := collection.Aggregate(context.Background(), pipeline)
 	if err != nil {
-		http.Error(w, "Ошибка при получении заявок", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при получении заявок", http.StatusInternalServerError)
 		return
 	}
 	defer cursor.Close(context.Background())
 
 	var registrations []bson.M
 	if err = cursor.All(context.Background(), &registrations); err != nil {
-		http.Error(w, "Ошибка при обработке данных заявок", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при обработке данных заявок", http.StatusInternalServerError)
 		return
 	}
 
@@ -647,11 +891,63 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(registrations)
 }
 
+func GetCourseByID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	courseID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		writeJSONError(w, "Неверный формат идентификатора курса", http.StatusBadRequest)
+		return
+	}
+
+	collection := db.GetCollection(db.CoursesCollection)
+
+	var course models.Course
+	filter := bson.M{"_id": courseID}
+	err = collection.FindOne(context.Background(), filter).Decode(&course)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeJSONError(w, "Курс не найден", http.StatusNotFound)
+		} else {
+			writeJSONError(w, "Ошибка при получении курса", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(course)
+}
+
+func ApproveCourseRegistration(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		return
+	}
+	collection := db.GetCollection(db.CourseRegistrationsCollection)
+
+	filter := bson.M{"_id": registrationID}
+	update := bson.M{
+		"$set": bson.M{
+			"status": "Пройдено",
+		},
+	}
+
+	_, err = collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		writeJSONError(w, "Ошибка при одобрении заявки", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
 func ApproveRegistration(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
@@ -665,7 +961,7 @@ func ApproveRegistration(w http.ResponseWriter, r *http.Request) {
 
 	_, err = collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, "Ошибка при одобрении заявки", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при одобрении заявки", http.StatusInternalServerError)
 		return
 	}
 
@@ -677,7 +973,7 @@ func RejectRegistration(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
 
@@ -686,12 +982,12 @@ func RejectRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	err = json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат данных", http.StatusBadRequest)
 		return
 	}
 
 	if requestBody.Reason == "" {
-		http.Error(w, "Причина отклонения обязательна", http.StatusBadRequest)
+		writeJSONError(w, "Причина отклонения обязательна", http.StatusBadRequest)
 		return
 	}
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
@@ -700,29 +996,28 @@ func RejectRegistration(w http.ResponseWriter, r *http.Request) {
 	update := bson.M{
 		"$set": bson.M{
 			"status":           "Отклоненный",
-			"rejectReason":     requestBody.Reason, // Сохраняем причину отклонения
+			"rejectReason":     requestBody.Reason,
 			"contractFilePath": bson.TypeNull,
 		},
 	}
 
 	_, err = collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, "Ошибка при отклонении заявки", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при отклонении заявки", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
+
 func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
-	// Получаем cookie с именем "token"
 	tokenCookie, err := r.Cookie("token")
 	if err != nil {
-		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+		writeJSONError(w, "Токен отсутствует", http.StatusUnauthorized)
 		return
 	}
 
-	// Парсим токен
 	tokenStr := tokenCookie.Value
 	claims := &utils.Claims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
@@ -730,36 +1025,31 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil || !token.Valid {
-		http.Error(w, "Неверный токен", http.StatusUnauthorized)
+		writeJSONError(w, "Неверный токен", http.StatusUnauthorized)
 		fmt.Println("Неверный токен:", err)
 		return
 	}
 
-	// Извлекаем userId из claims
 	userId := claims.UserID
 	if userId == "" {
-		http.Error(w, "Идентификатор пользователя не найден", http.StatusUnauthorized)
+		writeJSONError(w, "Идентификатор пользователя не найден", http.StatusUnauthorized)
 		return
 	}
 
-	// Преобразуем userId в ObjectID
 	userIdObj, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
-		http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
 		return
 	}
 
-	// Получаем параметр status из запроса
 	status := r.URL.Query().Get("status")
 	if status == "" {
-		http.Error(w, "Не указан статус", http.StatusBadRequest)
+		writeJSONError(w, "Не указан статус", http.StatusBadRequest)
 		return
 	}
 
-	// Подключаемся к базе данных
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
-	// Агрегация для получения курсов конкретного пользователя с указанным статусом
 	pipeline := bson.A{
 		bson.M{
 			"$match": bson.M{
@@ -792,14 +1082,12 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 				"groupId": 1,
-
 				"groupName": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$group.groupName", 0}},
 						"Unknown group",
 					},
 				},
-
 				"status":           1,
 				"rejectReason":     1,
 				"contractFilePath": 1,
@@ -810,14 +1098,14 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 
 	cursor, err := collection.Aggregate(context.Background(), pipeline)
 	if err != nil {
-		http.Error(w, "Ошибка при получении курсов", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при получении курсов", http.StatusInternalServerError)
 		return
 	}
 	defer cursor.Close(context.Background())
 
 	var courses []bson.M
 	if err = cursor.All(context.Background(), &courses); err != nil {
-		http.Error(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
 		return
 	}
 
@@ -826,14 +1114,12 @@ func GetCoursesByStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
-	// Получаем cookie с именем "token"
 	tokenCookie, err := r.Cookie("token")
 	if err != nil {
-		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
+		writeJSONError(w, "Токен отсутствует", http.StatusUnauthorized)
 		return
 	}
 
-	// Парсим токен
 	tokenStr := tokenCookie.Value
 	claims := &utils.Claims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
@@ -841,28 +1127,24 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil || !token.Valid {
-		http.Error(w, "Неверный токен", http.StatusUnauthorized)
+		writeJSONError(w, "Неверный токен", http.StatusUnauthorized)
 		return
 	}
 
-	// Извлекаем userId из claims
 	userId := claims.UserID
 	if userId == "" {
-		http.Error(w, "Идентификатор пользователя не найден", http.StatusUnauthorized)
+		writeJSONError(w, "Идентификатор пользователя не найден", http.StatusUnauthorized)
 		return
 	}
 
-	// Преобразуем userId в ObjectID
 	userIdObj, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
-		http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
 		return
 	}
 
-	// Подключаемся к базе данных
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
-	// Агрегация для получения курсов конкретного пользователя
 	pipeline := bson.A{
 		bson.M{
 			"$match": bson.M{"userId": userIdObj},
@@ -892,14 +1174,12 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 				"groupId": 1,
-
 				"groupName": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$group.groupName", 0}},
 						"Unknown group",
 					},
 				},
-
 				"status":           1,
 				"rejectReason":     1,
 				"contractFilePath": 1,
@@ -910,14 +1190,14 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 
 	cursor, err := collection.Aggregate(context.Background(), pipeline)
 	if err != nil {
-		http.Error(w, "Ошибка при получении курсов", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при получении курсов", http.StatusInternalServerError)
 		return
 	}
 	defer cursor.Close(context.Background())
 
 	var courses []bson.M
 	if err = cursor.All(context.Background(), &courses); err != nil {
-		http.Error(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
 		return
 	}
 
@@ -925,12 +1205,11 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(courses)
 }
 
-// Отчисление пользователя
 func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
 
@@ -939,31 +1218,29 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 	}
 	err = json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат данных", http.StatusBadRequest)
 		return
 	}
 
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
-	// Получаем тип приказа
 	orderCollection := db.GetCollection(db.OrderCollection)
 	var order models.Order
 	err = orderCollection.FindOne(context.Background(), bson.M{"_id": requestBody.OrderID}).Decode(&order)
 	if err != nil {
-		http.Error(w, "Приказ не найден", http.StatusBadRequest)
+		writeJSONError(w, "Приказ не найден", http.StatusBadRequest)
 		return
 	}
 
 	var newStatus string
 	if order.OrderType == "О выпуске обучающихся" {
 		newStatus = "Завершил"
-
 	} else if order.OrderType == "О зачислении обучающихся" {
 		newStatus = "Проходит курс"
 	} else if order.OrderType == "Об отчислении обучающихся" {
 		newStatus = "Отчисленный"
 	} else {
-		newStatus = "Отчисленный" // дефолтный статус
+		newStatus = "Отчисленный"
 	}
 
 	filter := bson.M{"_id": registrationID}
@@ -981,7 +1258,7 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 
 	_, err = collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, "Ошибка при отчислении", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при отчислении", http.StatusInternalServerError)
 		return
 	}
 
@@ -989,12 +1266,11 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
-// Выдача документа (сертификат/диплом)
 func IssueDocument(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
 
@@ -1003,12 +1279,12 @@ func IssueDocument(w http.ResponseWriter, r *http.Request) {
 	}
 	err = json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат данных", http.StatusBadRequest)
 		return
 	}
 
 	if requestBody.DocumentType == "" {
-		http.Error(w, "Тип документа обязателен", http.StatusBadRequest)
+		writeJSONError(w, "Тип документа обязателен", http.StatusBadRequest)
 		return
 	}
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
@@ -1016,13 +1292,13 @@ func IssueDocument(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
 		"$set": bson.M{
-			"documentType": requestBody.DocumentType, // Сохраняем тип документа
+			"documentType": requestBody.DocumentType,
 		},
 	}
 
 	_, err = collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, "Ошибка при выдаче документа", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при выдаче документа", http.StatusInternalServerError)
 		return
 	}
 
@@ -1030,82 +1306,11 @@ func IssueDocument(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
-func DeleteRegistration(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
-	if err != nil {
-		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
-		return
-	}
-	collection := db.GetCollection(db.CourseRegistrationsCollection)
-
-	filter := bson.M{"_id": registrationID}
-	_, err = collection.DeleteOne(context.Background(), filter)
-	if err != nil {
-		http.Error(w, "Ошибка при удалении заявки", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"success": true})
-}
-
-func WithdrawRegistration(w http.ResponseWriter, r *http.Request) {
-	// Получаем ID заявки из URL
-	vars := mux.Vars(r)
-	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
-	if err != nil {
-		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
-		return
-	}
-
-	// Получаем ID пользователя из токена
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		http.Error(w, "Токен отсутствует", http.StatusUnauthorized)
-		return
-	}
-
-	claims := &utils.Claims{}
-	token, err := jwt.ParseWithClaims(cookie.Value, claims, func(token *jwt.Token) (interface{}, error) {
-		return utils.JwtKey, nil
-	})
-
-	if err != nil || !token.Valid {
-		http.Error(w, "Неверный токен", http.StatusUnauthorized)
-		return
-	}
-
-	userID, err := primitive.ObjectIDFromHex(claims.UserID)
-	if err != nil {
-		http.Error(w, "Неверный формат идентификатора пользователя", http.StatusBadRequest)
-		return
-	}
-
-	// Подключаемся к базе данных
-	collection := db.GetCollection(db.CourseRegistrationsCollection)
-
-	// Проверяем, что заявка принадлежит пользователю
-	filter := bson.M{"_id": registrationID, "userId": userID}
-	result, err := collection.DeleteOne(context.Background(), filter)
-	if err != nil {
-		http.Error(w, "Ошибка при удалении заявки", http.StatusInternalServerError)
-		return
-	}
-
-	if result.DeletedCount == 0 {
-		http.Error(w, "Заявка не найдена или не принадлежит пользователю", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"success": true})
-}
 func PayCourse(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		http.Error(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
@@ -1119,7 +1324,7 @@ func PayCourse(w http.ResponseWriter, r *http.Request) {
 
 	_, err = collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		http.Error(w, "Ошибка при обновлении статуса оплаты", http.StatusInternalServerError)
+		writeJSONError(w, "Ошибка при обновлении статуса оплаты", http.StatusInternalServerError)
 		return
 	}
 

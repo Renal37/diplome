@@ -44,6 +44,7 @@ const CourseRegistration = () => {
                     navigate('/auth/login');
                 } else {
                     setUser(data);
+                    console.log(data);
                 }
             })
             .catch(error => {
@@ -184,6 +185,7 @@ const CourseRegistration = () => {
                     <p><strong>Тип:</strong> {course.type}</p>
                     <p><strong>Начало регистрации:</strong> {new Date(course.registrationStart).toLocaleDateString()}</p>
                     <p><strong>Окончание регистрации:</strong> {new Date(course.registrationEnd).toLocaleDateString()}</p>
+                    <p><strong>Осталось мест:</strong> {course.maxStudents - course.studentsCount}</p>
                 </div>
                 <div className="course_btn">
                     {isProfileComplete() && (
