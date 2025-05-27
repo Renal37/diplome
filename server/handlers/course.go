@@ -385,7 +385,7 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверка обязательных полей пользователя
+	// Проверка обязательных полей пользователя (без изменений)
 	requiredFields := map[string]string{
 		"lastname":          "Фамилия не заполнена",
 		"firstname":         "Имя не заполнено",
@@ -474,7 +474,7 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверка уровня образования для курсов типа "Профессиональная переподготовка"
+	// Проверка уровня образования для курсов типа "Профессиональная переподготовка" (без изменений)
 	if course.Type == "Профессиональная переподготовка" {
 		educationCollection := db.GetCollection(db.EducationsCollection)
 		var education bson.M
@@ -514,7 +514,7 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Начинаем транзакцию для атомарного обновления
+	// Начинаем транзакцию
 	session, err := db.GetMongoClient().StartSession()
 	if err != nil {
 		writeJSONError(w, "Ошибка при создании сессии", http.StatusInternalServerError)
@@ -528,7 +528,7 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Регистрация пользователя на курс
+	// Регистрация пользователя на курс с добавлением цены
 	registration := bson.M{
 		"courseId":          request.CourseID,
 		"userId":            request.UserID,
@@ -536,6 +536,7 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		"registerDate":      time.Now().Format("2006-01-02"),
 		"registrationStart": course.RegistrationStart,
 		"registrationEnd":   course.RegistrationEnd,
+		"price":             course.Price, // Добавляем цену из курса
 	}
 
 	_, err = registrationCollection.InsertOne(context.Background(), registration)
@@ -1222,8 +1223,7 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := db.GetCollection(db.CourseRegistrationsCollection)
-
+	// Проверяем, что приказ существует
 	orderCollection := db.GetCollection(db.OrderCollection)
 	var order models.Order
 	err = orderCollection.FindOne(context.Background(), bson.M{"_id": requestBody.OrderID}).Decode(&order)
@@ -1232,33 +1232,114 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var newStatus string
-	if order.OrderType == "О выпуске обучающихся" {
-		newStatus = "Завершил"
-	} else if order.OrderType == "О зачислении обучающихся" {
-		newStatus = "Проходит курс"
-	} else if order.OrderType == "Об отчислении обучающихся" {
-		newStatus = "Отчисленный"
-	} else {
-		newStatus = "Отчисленный"
+	// Проверяем текущий статус заявки
+	registrationCollection := db.GetCollection(db.CourseRegistrationsCollection)
+	var registration bson.M
+	err = registrationCollection.FindOne(context.Background(), bson.M{"_id": registrationID}).Decode(&registration)
+	if err != nil {
+		writeJSONError(w, "Заявка не найдена", http.StatusNotFound)
+		return
+	}
+	if registration["status"] != "Проходит курс" {
+		writeJSONError(w, "Действие возможно только для статуса 'Проходит курс'", http.StatusBadRequest)
+		return
 	}
 
+	// Определяем статус и тип документа
+	var newStatus string
+	var documentType string
+	if order.OrderType == "О выпуске обучающихся" {
+		newStatus = "Завершил"
+		documentType = "Диплом"
+	} else if order.OrderType == "Об отчислении обучающихся" {
+		newStatus = "Отчисленный"
+		documentType = "Сертификат"
+	} else {
+		writeJSONError(w, "Неверный тип приказа", http.StatusBadRequest)
+		return
+	}
+
+	// Обновляем заявку
 	filter := bson.M{"_id": registrationID}
 	update := bson.M{
 		"$set": bson.M{
 			"status":       newStatus,
 			"expelOrderId": requestBody.OrderID,
 			"expelDate":    time.Now(),
+			"documentType": documentType,
 		},
 	}
 
-	if newStatus == "Завершил" {
-		update["$set"].(bson.M)["documentType"] = "Диплом"
+	_, err = registrationCollection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		writeJSONError(w, "Ошибка при обработке", http.StatusInternalServerError)
+		return
 	}
 
-	_, err = collection.UpdateOne(context.Background(), filter, update)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":      true,
+		"status":       newStatus,
+		"documentType": documentType,
+	})
+}
+
+func EnrollRegistration(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		writeJSONError(w, "Ошибка при отчислении", http.StatusInternalServerError)
+		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
+		return
+	}
+
+	var requestBody struct {
+		OrderID primitive.ObjectID `json:"orderId"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		writeJSONError(w, "Неверный формат данных", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем, что приказ существует и имеет тип "О зачислении обучающихся"
+	orderCollection := db.GetCollection(db.OrderCollection)
+	var order models.Order
+	err = orderCollection.FindOne(context.Background(), bson.M{"_id": requestBody.OrderID}).Decode(&order)
+	if err != nil {
+		writeJSONError(w, "Приказ не найден", http.StatusBadRequest)
+		return
+	}
+	if order.OrderType != "О зачислении обучающихся" {
+		writeJSONError(w, "Неверный тип приказа для зачисления", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем текущий статус заявки
+	registrationCollection := db.GetCollection(db.CourseRegistrationsCollection)
+	var registration bson.M
+	err = registrationCollection.FindOne(context.Background(), bson.M{"_id": registrationID}).Decode(&registration)
+	if err != nil {
+		writeJSONError(w, "Заявка не найдена", http.StatusNotFound)
+		return
+	}
+	if registration["status"] != "Оплаченный" {
+		writeJSONError(w, "Зачисление возможно только для статуса 'Оплаченный'", http.StatusBadRequest)
+		return
+	}
+
+	// Обновляем статус заявки
+	filter := bson.M{"_id": registrationID}
+	update := bson.M{
+		"$set": bson.M{
+			"status":        "Проходит курс",
+			"enrollOrderId": requestBody.OrderID,
+			"enrollDate":    time.Now(),
+		},
+	}
+
+	_, err = registrationCollection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		writeJSONError(w, "Ошибка при зачислении", http.StatusInternalServerError)
 		return
 	}
 

@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import AdminAllAdd from '../admin_components/admin_all_add/admin_all_add';
 import AdminOrders from '../admin_components/admin_order/admin_order';
 import AdminPrompt from '../admin_components/admin_prompt/admin_prompt';
+import AdminDiagram from '../admin_components/admin_diagram/admin_diagram';
 
 const AdminComponent = () => {
   const [profile, setProfile] = useState(null);
@@ -124,6 +125,14 @@ const AdminComponent = () => {
                 Промпт 
               </Link>
             </li>
+                 <li>
+              <Link
+                to="/admin/analytic"
+                className={`nav-link ${isActive('/admin/prompt') ? 'active' : ''}`}
+              >
+                Аналитики 
+              </Link>
+            </li>
           </ul>
         </nav>
       </div>
@@ -136,6 +145,7 @@ const AdminComponent = () => {
           <Route path="order" element={<AdminOrders />} />
           <Route path="groups" element={<AdminGroupManagement />} />
           <Route path="prompt" element={<AdminPrompt />} />
+           <Route path="analytic" element={<AdminDiagram />} />
         </Routes>
       </div>
     </div>

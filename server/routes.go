@@ -20,6 +20,7 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/admin/approve-registration/{id}", handlers.ApproveRegistration).Methods("POST")
 	r.HandleFunc("/admin/reject-registration/{id}", handlers.RejectRegistration).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/expel-registration/{id}", handlers.ExpelRegistration).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/enroll-registration/{id}", handlers.EnrollRegistration).Methods("POST", "OPTIONS") // Новый маршрут
 	r.HandleFunc("/admin/issue-document/{id}", handlers.IssueDocument).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/approve-contract/{id}", handlers.ApproveContract).Methods("POST")
 
@@ -51,7 +52,7 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/user/download-document", handlers.DownloadDocument).Methods("GET")
 	r.HandleFunc("/user/upload-document/{userId}", handlers.UploadDocument).Methods("POST")
 	r.HandleFunc("/user/view-consent/{userId}", handlers.ViewConsent).Methods("GET")
-	r.HandleFunc("/user/fill-consent", handlers.FillConsent).Methods("GET") // Новый маршрут
+	r.HandleFunc("/user/fill-consent", handlers.FillConsent).Methods("GET")
 
 	// Маршруты для групп
 	r.HandleFunc("/groups", handlers.GetGroups).Methods("GET")
@@ -100,4 +101,3 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/user/contract-data/{courseId}", handlers.GetContractData).Methods("GET")
 	r.HandleFunc("/contract-template", handlers.GetContractTemplate).Methods("GET")
 }
-	
