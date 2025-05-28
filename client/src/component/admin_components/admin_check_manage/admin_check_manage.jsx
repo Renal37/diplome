@@ -7,8 +7,6 @@ const AdminCoursesManagement = () => {
     const [error, setError] = useState("");
     const [rejectReason, setRejectReason] = useState("");
     const [selectedRejectRegistrationId, setSelectedRejectRegistrationId] = useState(null);
-    const [selectedExpelRegistrationId, setSelectedExpelRegistrationId] = useState(null);
-    const [selectedEnrollRegistrationId, setSelectedEnrollRegistrationId] = useState(null);
     const [selectedPdfRegistrationId, setSelectedPdfRegistrationId] = useState(null);
     const [pdfUrl, setPdfUrl] = useState("");
     const [selectedUser, setSelectedUser] = useState(null);
@@ -17,9 +15,6 @@ const AdminCoursesManagement = () => {
     const [selectedRegistrations, setSelectedRegistrations] = useState([]);
     const [searchUserName, setSearchUserName] = useState("");
     const [searchCourseTitle, setSearchCourseTitle] = useState("");
-    const [orderTypes, setOrderTypes] = useState([]);
-    const [orders, setOrders] = useState([]);
-    const [selectedOrderId, setSelectedOrderId] = useState(null);
 
     // Фильтрация заявок
     const filteredRegistrations = registrations.filter((registration) => {
@@ -30,7 +25,7 @@ const AdminCoursesManagement = () => {
     });
 
     // Массовое одобрение
-    const handleMassApprove = () => {
+    const handleMassApprove = async () => {
         if (selectedRegistrations.length === 0) {
             setError("Выберите хотя бы одну заявку для одобрения");
             return;
@@ -46,15 +41,33 @@ const AdminCoursesManagement = () => {
             return;
         }
 
-        selectedRegistrations.forEach(registrationId => {
-            handleApprove(registrationId);
-        });
-    };
+        try {
+            const approvePromises = selectedRegistrations.map(id =>
+                fetch(`http://localhost:5000/admin/approve-registration/${id}`, {
+                    method: "POST",
+                    credentials: "include",
+                }).then(res => res.json())
+            );
 
-    const isMassApproveDisabled = selectedRegistrations.length === 0 || !selectedRegistrations.every(registrationId => {
-        const registration = registrations.find(reg => reg._id === registrationId);
-        return registration.status === "Ожидание";
-    });
+            const results = await Promise.all(approvePromises);
+            const allSuccess = results.every(res => res.success);
+            if (!allSuccess) {
+                throw new Error("Некоторые заявки не одобрены");
+            }
+
+            setRegistrations(prev =>
+                prev.map(reg =>
+                    selectedRegistrations.includes(reg._id) && reg.status === "Ожидание"
+                        ? { ...reg, status: "Одобренный" }
+                        : reg
+                )
+            );
+            setSelectedRegistrations([]);
+        } catch (error) {
+            console.error("Ошибка массового одобрения:", error);
+            setError(error.message || "Ошибка при одобрении");
+        }
+    };
 
     // Массовое удаление
     const handleMassDelete = async () => {
@@ -92,6 +105,7 @@ const AdminCoursesManagement = () => {
                 const response = await fetch("http://localhost:5000/groups", { credentials: "include" });
                 if (!response.ok) throw new Error("Ошибка при загрузке групп");
                 const data = await response.json();
+                console.log("Загруженные группы:", data.groups); // Отладка
                 setGroups(data.groups || []);
             } catch (error) {
                 console.error("Error fetching groups:", error);
@@ -99,36 +113,17 @@ const AdminCoursesManagement = () => {
             }
         };
 
-        const fetchOrderData = async () => {
-            try {
-                const [typesRes, ordersRes] = await Promise.all([
-                    fetch('http://localhost:5000/admin/order-types', { credentials: 'include' }),
-                    fetch('http://localhost:5000/admin/orders', { credentials: 'include' })
-                ]);
-
-                if (!typesRes.ok) throw new Error('Error fetching order types');
-                if (!ordersRes.ok) throw new Error('Error fetching orders');
-
-                const typesData = await typesRes.json();
-                const ordersData = await ordersRes.json();
-
-                setOrderTypes(typesData || []);
-                setOrders(ordersData || []);
-            } catch (error) {
-                console.error('Error fetching order data:', error);
-                setOrderTypes([]);
-                setOrders([]);
-            }
-        };
-
         const fetchRegistrations = async () => {
             try {
                 const response = await fetch("http://localhost:5000/admin/course-registrations", { credentials: "include" });
-                if (!response.ok) throw new Error("Ошибка при загрузке заявок");
+                if (!response.ok) {
+                    throw new Error("Ошибка при загрузке заявок");
+                }
                 const data = await response.json();
                 if (data.error) {
                     setError(data.error);
                 } else {
+                    console.log("Загруженные заявки:", data); // Отладка
                     setRegistrations(data);
                 }
                 setIsLoading(false);
@@ -140,21 +135,18 @@ const AdminCoursesManagement = () => {
         };
 
         fetchGroups();
-        fetchOrderData();
         fetchRegistrations();
     }, []);
 
-    // Обработчик Escape
+    // Обработчик для Escape
     useEffect(() => {
         const handleKeyDown = (event) => {
             if (event.key === "Escape") {
                 setSelectedRejectRegistrationId(null);
-                setSelectedExpelRegistrationId(null);
-                setSelectedEnrollRegistrationId(null);
                 setSelectedPdfRegistrationId(null);
                 setSelectedUser(null);
                 setRejectReason("");
-                setSelectedOrderId(null);
+                setPdfUrl("");
             }
         };
 
@@ -163,163 +155,63 @@ const AdminCoursesManagement = () => {
     }, []);
 
     // Одобрение заявки
-    const handleApprove = (registrationId) => {
-        fetch(`http://localhost:5000/admin/approve-registration/${registrationId}`, {
-            method: "POST",
-            credentials: "include",
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.success) {
-                    setRegistrations(
-                        registrations.map((reg) =>
-                            reg._id === registrationId ? { ...reg, status: "Одобренный" } : reg
-                        )
-                    );
-                } else {
-                    setError(data.message || "Ошибка при одобрении заявки");
-                }
-            })
-            .catch((error) => {
-                console.error("Error approving registration:", error);
-                setError("Ошибка при одобрении заявки");
+    const handleApprove = async (registrationId) => {
+        try {
+            const response = await fetch(`http://localhost:5000/admin/approve-registration/${registrationId}`, {
+                method: "POST",
+                credentials: "include",
             });
+            const data = await response.json();
+            if (data.success) {
+                setRegistrations(prev =>
+                    prev.map(reg =>
+                        reg._id === registrationId ? { ...reg, status: "Одобренный" } : reg
+                    )
+                );
+            } else {
+                setError(data.message || "Ошибка при одобрении заявки");
+            }
+        } catch (error) {
+            console.error("Error approving registration:", error);
+            setError("Ошибка при одобрении заявки");
+        }
     };
 
     // Отклонение заявки
     const handleReject = (registrationId) => {
         setSelectedRejectRegistrationId(registrationId);
+        setRejectReason("");
     };
 
-    const confirmReject = () => {
+    const confirmReject = async () => {
         if (!rejectReason) {
             setError("Укажите причину отклонения");
             return;
         }
-        fetch(`http://localhost:5000/admin/reject-registration/${selectedRejectRegistrationId}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ reason: rejectReason }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.success) {
-                    setRegistrations(
-                        registrations.map((reg) =>
-                            reg._id === selectedRejectRegistrationId
-                                ? { ...reg, status: "Отклоненный", rejectReason }
-                                : reg
-                        )
-                    );
-                    setSelectedRejectRegistrationId(null);
-                    setRejectReason("");
-                } else {
-                    setError(data.message || "Ошибка при отклонении заявки");
-                }
-            })
-            .catch((error) => {
-                console.error("Error rejecting registration:", error);
-                setError("Ошибка при отклонении заявки");
+        try {
+            const response = await fetch(`http://localhost:5000/admin/reject-registration/${selectedRejectRegistrationId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ reason: rejectReason }),
             });
-    };
-
-    // Зачисление на курс
-    const handleEnroll = (registrationId) => {
-        setSelectedEnrollRegistrationId(registrationId);
-    };
-
-    const confirmEnroll = async () => {
-        if (!selectedOrderId) {
-            setError("Выберите приказ о зачислении");
-            return;
-        }
-
-        try {
-            const response = await fetch(
-                `http://localhost:5000/admin/enroll-registration/${selectedEnrollRegistrationId}`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ orderId: selectedOrderId }),
-                }
-            );
-
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error(text || "Ошибка при зачислении");
-            }
-
             const data = await response.json();
             if (data.success) {
                 setRegistrations(prev =>
                     prev.map(reg =>
-                        reg._id === selectedEnrollRegistrationId
-                            ? { ...reg, status: "Проходит курс", enrollOrderId: selectedOrderId }
+                        reg._id === selectedRejectRegistrationId
+                            ? { ...reg, status: "Отклоненный", rejectReason }
                             : reg
                     )
                 );
-                setSelectedEnrollRegistrationId(null);
-                setSelectedOrderId(null);
+                setSelectedRejectRegistrationId(null);
+                setRejectReason("");
             } else {
-                setError(data.message || "Ошибка при зачислении");
+                setError(data.message || "Ошибка при отклонении заявки");
             }
         } catch (error) {
-            console.error("Error enrolling registration:", error);
-            setError(error.message || "Ошибка при зачислении");
-        }
-    };
-
-    // Отчисление/выпуск
-    const handleExpel = (registrationId) => {
-        setSelectedExpelRegistrationId(registrationId);
-    };
-
-    const confirmExpel = async () => {
-        if (!selectedOrderId) {
-            setError("Выберите приказ");
-            return;
-        }
-
-        try {
-            const response = await fetch(
-                `http://localhost:5000/admin/expel-registration/${selectedExpelRegistrationId}`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ orderId: selectedOrderId }),
-                }
-            );
-
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error(text || "Ошибка при обработке");
-            }
-
-            const data = await response.json();
-            if (data.success) {
-                setRegistrations(prev =>
-                    prev.map(reg =>
-                        reg._id === selectedExpelRegistrationId
-                            ? {
-                                ...reg,
-                                status: data.status,
-                                expelOrderId: selectedOrderId,
-                                documentType: data.documentType || reg.documentType,
-                            }
-                            : reg
-                    )
-                );
-                setSelectedExpelRegistrationId(null);
-                setSelectedOrderId(null);
-            } else {
-                setError(data.message || "Ошибка при обработке");
-            }
-        } catch (error) {
-            console.error("Error expelling registration:", error);
-            setError(error.message || "Ошибка при обработке");
+            console.error("Error rejecting registration:", error);
+            setError("Ошибка при отклонении заявки");
         }
     };
 
@@ -329,28 +221,29 @@ const AdminCoursesManagement = () => {
         setPdfUrl(`http://localhost:5000/user/view-contract/${registrationId}`);
     };
 
-    const handleApprovePdf = (registrationId) => {
-        fetch(`http://localhost:5000/admin/approve-contract/${registrationId}`, {
-            method: "POST",
-            credentials: "include",
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.success) {
-                    setRegistrations((prevRegistrations) =>
-                        prevRegistrations.map((reg) =>
-                            reg._id === registrationId ? { ...reg, status: "Принят" } : reg
-                        )
-                    );
-                    setSelectedPdfRegistrationId(null);
-                } else {
-                    window.alert(data.message || "Ошибка при принятии заявки");
-                }
-            })
-            .catch((error) => {
-                console.error("Error approving contract:", error);
-                window.alert("Произошла ошибка при принятии заявки. Пожалуйста, попробуйте снова.");
+    // Подтверждение договора
+    const handleApprovePdf = async (registrationId) => {
+        try {
+            const response = await fetch(`http://localhost:5000/admin/approve-contract/${registrationId}`, {
+                method: "POST",
+                credentials: "include",
             });
+            const data = await response.json();
+            if (data.success) {
+                setRegistrations(prev =>
+                    prev.map(reg =>
+                        reg._id === registrationId ? { ...reg, status: "Принят" } : reg
+                    )
+                );
+                setSelectedPdfRegistrationId(null);
+                setPdfUrl("");
+            } else {
+                setError(data.message || "Ошибка при принятии договора");
+            }
+        } catch (error) {
+            console.error("Error approving contract:", error);
+            setError("Ошибка при принятии договора");
+        }
     };
 
     // Назначение группы
@@ -361,25 +254,16 @@ const AdminCoursesManagement = () => {
         }
 
         try {
-            const response = await fetch(
-                `http://localhost:5000/admin/assign-group/${registrationId}`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ groupId }),
-                }
-            );
-
-            const contentType = response.headers.get("content-type");
-            if (!contentType || !contentType.includes("application/json")) {
-                throw new Error("Ошибка: сервер вернул невалидный JSON");
-            }
-
+            const response = await fetch(`http://localhost:5000/admin/assign-group/${registrationId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ groupId }),
+            });
             const data = await response.json();
             if (data.success) {
-                setRegistrations((prevRegistrations) =>
-                    prevRegistrations.map((reg) =>
+                setRegistrations(prev =>
+                    prev.map(reg =>
                         reg._id === registrationId ? { ...reg, groupId } : reg
                     )
                 );
@@ -388,7 +272,7 @@ const AdminCoursesManagement = () => {
             }
         } catch (error) {
             console.error("Error assigning group:", error);
-            setError(error.message || "Ошибка при привязке к группе");
+            setError("Ошибка при привязке к группе");
         }
     };
 
@@ -407,23 +291,22 @@ const AdminCoursesManagement = () => {
     };
 
     // Удаление заявки
-    const handleDelete = (registrationId) => {
-        fetch(`http://localhost:5000/admin/delete-registration/${registrationId}`, {
-            method: "POST",
-            credentials: "include",
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.success) {
-                    setRegistrations(registrations.filter((reg) => reg._id !== registrationId));
-                } else {
-                    setError(data.message || "Ошибка при удалении заявки");
-                }
-            })
-            .catch((error) => {
-                console.error("Error deleting registration:", error);
-                setError("Ошибка при удалении заявки");
+    const handleDelete = async (registrationId) => {
+        try {
+            const response = await fetch(`http://localhost:5000/admin/delete-registration/${registrationId}`, {
+                method: "POST",
+                credentials: "include",
             });
+            const data = await response.json();
+            if (data.success) {
+                setRegistrations(prev => prev.filter(reg => reg._id !== registrationId));
+            } else {
+                setError(data.message || "Ошибка при удалении заявки");
+            }
+        } catch (error) {
+            console.error("Error deleting registration:", error);
+            setError("Ошибка при удалении заявки");
+        }
     };
 
     if (isLoading) return <div>Loading...</div>;
@@ -454,11 +337,8 @@ const AdminCoursesManagement = () => {
                             <option value="Ожидание">Ожидание</option>
                             <option value="Одобренный">Одобренный</option>
                             <option value="Отклоненный">Отклоненный</option>
-                            <option value="Отчисленный">Отчисленный</option>
                             <option value="Принят">Принят</option>
                             <option value="Оплаченный">Оплаченный</option>
-                            <option value="Проходит курс">Проходит курс</option>
-                            <option value="Завершил">Завершил</option>
                         </select>
                     </div>
                 </div>
@@ -467,7 +347,10 @@ const AdminCoursesManagement = () => {
                 <button
                     className="approve-btn"
                     onClick={handleMassApprove}
-                    disabled={isMassApproveDisabled}
+                    disabled={selectedRegistrations.length === 0 || !selectedRegistrations.every(id => {
+                        const reg = registrations.find(r => r._id === id);
+                        return reg.status === "Ожидание";
+                    })}
                 >
                     Одобрить выбранные
                 </button>
@@ -482,7 +365,7 @@ const AdminCoursesManagement = () => {
                         <th>Пользователь</th>
                         <th>Группа</th>
                         <th>Статус</th>
-                        <th>Причина/Документ</th>
+                        <th>Причина</th>
                         <th>Цена</th>
                         <th>Выборка</th>
                         <th>Действия</th>
@@ -515,7 +398,7 @@ const AdminCoursesManagement = () => {
                                 </button>
                             </td>
                             <td>
-                                {(registration.status === "Оплаченный" || registration.status === "Проходит курс") && (
+                                {registration.status === "Оплаченный" && (
                                     <div className="filter-group">
                                         <select
                                             value={registration.groupId || ""}
@@ -524,23 +407,21 @@ const AdminCoursesManagement = () => {
                                             <option value="">Выберите группу</option>
                                             {groups.map((group) => (
                                                 <option key={group._id} value={group._id}>
-                                                    {group.groupName}
+                                                    {group.groupName} (Course ID: {group.courseId})
                                                 </option>
                                             ))}
                                         </select>
+                                        {groups.length === 0 && <span>Группы не найдены</span>}
                                     </div>
+                                )}
+                                {registration.groupId && registration.status !== "Оплаченный" && (
+                                    <span>{groups.find(g => g._id === registration.groupId)?.groupName || "Неизвестная группа"}</span>
                                 )}
                             </td>
                             <td>{registration.status}</td>
                             <td>
                                 {registration.rejectReason && (
                                     <div className="reason-text">{registration.rejectReason}</div>
-                                )}
-                                {registration.orderType !== "Unknown orderType" && (
-                                    <div className="reason-text">По приказу: {registration.orderType}</div>
-                                )}
-                                {registration.documentType && (
-                                    <div className="reason-text">Выдан документ: {registration.documentType}</div>
                                 )}
                             </td>
                             <td>{registration.price ? `${registration.price} руб.` : "Не указана"}</td>
@@ -576,7 +457,7 @@ const AdminCoursesManagement = () => {
                                         </button>
                                     </>
                                 )}
-                                {(registration.status === "Отклоненный" || registration.status === "Отчисленный") && (
+                                {registration.status === "Отклоненный" && (
                                     <button
                                         className="reject-btn"
                                         onClick={() => handleDelete(registration._id)}
@@ -616,33 +497,8 @@ const AdminCoursesManagement = () => {
                                         Отклонить
                                     </button>
                                 )}
-                                {registration.status === "Оплаченный" && (
-                                    <>
-                                        <button
-                                            className="approve-btn"
-                                            onClick={() => handleEnroll(registration._id)}
-                                        >
-                                            Зачислить
-                                        </button>
-                                        <button
-                                            className="reject-btn"
-                                            onClick={() => handleReject(registration._id)}
-                                        >
-                                            Отклонить
-                                        </button>
-                                    </>
-                                )}
-                                {registration.status === "Проходит курс" && (
-                                    <button
-                                        className="reject-btn"
-                                        onClick={() => handleExpel(registration._id)}
-                                    >
-                                        Приказы
-                                    </button>
-                                )}
                                 {registration.status !== "Ожидание" &&
-                                    registration.status !== "Отклоненный" &&
-                                    registration.status !== "Отчисленный" && (
+                                    registration.status !== "Отклоненный" && (
                                         <button
                                             onClick={() => handleViewConsent(registration.userId)}
                                             className="toggle-info-button"
@@ -666,98 +522,20 @@ const AdminCoursesManagement = () => {
                             onChange={(e) => setRejectReason(e.target.value)}
                             placeholder="Причина отклонения"
                         />
-                        <button className="approve-btn" onClick={confirmReject}>
-                            Подтвердить
-                        </button>
-                        <button
-                            className="reject-btn"
-                            onClick={() => {
-                                setSelectedRejectRegistrationId(null);
-                                setRejectReason("");
-                            }}
-                        >
-                            Отмена
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Модальное окно для зачисления */}
-            {selectedEnrollRegistrationId && (
-                <div className="modal">
-                    <div className="modal-content">
-                        <h3>Зачисление на курс</h3>
-                        <div className="form-group">
-                            <label>Приказ о зачислении:</label>
-                            <select
-                                value={selectedOrderId || ""}
-                                onChange={(e) => setSelectedOrderId(e.target.value)}
+                        <div className="form-buttons">
+                            <button className="approve-btn" onClick={confirmReject}>
+                                Подтвердить
+                            </button>
+                            <button
+                                className="reject-btn"
+                                onClick={() => {
+                                    setSelectedRejectRegistrationId(null);
+                                    setRejectReason("");
+                                }}
                             >
-                                <option value="">Выберите приказ</option>
-                                {orders
-                                    .filter((order) => order.orderType === "О зачислении обучающихся")
-                                    .map((order) => (
-                                        <option key={order.id} value={order.id}>
-                                            {order.number} от {new Date(order.date).toLocaleDateString()} (
-                                            {order.orderType})
-                                        </option>
-                                    ))}
-                            </select>
+                                Отмена
+                            </button>
                         </div>
-                        <button className="approve-btn" onClick={confirmEnroll}>
-                            Подтвердить
-                        </button>
-                        <button
-                            className="reject-btn"
-                            onClick={() => {
-                                setSelectedEnrollRegistrationId(null);
-                                setSelectedOrderId(null);
-                            }}
-                        >
-                            Отмена
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Модальное окно для отчисления/выпуска */}
-            {selectedExpelRegistrationId && (
-                <div className="modal">
-                    <div className="modal-content">
-                        <h3>Выбор приказа</h3>
-                        <div className="form-group">
-                            <label>Приказ:</label>
-                            <select
-                                value={selectedOrderId || ""}
-                                onChange={(e) => setSelectedOrderId(e.target.value)}
-                            >
-                                <option value="">Выберите приказ</option>
-                                {orders
-                                    .filter(
-                                        (order) =>
-                                            order.orderType === "О выпуске обучающихся" ||
-                                            order.orderType === "Об отчислении обучающихся"
-                                    )
-                                    .map((order) => (
-                                        <option key={order.id} value={order.id}>
-                                            {order.number} от {new Date(order.date).toLocaleDateString()} (
-                                            {order.orderType})
-                                        </option>
-                                    ))}
-                            </select>
-                        </div>
-                        <button className="approve-btn" onClick={confirmExpel}>
-                            Подтвердить
-                        </button>
-                        <button
-                            className="reject-btn"
-                            onClick={() => {
-                                setSelectedExpelRegistrationId(null);
-                                setSelectedOrderId(null);
-                            }}
-                        >
-                            Отмена
-                        </button>
                     </div>
                 </div>
             )}
@@ -765,26 +543,30 @@ const AdminCoursesManagement = () => {
             {/* Модальное окно для просмотра PDF */}
             {selectedPdfRegistrationId && (
                 <div className="modal">
-                    <div className="modal-content_for_view">
+                    <div className="modal-content">
                         <h3>Проверка договора</h3>
                         <iframe
                             src={pdfUrl}
                             width="100%"
-                            height="100%"
+                            height="500px"
                             style={{ border: "none" }}
+                            title="Contract PDF"
                         />
-                        <div className="btns">
-                            <button
-                                className="reject-btn"
-                                onClick={() => setSelectedPdfRegistrationId(null)}
-                            >
-                                Закрыть
-                            </button>
+                        <div className="form-buttons">
                             <button
                                 className="approve-btn"
                                 onClick={() => handleApprovePdf(selectedPdfRegistrationId)}
                             >
                                 Принять
+                            </button>
+                            <button
+                                className="reject-btn"
+                                onClick={() => {
+                                    setSelectedPdfRegistrationId(null);
+                                    setPdfUrl("");
+                                }}
+                            >
+                                Закрыть
                             </button>
                         </div>
                     </div>
@@ -848,9 +630,11 @@ const AdminCoursesManagement = () => {
                                 </tr>
                             </tbody>
                         </table>
-                        <button className="reject-btn" onClick={handleCloseUserInfo}>
-                            Закрыть
-                        </button>
+                        <div className="form-buttons">
+                            <button className="reject-btn" onClick={handleCloseUserInfo}>
+                                Закрыть
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

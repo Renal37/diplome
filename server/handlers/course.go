@@ -173,7 +173,7 @@ func GetCourses(w http.ResponseWriter, r *http.Request) {
 				"registrationStart": 1,
 				"registrationEnd":   1,
 				"studentsCount":     1,
-				"maxStudents":       1,
+				"maxStudents":       1, // Добавляем maxStudents
 			},
 		},
 	}
@@ -730,7 +730,6 @@ func WithdrawRegistration(w http.ResponseWriter, r *http.Request) {
 func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection(db.CourseRegistrationsCollection)
 
-	// Агрегация для получения данных о курсе и пользователе
 	pipeline := bson.A{
 		bson.M{
 			"$lookup": bson.M{
@@ -784,6 +783,7 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 				"userId":           1,
 				"rejectReason":     1,
 				"expelOrderId":     1,
+				"price":            1, // Убедимся, что price включен
 				"orderType": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$order.orderType", 0}},
