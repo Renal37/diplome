@@ -19,10 +19,13 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/admin/course-registrations", handlers.GetCourseRegistrations).Methods("GET")
 	r.HandleFunc("/admin/approve-registration/{id}", handlers.ApproveRegistration).Methods("POST")
 	r.HandleFunc("/admin/reject-registration/{id}", handlers.RejectRegistration).Methods("POST", "OPTIONS")
-	r.HandleFunc("/admin/expel-registration/{id}", handlers.ExpelRegistration).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/enroll-registration/{id}", handlers.EnrollRegistration).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/issue-document/{id}", handlers.IssueDocument).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/approve-contract/{id}", handlers.ApproveContract).Methods("POST")
+
+
+	r.HandleFunc("/admin/expel-registration/{id}", handlers.ExpelRegistration).Methods("POST", "OPTIONS")
+	r.HandleFunc("/admin/expel-registrations", handlers.ExpelMultipleRegistrations).Methods("POST", "OPTIONS")
 
 	// Добавление уровня образования
 	r.HandleFunc("/admin/educations", handlers.GetEducations).Methods("GET")

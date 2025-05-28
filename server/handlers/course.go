@@ -17,12 +17,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// writeJSONError отправляет JSON-ошибку с указанным сообщением и кодом состояния
-func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
-}
 
 func AddCourse(w http.ResponseWriter, r *http.Request) {
 	var course models.Course
@@ -220,9 +214,6 @@ func UpdateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Отладка входных данных
-	fmt.Printf("Полученные данные: %+v\n", course)
-
 	// Проверяем обязательные поля
 	if course.Title == "" || course.Description == "" {
 		writeJSONError(w, "Заголовок и описание обязательны", http.StatusBadRequest)
@@ -251,8 +242,6 @@ func UpdateCourse(w http.ResponseWriter, r *http.Request) {
 
 	// Проверяем, что дата начала регистрации не раньше текущей даты
 	today := time.Now().Truncate(24 * time.Hour)
-	fmt.Printf("course.RegistrationStart: %v, course.RegistrationEnd: %v, today: %v\n",
-		course.RegistrationStart, course.RegistrationEnd, today)
 	if course.RegistrationStart.Before(today) {
 		writeJSONError(w, "Дата начала регистрации не может быть раньше сегодняшней даты", http.StatusBadRequest)
 		return
@@ -1204,84 +1193,6 @@ func GetCoursesForUser(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(courses)
-}
-
-func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
-	if err != nil {
-		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
-		return
-	}
-
-	var requestBody struct {
-		OrderID primitive.ObjectID `json:"orderId"`
-	}
-	err = json.NewDecoder(r.Body).Decode(&requestBody)
-	if err != nil {
-		writeJSONError(w, "Неверный формат данных", http.StatusBadRequest)
-		return
-	}
-
-	// Проверяем, что приказ существует
-	orderCollection := db.GetCollection(db.OrderCollection)
-	var order models.Order
-	err = orderCollection.FindOne(context.Background(), bson.M{"_id": requestBody.OrderID}).Decode(&order)
-	if err != nil {
-		writeJSONError(w, "Приказ не найден", http.StatusBadRequest)
-		return
-	}
-
-	// Проверяем текущий статус заявки
-	registrationCollection := db.GetCollection(db.CourseRegistrationsCollection)
-	var registration bson.M
-	err = registrationCollection.FindOne(context.Background(), bson.M{"_id": registrationID}).Decode(&registration)
-	if err != nil {
-		writeJSONError(w, "Заявка не найдена", http.StatusNotFound)
-		return
-	}
-	if registration["status"] != "Проходит курс" {
-		writeJSONError(w, "Действие возможно только для статуса 'Проходит курс'", http.StatusBadRequest)
-		return
-	}
-
-	// Определяем статус и тип документа
-	var newStatus string
-	var documentType string
-	if order.OrderType == "О выпуске обучающихся" {
-		newStatus = "Завершил"
-		documentType = "Диплом"
-	} else if order.OrderType == "Об отчислении обучающихся" {
-		newStatus = "Отчисленный"
-		documentType = "Сертификат"
-	} else {
-		writeJSONError(w, "Неверный тип приказа", http.StatusBadRequest)
-		return
-	}
-
-	// Обновляем заявку
-	filter := bson.M{"_id": registrationID}
-	update := bson.M{
-		"$set": bson.M{
-			"status":       newStatus,
-			"expelOrderId": requestBody.OrderID,
-			"expelDate":    time.Now(),
-			"documentType": documentType,
-		},
-	}
-
-	_, err = registrationCollection.UpdateOne(context.Background(), filter, update)
-	if err != nil {
-		writeJSONError(w, "Ошибка при обработке", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success":      true,
-		"status":       newStatus,
-		"documentType": documentType,
-	})
 }
 
 func EnrollRegistration(w http.ResponseWriter, r *http.Request) {
