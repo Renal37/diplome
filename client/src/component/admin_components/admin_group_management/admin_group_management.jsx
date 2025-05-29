@@ -37,10 +37,20 @@ const AdminGroupManagement = () => {
             for (const group of data.groups) {
                 const membersResponse = await fetch(`http://localhost:5000/admin/group-members/${group._id}`);
                 const membersData = await membersResponse.json();
+
+                const hasPaid = membersData.members?.some(m => m.status === "Оплаченный");
+                const hasEnrolled = membersData.members?.some(m => m.status === "Проходит курс");
+                const hasCompleted = membersData.members?.some(m => m.status === "Завершил");
+                const hasRejected = membersData.members?.some(m => m.status === "Отклоненный");
                 groupsWithMembersInfo[group._id] = {
                     hasMembers: membersData.members?.length > 0,
+                    hasPaidMembers: hasPaid,
+                    hasEnrolledMembers: hasEnrolled,
+                    hasCompletedMembers: hasCompleted,
+                    hasRejectedMembers: hasRejected,
                     status: group.status,
-                    currentStudents: group.currentStudents
+                    currentStudents: group.currentStudents,
+                    members: membersData.members || []
                 };
             }
 
@@ -113,7 +123,7 @@ const AdminGroupManagement = () => {
             const data = await response.json();
             if (data.success) {
                 setSuccessMessage("Группа успешно обновлена!");
-                handleClose();
+                handleCloseAllModals();
                 fetchGroups();
             } else {
                 setError(data.error || "Ошибка при обновлении группы");
@@ -164,8 +174,7 @@ const AdminGroupManagement = () => {
             const data = await response.json();
             if (data.success) {
                 setSuccessMessage("Записи группы успешно отклонены!");
-                setIsRejectModalOpen(false);
-                setRejectReason("");
+                handleCloseAllModals();
                 fetchGroups();
             } else {
                 setError(data.error || "Ошибка при отклонении записей");
@@ -192,7 +201,7 @@ const AdminGroupManagement = () => {
             const data = await response.json();
             if (data.success) {
                 setSuccessMessage("Группа успешно создана!");
-                handleClose();
+                handleCloseAllModals();
                 fetchGroups();
             } else {
                 setError(data.error || "Ошибка при создании группы");
@@ -218,11 +227,12 @@ const AdminGroupManagement = () => {
     const handleViewMembers = (groupId) => {
         setSelectedGroupId(groupId);
         setSelectedMembers([]);
+        setGroupMembers(groupsWithMembers[groupId]?.members || []);
         fetchGroupMembers(groupId);
     };
 
     const handleExpelMember = (registrationId) => {
-        setSelectedGroupId(registrationId);
+        setSelectedGroupId(`registration-${registrationId}`);
         setIsExpelModalOpen(true);
     };
 
@@ -231,11 +241,10 @@ const AdminGroupManagement = () => {
         setIsEnrollModalOpen(true);
     };
 
-    const handleExpelGroup = (groupId, isExpel = false) => {
+    const handleExpelGroup = (groupId, isSelective = false) => {
         setSelectedGroupId(groupId);
-        if (isExpel) {
+        if (isSelective) {
             setIsSelectMembersModalOpen(true);
-            fetchGroupMembers(groupId);
         } else {
             setIsExpelModalOpen(true);
         }
@@ -243,7 +252,6 @@ const AdminGroupManagement = () => {
 
     const handleExpelSelectedMembers = () => {
         setIsSelectMembersModalOpen(true);
-        fetchGroupMembers(selectedGroupId);
     };
 
     const confirmEnroll = async () => {
@@ -261,9 +269,7 @@ const AdminGroupManagement = () => {
             const data = await response.json();
             if (data.success) {
                 setSuccessMessage("Группа успешно зачислена!");
-                setIsEnrollModalOpen(false);
-                setSelectedOrderId(null);
-                fetchGroupMembers(selectedGroupId);
+                handleCloseAllModals();
                 fetchGroups();
             } else {
                 setError(data.error || "Ошибка при зачислении группы");
@@ -288,7 +294,8 @@ const AdminGroupManagement = () => {
                     orderId: selectedOrderId
                 });
             } else if (selectedGroupId.includes("registration")) {
-                url = `http://localhost:5000/admin/expel-registration/${selectedGroupId}`;
+                const registrationId = selectedGroupId.split("-")[1];
+                url = `http://localhost:5000/admin/expel-registration/${registrationId}`;
                 body = JSON.stringify({ orderId: selectedOrderId });
             } else {
                 url = `http://localhost:5000/admin/expel-group/${selectedGroupId}`;
@@ -310,10 +317,7 @@ const AdminGroupManagement = () => {
                             ? "Участник успешно отчислен!"
                             : "Приказ успешно выдан!"
                 );
-                setIsExpelModalOpen(false);
-                setSelectedOrderId(null);
-                setSelectedMembers([]);
-                fetchGroupMembers(selectedGroupId.includes("registration") ? selectedGroupId : selectedGroupId);
+                handleCloseAllModals();
                 fetchGroups();
             } else {
                 setError(data.error || "Ошибка при обработке");
@@ -341,22 +345,20 @@ const AdminGroupManagement = () => {
         setIsExpelModalOpen(true);
     };
 
-    const handleCloseMembersModal = () => {
-        setSelectedGroupId(null);
-        setGroupMembers([]);
-        setSelectedMembers([]);
-    };
-
-    const handleCloseSelectMembersModal = () => {
-        setIsSelectMembersModalOpen(false);
-        setSelectedMembers([]);
-    };
-
-    const handleClose = () => {
+    const handleCloseAllModals = () => {
         setIsModalOpen(false);
+        setIsEnrollModalOpen(false);
+        setIsExpelModalOpen(false);
+        setIsRejectModalOpen(false);
+        setIsSelectMembersModalOpen(false);
         setSelectedGroup(null);
+        setSelectedGroupId(null);
         setGroupName("");
         setCourseId("");
+        setGroupMembers([]);
+        setSelectedMembers([]);
+        setSelectedOrderId(null);
+        setRejectReason("");
         setError("");
         setSuccessMessage("");
     };
@@ -364,27 +366,12 @@ const AdminGroupManagement = () => {
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === "Escape") {
-                if (isEnrollModalOpen) {
-                    setIsEnrollModalOpen(false);
-                    setSelectedOrderId(null);
-                } else if (isExpelModalOpen) {
-                    setIsExpelModalOpen(false);
-                    setSelectedOrderId(null);
-                } else if (isRejectModalOpen) {
-                    setIsRejectModalOpen(false);
-                    setRejectReason("");
-                } else if (isSelectMembersModalOpen) {
-                    handleCloseSelectMembersModal();
-                } else if (selectedGroupId) {
-                    handleCloseMembersModal();
-                } else if (isModalOpen) {
-                    handleClose();
-                }
+                handleCloseAllModals();
             }
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isEnrollModalOpen, isExpelModalOpen, isRejectModalOpen, isSelectMembersModalOpen, selectedGroupId, isModalOpen]);
+    }, []);
 
     return (
         <div className="admin-groups-management-page">
@@ -432,7 +419,7 @@ const AdminGroupManagement = () => {
                                 <button className="approve-btn" type="submit">
                                     {selectedGroup ? "Сохранить" : "Создать"}
                                 </button>
-                                <button className="reject-btn" type="button" onClick={handleClose}>Закрыть</button>
+                                <button className="reject-btn" type="button" onClick={handleCloseAllModals}>Закрыть</button>
                             </div>
                         </form>
                     </div>
@@ -449,54 +436,70 @@ const AdminGroupManagement = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {filteredGroups.map((group) => (
-                        <tr key={group._id}>
-                            <td>{group.groupName}</td>
-                            <td>
-                                {courses.find((course) => course._id === group.courseId)?.title || "Неизвестный курс"}
-                            </td>
-                            <td>
-                                {`${groupsWithMembers[group._id]?.currentStudents || 0} / ${courses.find((course) => course._id === group.courseId)?.maxStudents || "Не указано"
-                                    }`}
-                            </td>
-                            <td>
-                                <div className="bt">
-                                    <button className="approve-btn" onClick={() => handleViewMembers(group._id)}>
-                                        Просмотр участников
-                                    </button>
-                                    {groupsWithMembers[group._id]?.status !== "Завершена" && (
-                                        <>
-                                            {groupsWithMembers[group._id]?.hasMembers ? (
-                                                <>
-                                                    <button className="approve-btn" onClick={() => handleEnrollGroup(group._id)}>
-                                                        Зачислить группу
-                                                    </button>
-                                                    <button className="approve-btn" onClick={() => handleExpelGroup(group._id, true)}>
-                                                        Отчислить
-                                                    </button>
-                                                    <button className="approve-btn" onClick={() => handleExpelGroup(group._id, false)}>
-                                                        Завершить
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <button className="approve-btn" onClick={() => handleEdit(group)}>
-                                                        Редактировать
-                                                    </button>
-                                                    <button className="reject-btn" onClick={() => handleRejectGroup(group._id)}>
-                                                        Отклонить записи
-                                                    </button>
-                                                    <button className="reject-btn" onClick={() => handleDelete(group._id)}>
-                                                        Удалить
-                                                    </button>
-                                                </>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
+                    {filteredGroups.map((group) => {
+                        const groupInfo = groupsWithMembers[group._id] || {};
+                        const isCompleted = groupInfo.status === "Завершена";
+                        const hasActiveMembers = groupInfo.hasEnrolledMembers || groupInfo.hasCompletedMembers;
+                        const hasOnlyPaid = groupInfo.hasPaidMembers && !hasActiveMembers;
+                        const isEmpty = !groupInfo.hasMembers || (groupInfo.hasRejectedMembers && !hasActiveMembers && !groupInfo.hasPaidMembers);
+
+                        return (
+                            <tr key={group._id}>
+                                <td>{group.groupName}</td>
+                                <td>
+                                    {courses.find((course) => course._id === group.courseId)?.title || "Неизвестный курс"}
+                                </td>
+                                <td>
+                                    {`${groupInfo.currentStudents || 0} / ${courses.find((course) => course._id === group.courseId)?.maxStudents || "Не указано"}`}
+                                </td>
+                                <td>
+                                    <div className="bt">
+                                        <button className="approve-btn" onClick={() => handleViewMembers(group._id)}>
+                                            Просмотр участников
+                                        </button>
+
+                                        {!isCompleted && (
+                                            <>
+                                                {isEmpty ? (
+                                                    <>
+                                                        <button className="approve-btn" onClick={() => handleEdit(group)}>
+                                                            Редактировать
+                                                        </button>
+                                                        <button className="reject-btn" onClick={() => handleRejectGroup(group._id)}>
+                                                            Отклонить записи
+                                                        </button>
+                                                        <button className="reject-btn" onClick={() => handleDelete(group._id)}>
+                                                            Удалить
+                                                        </button>
+                                                    </>
+                                                ) : hasOnlyPaid ? (
+                                                    <>
+                                                        <button className="approve-btn" onClick={() => handleEnrollGroup(group._id)}>
+                                                            Зачислить группу
+                                                        </button>
+                                                        <button className="reject-btn" onClick={() => handleRejectGroup(group._id)}>
+                                                            Отклонить записи
+                                                        </button>
+                                                        {!groupInfo.hasEnrolledMembers && (
+                                                            <button className="reject-btn" onClick={() => handleDelete(group._id)}>
+                                                                Удалить
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                ) : hasActiveMembers ? (
+                                                    <>
+                                                        <button className="approve-btn" onClick={() => handleExpelGroup(group._id, false)}>
+                                                            Завершить
+                                                        </button>
+                                                    </>
+                                                ) : null}
+                                            </>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </table>
 
@@ -547,7 +550,7 @@ const AdminGroupManagement = () => {
                                     Отчислить выбранных
                                 </button>
                             )}
-                            <button className="reject-btn" onClick={handleCloseMembersModal}>
+                            <button className="reject-btn" onClick={handleCloseAllModals}>
                                 Закрыть
                             </button>
                         </div>
@@ -589,7 +592,7 @@ const AdminGroupManagement = () => {
                             <button className="approve-btn" onClick={confirmSelectMembers}>
                                 Подтвердить выбор
                             </button>
-                            <button className="reject-btn" onClick={handleCloseSelectMembersModal}>
+                            <button className="reject-btn" onClick={handleCloseAllModals}>
                                 Отмена
                             </button>
                         </div>
@@ -620,13 +623,7 @@ const AdminGroupManagement = () => {
                         <button className="approve-btn" onClick={confirmEnroll}>
                             Подтвердить
                         </button>
-                        <button
-                            className="reject-btn"
-                            onClick={() => {
-                                setIsEnrollModalOpen(false);
-                                setSelectedOrderId(null);
-                            }}
-                        >
+                        <button className="reject-btn" onClick={handleCloseAllModals}>
                             Отмена
                         </button>
                     </div>
@@ -660,13 +657,7 @@ const AdminGroupManagement = () => {
                         <button className="approve-btn" onClick={confirmExpel}>
                             Подтвердить
                         </button>
-                        <button
-                            className="reject-btn"
-                            onClick={() => {
-                                setIsExpelModalOpen(false);
-                                setSelectedOrderId(null);
-                            }}
-                        >
+                        <button className="reject-btn" onClick={handleCloseAllModals}>
                             Отмена
                         </button>
                     </div>
@@ -685,13 +676,7 @@ const AdminGroupManagement = () => {
                         <button className="approve-btn" onClick={confirmReject}>
                             Подтвердить
                         </button>
-                        <button
-                            className="reject-btn"
-                            onClick={() => {
-                                setIsRejectModalOpen(false);
-                                setRejectReason("");
-                            }}
-                        >
+                        <button className="reject-btn" onClick={handleCloseAllModals}>
                             Отмена
                         </button>
                     </div>
