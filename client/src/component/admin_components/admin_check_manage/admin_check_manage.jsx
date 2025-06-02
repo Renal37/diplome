@@ -16,28 +16,28 @@ const AdminCoursesManagement = () => {
     const [searchUserName, setSearchUserName] = useState("");
     const [searchCourseTitle, setSearchCourseTitle] = useState("");
 
-    // Фильтрация заявок
-    const filteredRegistrations = registrations.filter((registration) => {
+    const deletableStatuses = ["Ожидание", "Одобренный", "Отклоненный"];
+
+    const filteredRegistrations = registrations.filter(registration => {
         const matchesStatus = filterStatus === "all" || registration.status === filterStatus;
         const matchesUserName = registration.userName.toLowerCase().includes(searchUserName.toLowerCase());
         const matchesCourseTitle = registration.courseTitle.toLowerCase().includes(searchCourseTitle.toLowerCase());
         return matchesStatus && matchesUserName && matchesCourseTitle;
     });
 
-    // Массовое одобрение
     const handleMassApprove = async () => {
         if (selectedRegistrations.length === 0) {
-            setError("Выберите хотя бы одну заявку для одобрения");
+            setError("Выберите хотя бы одну заявку");
             return;
         }
 
-        const allPending = selectedRegistrations.every(registrationId => {
-            const registration = registrations.find(reg => reg._id === registrationId);
+        const allPending = selectedRegistrations.every(id => {
+            const registration = registrations.find(reg => reg._id === id);
             return registration?.status === "Ожидание";
         });
 
         if (!allPending) {
-            setError("Можно одобрять только заявки со статусом 'Ожидание'");
+            setError("Одобрять можно только заявки 'Ожидание'");
             return;
         }
 
@@ -52,7 +52,7 @@ const AdminCoursesManagement = () => {
             const results = await Promise.all(approvePromises);
             const allSuccess = results.every(res => res.success);
             if (!allSuccess) {
-                throw new Error("Некоторые заявки не одобрены");
+                throw new Error("Ошибка при одобрении заявок");
             }
 
             setRegistrations(prev =>
@@ -62,25 +62,33 @@ const AdminCoursesManagement = () => {
                         : reg
                 )
             );
-
             setSelectedRegistrations([]);
-        } catch (error) {
-            console.error("Ошибка массового одобрения:", error);
-            setError(error.message || "Ошибка при одобрении");
+        } catch (err) {
+            console.error("Ошибка массового одобрения:", err);
+            setError(err.message || "Ошибка при одобрении");
         }
     };
 
-    // Массовое удаление
     const handleMassDelete = async () => {
         if (selectedRegistrations.length === 0) {
-            setError("Выберите хотя бы одну заявку для удаления");
+            setError("Выберите хотя бы одну заявку");
+            return;
+        }
+
+        const allDeletable = selectedRegistrations.every(id => {
+            const registration = registrations.find(reg => reg._id === id);
+            return deletableStatuses.includes(registration?.status);
+        });
+
+        if (!allDeletable) {
+            setError("Удалять можно только 'Ожидание', 'Одобренный', 'Отклоненный'");
             return;
         }
 
         try {
             const deletePromises = selectedRegistrations.map(id =>
                 fetch(`http://localhost:5000/admin/delete-registration/${id}`, {
-                    method: "POST",
+                    method: "DELETE",
                     credentials: "include",
                 }).then(res => res.json())
             );
@@ -88,50 +96,44 @@ const AdminCoursesManagement = () => {
             const results = await Promise.all(deletePromises);
             const allSuccess = results.every(res => res.success);
             if (!allSuccess) {
-                throw new Error("Некоторые заявки не удалены");
+                throw new Error("Ошибка при удалении заявок");
             }
 
             setRegistrations(prev => prev.filter(reg => !selectedRegistrations.includes(reg._id)));
             setSelectedRegistrations([]);
-        } catch (error) {
-            console.error("Ошибка массового удаления:", error);
-            setError(error.message || "Ошибка при удалении");
+        } catch (err) {
+            console.error("Ошибка массового удаления:", err);
+            setError(err.message || "Ошибка при удалении");
         }
     };
 
-    // Загрузка данных
     useEffect(() => {
         const fetchGroups = async () => {
             try {
                 const response = await fetch("http://localhost:5000/groups", { credentials: "include" });
-                if (!response.ok) throw new Error("Ошибка при загрузке групп");
+                if (!response.ok) throw new Error(`Ошибка ${response.status}: Не удалось загрузить группы`);
                 const data = await response.json();
-                console.log("Загруженные группы:", data.groups); // Отладка
                 setGroups(data.groups || []);
-            } catch (error) {
-                console.error("Error fetching groups:", error);
-                setError("Ошибка при загрузке групп");
+            } catch (err) {
+                console.error("Ошибка загрузки групп:", err);
+                setError(err.message || "Ошибка при загрузке групп");
             }
         };
 
         const fetchRegistrations = async () => {
             try {
                 const response = await fetch("http://localhost:5000/admin/course-registrations", { credentials: "include" });
-                if (!response.ok) {
-                    throw new Error("Ошибка при загрузке заявок");
-                }
+                if (!response.ok) throw new Error(`Ошибка ${response.status}: Не удалось загрузить заявки`);
                 const data = await response.json();
                 if (data.error) {
                     setError(data.error);
                 } else {
-                    console.log("Загруженные заявки:", data); // Отладка
-                    setRegistrations(data);
-                    console.log(data)
+                    setRegistrations(data || []);
                 }
                 setIsLoading(false);
-            } catch (error) {
-                console.error("Error fetching registrations:", error);
-                setError("Ошибка при загрузке заявок");
+            } catch (err) {
+                console.error("Ошибка загрузки заявок:", err);
+                setError(err.message || "Ошибка при загрузке заявок");
                 setIsLoading(false);
             }
         };
@@ -140,9 +142,8 @@ const AdminCoursesManagement = () => {
         fetchRegistrations();
     }, []);
 
-    // Обработчик для Escape
     useEffect(() => {
-        const handleKeyDown = (event) => {
+        const handleKeyDown = event => {
             if (event.key === "Escape") {
                 setSelectedRejectRegistrationId(null);
                 setSelectedPdfRegistrationId(null);
@@ -156,7 +157,6 @@ const AdminCoursesManagement = () => {
         return () => document.removeEventListener("keydown", handleKeyDown);
     }, []);
 
-    // Одобрение заявки
     const handleApprove = async (registrationId) => {
         try {
             const response = await fetch(`http://localhost:5000/admin/approve-registration/${registrationId}`, {
@@ -164,22 +164,21 @@ const AdminCoursesManagement = () => {
                 credentials: "include",
             });
             const data = await response.json();
-            if (data.success) {
-                setRegistrations(prev =>
-                    prev.map(reg =>
-                        reg._id === registrationId ? { ...reg, status: "Одобренный" } : reg
-                    )
-                );
-            } else {
-                setError(data.message || "Ошибка при одобрении заявки");
+            if (!data.success) {
+                setError(data.error || "Ошибка при одобрении заявки");
+                return;
             }
-        } catch (error) {
-            console.error("Error approving registration:", error);
-            setError("Ошибка при одобрении заявки");
+            setRegistrations(prev =>
+                prev.map(reg =>
+                    reg._id === registrationId ? { ...reg, status: "Одобренный" } : reg
+                )
+            );
+        } catch (err) {
+            console.error("Ошибка одобрения заявки:", err);
+            setError(err.message || "Ошибка при одобрении заявки");
         }
     };
 
-    // Отклонение заявки
     const handleReject = (registrationId) => {
         setSelectedRejectRegistrationId(registrationId);
         setRejectReason("");
@@ -195,35 +194,33 @@ const AdminCoursesManagement = () => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({ reason: rejectReason }),
+                body: JSON.stringify({ reason: rejectReason })
             });
             const data = await response.json();
-            if (data.success) {
-                setRegistrations(prev =>
-                    prev.map(reg =>
-                        reg._id === selectedRejectRegistrationId
-                            ? { ...reg, status: "Отклоненный", rejectReason }
-                            : reg
-                    )
-                );
-                setSelectedRejectRegistrationId(null);
-                setRejectReason("");
-            } else {
-                setError(data.message || "Ошибка при отклонении заявки");
+            if (!data.success) {
+                setError(data.error || "Ошибка при отклонении заявки");
+                return;
             }
-        } catch (error) {
-            console.error("Error rejecting registration:", error);
-            setError("Ошибка при отклонении заявки");
+            setRegistrations(prev =>
+                prev.map(reg =>
+                    reg._id === selectedRejectRegistrationId
+                        ? { ...reg, status: "Отклоненный", rejectReason }
+                        : reg
+                )
+            );
+            setSelectedRejectRegistrationId(null);
+            setRejectReason("");
+        } catch (err) {
+            console.error("Ошибка отклонения заявки:", err);
+            setError(err.message || "Ошибка при отклонении заявки");
         }
     };
 
-    // Просмотр договора (PDF)
     const handleViewPdf = (registrationId) => {
         setSelectedPdfRegistrationId(registrationId);
         setPdfUrl(`http://localhost:5000/user/view-contract/${registrationId}`);
     };
 
-    // Подтверждение договора
     const handleApprovePdf = async (registrationId) => {
         try {
             const response = await fetch(`http://localhost:5000/admin/approve-contract/${registrationId}`, {
@@ -231,54 +228,51 @@ const AdminCoursesManagement = () => {
                 credentials: "include",
             });
             const data = await response.json();
-            if (data.success) {
-                setRegistrations(prev =>
-                    prev.map(reg =>
-                        reg._id === registrationId ? { ...reg, status: "Принят" } : reg
-                    )
-                );
-                setSelectedPdfRegistrationId(null);
-                setPdfUrl("");
-            } else {
-                setError(data.message || "Ошибка при принятии договора");
+            if (!data.success) {
+                setError(data.error || "Ошибка при принятии договора");
+                return;
             }
-        } catch (error) {
-            console.error("Error approving contract:", error);
-            setError("Ошибка при принятии договора");
+            setRegistrations(prev =>
+                prev.map(reg =>
+                    reg._id === registrationId ? { ...reg, status: "Принят" } : reg
+                )
+            );
+            setSelectedPdfRegistrationId(null);
+            setPdfUrl("");
+        } catch (err) {
+            console.error("Ошибка принятия договора:", err);
+            setError(err.message || "Ошибка при принятии договора");
         }
     };
 
-    // Назначение группы
     const handleAssignGroup = async (registrationId, groupId) => {
         if (!groupId) {
             setError("Выберите группу");
             return;
         }
-
         try {
             const response = await fetch(`http://localhost:5000/admin/assign-group/${registrationId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({ groupId }),
+                body: JSON.stringify({ groupId })
             });
             const data = await response.json();
-            if (data.success) {
-                setRegistrations(prev =>
-                    prev.map(reg =>
-                        reg._id === registrationId ? { ...reg, groupId } : reg
-                    )
-                );
-            } else {
-                setError(data.message || "Ошибка при привязке к группе");
+            if (!data.success) {
+                setError(data.error || "Ошибка при привязке к группе");
+                return;
             }
-        } catch (error) {
-            console.error("Error assigning group:", error);
-            setError("Ошибка при привязке к группе");
+            setRegistrations(prev =>
+                prev.map(reg =>
+                    reg._id === registrationId ? { ...reg, groupId } : reg
+                )
+            );
+        } catch (err) {
+            console.error("Ошибка привязки к группе:", err);
+            setError(err.message || "Ошибка при привязке к группе");
         }
     };
 
-    // Просмотр информации о пользователе
     const handleViewUser = (user) => {
         setSelectedUser(user);
     };
@@ -287,54 +281,57 @@ const AdminCoursesManagement = () => {
         setSelectedUser(null);
     };
 
-    // Просмотр согласия
     const handleViewConsent = (userId) => {
         window.open(`http://localhost:5000/user/view-consent/${userId}`, '_blank');
     };
 
-    // Удаление заявки
     const handleDelete = async (registrationId) => {
+        const registration = registrations.find(reg => reg._id === registrationId);
+        if (!deletableStatuses.includes(registration.status)) {
+            setError("Удалять можно только 'Ожидание', 'Одобренный', 'Отклоненный'");
+            return;
+        }
         try {
             const response = await fetch(`http://localhost:5000/admin/delete-registration/${registrationId}`, {
-                method: "POST",
+                method: "DELETE",
                 credentials: "include",
             });
             const data = await response.json();
-            if (data.success) {
-                setRegistrations(prev => prev.filter(reg => reg._id !== registrationId));
-            } else {
-                setError(data.message || "Ошибка при удалении заявки");
+            if (!data.success) {
+                setError(data.error || "Ошибка при удалении");
+                return;
             }
-        } catch (error) {
-            console.error("Error deleting registration:", error);
-            setError("Ошибка при удалении заявки");
+            setRegistrations(prev => prev.filter(reg => reg._id !== registrationId));
+        } catch (err) {
+            console.error("Ошибка удаления заявки:", err);
+            setError(err.message || "Ошибка при удалении заявки");
         }
     };
 
-    if (isLoading) return <div>Loading...</div>;
+    if (isLoading) return <div>Загрузка...</div>;
 
     return (
         <div className="admin-approval-page">
-            {error && <p className="error">{error}</p>}
+            {error && <p className="error-message">{error}</p>}
             <div className="controls">
                 <div className="search-container">
                     <input
                         type="text"
                         value={searchUserName}
-                        onChange={(e) => setSearchUserName(e.target.value)}
-                        placeholder="Поиск по имени пользователя"
+                        onChange={e => setSearchUserName(e.target.value)}
+                        placeholder="Поиск по пользователю"
                         className="search-input"
                     />
                     <input
                         type="text"
                         value={searchCourseTitle}
-                        onChange={(e) => setSearchCourseTitle(e.target.value)}
-                        placeholder="Поиск по названию курса"
+                        onChange={e => setSearchCourseTitle(e.target.value)}
+                        placeholder="Поиск по курсу"
                         className="search-input"
                     />
                     <div className="filter-section">
                         <label>Фильтр по статусу:</label>
-                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
                             <option value="all">Все</option>
                             <option value="Ожидание">Ожидание</option>
                             <option value="Одобренный">Одобренный</option>
@@ -359,7 +356,14 @@ const AdminCoursesManagement = () => {
                 >
                     Одобрить выбранные
                 </button>
-                <button className="reject-btn" onClick={handleMassDelete}>
+                <button
+                    className="reject-btn"
+                    onClick={handleMassDelete}
+                    disabled={selectedRegistrations.length === 0 || !selectedRegistrations.every(id => {
+                        const reg = registrations.find(r => r._id === id);
+                        return deletableStatuses.includes(reg.status);
+                    })}
+                >
                     Удалить выбранные
                 </button>
             </div>
@@ -377,154 +381,172 @@ const AdminCoursesManagement = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {filteredRegistrations.map((registration) => (
-                        <tr key={registration._id}>
-                            <td className="course-titles">{registration.courseTitle}</td>
-                            <td>
-                                <button
-                                    onClick={() =>
-                                        handleViewUser({
-                                            username: registration.userName,
-                                            email: registration.userEmail,
-                                            fullname: registration.userFullname,
-                                            birthdate: registration.userBirthdate,
-                                            birthplace: registration.userBirthplace,
-                                            education: registration.userEducation,
-                                            workplace: registration.userWorkplace,
-                                            jobtitle: registration.userJobtitle,
-                                            homeaddress: registration.userHomeaddress,
-                                            phone: registration.userPhone,
-                                            passportdata: registration.userPassportdata,
-                                            snils: registration.userSnils,
-                                        })
-                                    }
-                                >
-                                    {registration.userName}
-                                </button>
-                            </td>
-                            <td>
-                                {registration.status === "Оплаченный" && (
-                                    <div className="filter-group">
+                    {filteredRegistrations.map(registration => {
+                        const availableGroups = groups.filter(group => group.courseId === registration.courseId);
+
+                        return (
+                            <tr key={registration._id}>
+                                <td className="course-title">{registration.courseTitle}</td>
+                                <td>
+                                    <button
+                                        onClick={() =>
+                                            handleViewUser({
+                                                username: registration.userName,
+                                                email: registration.userEmail,
+                                                fullname: registration.userFullname,
+                                                birthdate: registration.userBirthdate,
+                                                birthplace: registration.userBirthplace,
+                                                education: registration.userEducation,
+                                                workplace: registration.userWorkplace,
+                                                jobtitle: registration.userJobtitle,
+                                                homeaddress: registration.userHomeaddress,
+                                                phone: registration.userPhone,
+                                                passportdata: registration.userPassportdata,
+                                                snils: registration.userSnils,
+                                            })}
+                                    >
+                                        {registration.userName}
+                                    </button>
+                                </td>
+                                <td>
+                                    {registration.status === "Оплаченный" ? (
                                         <select
                                             value={registration.groupId || ""}
-                                            onChange={(e) => handleAssignGroup(registration._id, e.target.value)}
+                                            onChange={e => handleAssignGroup(registration._id, e.target.value)}
                                         >
                                             <option value="">Выберите группу</option>
-                                            {groups.map((group) => (
+                                            {availableGroups.map(group => (
                                                 <option key={group._id} value={group._id}>
-                                                    {group.groupName} (Course ID: {group.courseId})
+                                                    {group.groupName}
                                                 </option>
                                             ))}
                                         </select>
-                                        {groups.length === 0 && <span>Группы не найдены</span>}
-                                    </div>
-                                )}
-                                {registration.groupId && registration.status !== "Оплаченный" && (
-                                    <span>{groups.find(g => g._id === registration.groupId)?.groupName || "Неизвестная группа"}</span>
-                                )}
-                            </td>
-                            <td>{registration.status}</td>
-                            <td>
-                                {registration.rejectReason && (
-                                    <div className="reason-text">{registration.rejectReason}</div>
-                                )}
-                            </td>
-                            <td>{registration.price ? `${registration.price} руб.` : "Не указана"}</td>
-                            <td>
-                                <input
-                                    type="checkbox"
-                                    checked={selectedRegistrations.includes(registration._id)}
-                                    onChange={(e) => {
-                                        if (e.target.checked) {
-                                            setSelectedRegistrations([...selectedRegistrations, registration._id]);
-                                        } else {
-                                            setSelectedRegistrations(
-                                                selectedRegistrations.filter((id) => id !== registration._id)
-                                            );
-                                        }
-                                    }}
-                                />
-                            </td>
-                            <td className="admin_btns">
-                                {registration.status === "Ожидание" && (
-                                    <>
-                                        <button
-                                            className="approve-btn"
-                                            onClick={() => handleApprove(registration._id)}
-                                        >
-                                            Одобрить
-                                        </button>
-                                        <button
-                                            className="reject-btn"
-                                            onClick={() => handleReject(registration._id)}
-                                        >
-                                            Отклонить
-                                        </button>
-                                    </>
-                                )}
-                                {registration.status === "Отклоненный" && (
-                                    <button
-                                        className="reject-btn"
-                                        onClick={() => handleDelete(registration._id)}
-                                    >
-                                        Удалить
-                                    </button>
-                                )}
-                                {registration.status === "Одобренный" && registration.contractFilePath && (
-                                    <>
+                                    ) : (
+                                        <span>{groups.find(g => g._id === registration.groupId)?.groupName || "Нет группы"}</span>
+                                    )}
+                                </td>
+                                <td>{registration.status}</td>
+                                <td>
+                                    {registration.rejectReason && (
+                                        <div className="reason-text">{registration.rejectReason}</div>
+                                    )}
+                                </td>
+                                <td>{registration.price ? `${registration.price} руб.` : "Не указана"}</td>
+                                <td>
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedRegistrations.includes(registration._id)}
+                                        onChange={e => {
+                                            if (e.target.checked) {
+                                                setSelectedRegistrations([...selectedRegistrations, registration._id]);
+                                            } else {
+                                                setSelectedRegistrations(
+                                                    selectedRegistrations.filter(id => id !== registration._id)
+                                                );
+                                            }
+                                        }}
+                                    />
+                                </td>
+                                <td className="admin_btns">
+                                    {registration.status === "Ожидание" && (
+                                        <>
+                                            <button
+                                                className="approve-btn"
+                                                onClick={() => handleApprove(registration._id)}
+                                            >
+                                                Одобрить
+                                            </button>
+                                            <button
+                                                className="reject-btn"
+                                                onClick={() => handleReject(registration._id)}
+                                            >
+                                                Отклонить
+                                            </button>
+                                            <button
+                                                className="reject-btn"
+                                                onClick={() => handleDelete(registration._id)}
+                                            >
+                                                Удалить
+                                            </button>
+                                        </>
+                                    )}
+                                    {registration.status === "Отклоненный" && (
                                         <button
                                             className="reject-btn"
-                                            onClick={() => handleReject(registration._id)}
+                                            onClick={() => handleDelete(registration._id)}
                                         >
-                                            Отклонить
-                                        </button>
-                                        <button
-                                            className="approve-btn"
-                                            onClick={() => handleViewPdf(registration._id)}
-                                        >
-                                            Проверить договор
-                                        </button>
-                                    </>
-                                )}
-                                {registration.status === "Одобренный" && !registration.contractFilePath && (
-                                    <button
-                                        className="reject-btn"
-                                        onClick={() => handleReject(registration._id)}
-                                    >
-                                        Отклонить
-                                    </button>
-                                )}
-                                {registration.status === "Принят" && (
-                                    <button
-                                        className="reject-btn"
-                                        onClick={() => handleReject(registration._id)}
-                                    >
-                                        Отклонить
-                                    </button>
-                                )}
-                                {registration.status !== "Ожидание" &&
-                                    registration.status !== "Отклоненный" && (
-                                        <button
-                                            onClick={() => handleViewConsent(registration.userId)}
-                                            className="toggle-info-button"
-                                        >
-                                            Просмотр согласия
+                                            Удалить
                                         </button>
                                     )}
-                            </td>
-                        </tr>
-                    ))}
+                                    {registration.status === "Одобренный" && registration.contractFilePath && (
+                                        <>
+                                            <button
+                                                className="reject-btn"
+                                                onClick={() => handleReject(registration._id)}
+                                            >
+                                                Отклонить
+                                            </button>
+                                            <button
+                                                className="approve-btn"
+                                                onClick={() => handleViewPdf(registration._id)}
+                                            >
+                                                Проверить договор
+                                            </button>
+                                            <button
+                                                className="reject-btn"
+                                                onClick={() => handleDelete(registration._id)}
+                                            >
+                                                Удалить
+                                            </button>
+                                        </>
+                                    )}
+                                    {registration.status === "Одобренный" && !registration.contractFilePath && (
+                                        <>
+                                            <button
+                                                className="reject-btn"
+                                                onClick={() => handleReject(registration._id)}
+                                            >
+                                                Отклонить
+                                            </button>
+                                            <button
+                                                className="reject-btn"
+                                                onClick={() => handleDelete(registration._id)}
+                                            >
+                                                Удалить
+                                            </button>
+                                        </>
+                                    )}
+                                    {registration.status === "Принят" && (
+                                        <button
+                                            className="reject-btn"
+                                            onClick={() => handleReject(registration._id)}
+                                        >
+                                            Отклонить
+                                        </button>
+                                    )}
+                                    {registration.status !== "Ожидание" &&
+                                        registration.status !== "Отклоненный" &&
+                                        registration.status !== "Одобренный" && (
+                                            <button
+                                                onClick={() => handleViewConsent(registration.userId)}
+                                                className="toggle-info-button"
+                                            >
+                                                Просмотр согласия
+                                            </button>
+                                        )}
+                                </td>
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </table>
-
-            {/* Модальное окно для отклонения заявки */}
             {selectedRejectRegistrationId && (
                 <div className="modal">
                     <div className="modal-content">
-                        <h3>Укажите причину отклонения</h3>
+                        <h3>Причина отклонения</h3>
                         <textarea
                             value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
+                            onChange={e => setRejectReason(e.target.value)}
                             placeholder="Причина отклонения"
                         />
                         <div className="form-buttons">
@@ -544,8 +566,6 @@ const AdminCoursesManagement = () => {
                     </div>
                 </div>
             )}
-
-            {/* Модальное окно для просмотра PDF */}
             {selectedPdfRegistrationId && (
                 <div className="modal">
                     <div className="modal-content">
@@ -577,8 +597,6 @@ const AdminCoursesManagement = () => {
                     </div>
                 </div>
             )}
-
-            {/* Модальное окно для просмотра информации о пользователе */}
             {selectedUser && (
                 <div className="user-info-modal">
                     <div className="user-info-container">

@@ -28,26 +28,22 @@ const AdminGroupManagement = () => {
 
     const fetchGroups = async () => {
         try {
-            const response = await fetch("http://localhost:5000/groups");
+            const response = await fetch("http://localhost:5000/groups", { credentials: "include" });
             if (!response.ok) throw new Error("Ошибка при загрузке групп");
             const data = await response.json();
-            if (!data?.groups) throw new Error("Данные не получены или пусты");
+            if (!data?.groups) throw new Error("Данные не получены");
 
             const groupsWithMembersInfo = {};
             for (const group of data.groups) {
-                const membersResponse = await fetch(`http://localhost:5000/admin/group-members/${group._id}`);
+                const membersResponse = await fetch(`http://localhost:5000/admin/group-members/${group._id}`, { credentials: "include" });
+                if (!membersResponse.ok) throw new Error("Ошибка при загрузке участников группы");
                 const membersData = await membersResponse.json();
-
-                const hasPaid = membersData.members?.some(m => m.status === "Оплаченный");
-                const hasEnrolled = membersData.members?.some(m => m.status === "Проходит курс");
-                const hasCompleted = membersData.members?.some(m => m.status === "Завершил");
-                const hasRejected = membersData.members?.some(m => m.status === "Отклоненный");
                 groupsWithMembersInfo[group._id] = {
                     hasMembers: membersData.members?.length > 0,
-                    hasPaidMembers: hasPaid,
-                    hasEnrolledMembers: hasEnrolled,
-                    hasCompletedMembers: hasCompleted,
-                    hasRejectedMembers: hasRejected,
+                    hasPaidMembers: membersData.members?.some(m => m.status === "Оплаченный"),
+                    hasEnrolledMembers: membersData.members?.some(m => m.status === "Проходит курс"),
+                    hasCompletedMembers: membersData.members?.some(m => m.status === "Завершил"),
+                    hasRejectedMembers: membersData.members?.some(m => m.status === "Отклоненный"),
                     status: group.status,
                     currentStudents: group.currentStudents,
                     members: membersData.members || []
@@ -58,19 +54,19 @@ const AdminGroupManagement = () => {
             setFilteredGroups(data.groups);
             setGroupsWithMembers(groupsWithMembersInfo);
         } catch (error) {
-            console.error("Error fetching groups:", error);
+            console.error("Ошибка загрузки групп:", error);
             setError("Ошибка при загрузке групп");
         }
     };
 
     const fetchCourses = async () => {
         try {
-            const response = await fetch("http://localhost:5000/courses");
+            const response = await fetch("http://localhost:5000/courses", { credentials: "include" });
             if (!response.ok) throw new Error("Ошибка при загрузке курсов");
             const data = await response.json();
-            setCourses(data);
+            setCourses(data || []);
         } catch (error) {
-            console.error("Error fetching courses:", error);
+            console.error("Ошибка загрузки курсов:", error);
             setError("Ошибка при загрузке курсов");
         }
     };
@@ -82,7 +78,7 @@ const AdminGroupManagement = () => {
             const data = await response.json();
             setOrders(data || []);
         } catch (error) {
-            console.error("Error fetching orders:", error);
+            console.error("Ошибка загрузки приказов:", error);
             setError("Ошибка при загрузке приказов");
         }
     };
@@ -110,7 +106,7 @@ const AdminGroupManagement = () => {
 
     const handleSave = async () => {
         if (!groupName || !courseId) {
-            setError("Пожалуйста, заполните название группы и выберите курс");
+            setError("Заполните название группы и выберите курс");
             return;
         }
         try {
@@ -122,15 +118,15 @@ const AdminGroupManagement = () => {
             });
             const data = await response.json();
             if (data.success) {
-                setSuccessMessage("Группа успешно обновлена!");
+                setSuccessMessage("Группа обновлена!");
                 handleCloseAllModals();
                 fetchGroups();
             } else {
                 setError(data.error || "Ошибка при обновлении группы");
             }
         } catch (error) {
-            console.error("Error updating group:", error);
-            setError("Не удалось подключиться к серверу");
+            console.error("Ошибка обновления группы:", error);
+            setError("Ошибка сервера");
         }
     };
 
@@ -138,19 +134,18 @@ const AdminGroupManagement = () => {
         try {
             const response = await fetch(`http://localhost:5000/admin/delete-group/${groupId}`, {
                 method: "DELETE",
-                headers: { "Content-Type": "application/json" },
                 credentials: "include"
             });
             const data = await response.json();
             if (data.success) {
-                setSuccessMessage("Группа успешно удалена!");
+                setSuccessMessage("Группа удалена!");
                 fetchGroups();
             } else {
                 setError(data.error || "Ошибка при удалении группы");
             }
         } catch (error) {
-            console.error("Error deleting group:", error);
-            setError("Не удалось подключиться к серверу");
+            console.error("Ошибка удаления группы:", error);
+            setError("Ошибка сервера");
         }
     };
 
@@ -173,22 +168,22 @@ const AdminGroupManagement = () => {
             });
             const data = await response.json();
             if (data.success) {
-                setSuccessMessage("Записи группы успешно отклонены!");
+                setSuccessMessage("Записи группы отклонены!");
                 handleCloseAllModals();
                 fetchGroups();
             } else {
                 setError(data.error || "Ошибка при отклонении записей");
             }
         } catch (error) {
-            console.error("Error rejecting group registrations:", error);
-            setError("Не удалось подключиться к серверу");
+            console.error("Ошибка отклонения записей:", error);
+            setError("Ошибка сервера");
         }
     };
 
     const handleCreateGroup = async (e) => {
         e.preventDefault();
         if (!groupName || !courseId) {
-            setError("Пожалуйста, заполните название группы и выберите курс");
+            setError("Заполните название группы и выберите курс");
             return;
         }
         try {
@@ -200,34 +195,33 @@ const AdminGroupManagement = () => {
             });
             const data = await response.json();
             if (data.success) {
-                setSuccessMessage("Группа успешно создана!");
+                setSuccessMessage("Группа создана!");
                 handleCloseAllModals();
                 fetchGroups();
             } else {
-                setError(data.error || "Ошибка при создании группы");
+                setError(data.error || "Ошибка создания группы");
             }
         } catch (error) {
-            console.error("Error creating group:", error);
-            setError("Не удалось подключиться к серверу");
+            console.error("Ошибка создания группы:", error);
+            setError("Ошибка сервера");
         }
     };
 
     const fetchGroupMembers = async (groupId) => {
         try {
-            const response = await fetch(`http://localhost:5000/admin/group-members/${groupId}`);
+            const response = await fetch(`http://localhost:5000/admin/group-members/${groupId}`, { credentials: "include" });
             if (!response.ok) throw new Error("Ошибка при загрузке участников");
             const data = await response.json();
             setGroupMembers(data.members || []);
         } catch (error) {
-            console.error("Error fetching members:", error);
-            setError("Ошибка при загрузке участников");
+            console.error("Ошибка загрузки участников:", error);
+            setError("Ошибка загрузки участников");
         }
     };
 
     const handleViewMembers = (groupId) => {
         setSelectedGroupId(groupId);
         setSelectedMembers([]);
-        setGroupMembers(groupsWithMembers[groupId]?.members || []);
         fetchGroupMembers(groupId);
     };
 
@@ -250,7 +244,7 @@ const AdminGroupManagement = () => {
         }
     };
 
-    const handleExpelSelectedMembers = () => {
+    const handleSelectMembersModal = () => {
         setIsSelectMembersModalOpen(true);
     };
 
@@ -268,15 +262,15 @@ const AdminGroupManagement = () => {
             });
             const data = await response.json();
             if (data.success) {
-                setSuccessMessage("Группа успешно зачислена!");
+                setSuccessMessage("Группа зачислена!");
                 handleCloseAllModals();
                 fetchGroups();
             } else {
                 setError(data.error || "Ошибка при зачислении группы");
             }
         } catch (error) {
-            console.error("Error enrolling group:", error);
-            setError("Не удалось подключиться к серверу");
+            console.error("Ошибка зачисления группы:", error);
+            setError("Ошибка сервера");
         }
     };
 
@@ -289,10 +283,7 @@ const AdminGroupManagement = () => {
             let url, body;
             if (selectedMembers.length > 0) {
                 url = `http://localhost:5000/admin/expel-registrations`;
-                body = JSON.stringify({
-                    registrationIds: selectedMembers,
-                    orderId: selectedOrderId
-                });
+                body = JSON.stringify({ registrationIds: selectedMembers, orderId: selectedOrderId });
             } else if (selectedGroupId.includes("registration")) {
                 const registrationId = selectedGroupId.split("-")[1];
                 url = `http://localhost:5000/admin/expel-registration/${registrationId}`;
@@ -312,33 +303,33 @@ const AdminGroupManagement = () => {
             if (data.success) {
                 setSuccessMessage(
                     selectedMembers.length > 0
-                        ? `Выбранные участники (${data.count}) успешно отчислены!`
+                        ? `Выбранные участники (${data.count}) отчислены!`
                         : selectedGroupId.includes("registration")
-                            ? "Участник успешно отчислен!"
-                            : "Приказ успешно выдан!"
+                            ? "Участник отчислен!"
+                            : "Группа завершена!"
                 );
                 handleCloseAllModals();
                 fetchGroups();
             } else {
-                setError(data.error || "Ошибка при обработке");
+                setError(data.error || "Ошибка при отчислении");
             }
         } catch (error) {
-            console.error("Error expelling:", error);
-            setError("Не удалось подключиться к серверу");
+            console.error("Ошибка отчисления:", error);
+            setError("Ошибка сервера");
         }
     };
 
     const handleSelectMember = (memberId) => {
-        setSelectedMembers((prev) =>
+        setSelectedMembers(prev =>
             prev.includes(memberId)
-                ? prev.filter((id) => id !== memberId)
+                ? prev.filter(id => id !== memberId)
                 : [...prev, memberId]
         );
     };
 
     const confirmSelectMembers = () => {
         if (selectedMembers.length === 0) {
-            setError("Выберите хотя бы одного участника для отчисления");
+            setError("Выберите хотя бы одного участника");
             return;
         }
         setIsSelectMembersModalOpen(false);
@@ -364,10 +355,8 @@ const AdminGroupManagement = () => {
     };
 
     useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (e.key === "Escape") {
-                handleCloseAllModals();
-            }
+        const handleKeyDown = e => {
+            if (e.key === "Escape") handleCloseAllModals();
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
@@ -394,20 +383,17 @@ const AdminGroupManagement = () => {
             {isModalOpen && (
                 <div className="modal">
                     <div className="modal-content">
-                        <h2>{selectedGroup ? "Редактирование группы" : "Создание новой группы"}</h2>
+                        <h2>{selectedGroup ? "Редактирование группы" : "Создание группы"}</h2>
                         <form onSubmit={selectedGroup ? handleSave : handleCreateGroup}>
                             <label>Название группы:</label>
                             <input
                                 type="text"
                                 value={groupName}
-                                onChange={(e) => setGroupName(e.target.value)}
+                                onChange={e => setGroupName(e.target.value)}
                                 placeholder="Введите название группы"
                             />
                             <label>Курс:</label>
-                            <select
-                                value={courseId}
-                                onChange={(e) => setCourseId(e.target.value)}
-                            >
+                            <select value={courseId} onChange={e => setCourseId(e.target.value)}>
                                 <option value="">Выберите курс</option>
                                 {courses.map(course => (
                                     <option key={course._id} value={course._id}>
@@ -419,7 +405,9 @@ const AdminGroupManagement = () => {
                                 <button className="approve-btn" type="submit">
                                     {selectedGroup ? "Сохранить" : "Создать"}
                                 </button>
-                                <button className="reject-btn" type="button" onClick={handleCloseAllModals}>Закрыть</button>
+                                <button className="reject-btn" type="button" onClick={handleCloseAllModals}>
+                                    Закрыть
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -432,11 +420,12 @@ const AdminGroupManagement = () => {
                         <th>Название группы</th>
                         <th>Курс</th>
                         <th>Студенты</th>
+                        <th>Статус</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {filteredGroups.map((group) => {
+                    {filteredGroups.map(group => {
                         const groupInfo = groupsWithMembers[group._id] || {};
                         const isCompleted = groupInfo.status === "Завершена";
                         const hasActiveMembers = groupInfo.hasEnrolledMembers || groupInfo.hasCompletedMembers;
@@ -446,18 +435,16 @@ const AdminGroupManagement = () => {
                         return (
                             <tr key={group._id}>
                                 <td>{group.groupName}</td>
-                                <td>
-                                    {courses.find((course) => course._id === group.courseId)?.title || "Неизвестный курс"}
-                                </td>
+                                <td>{courses.find(c => c._id === group.courseId)?.title || "Неизвестный курс"}</td>
                                 <td>
                                     {`${groupInfo.currentStudents || 0} / ${courses.find((course) => course._id === group.courseId)?.maxStudents || "Не указано"}`}
                                 </td>
+                                <td>{groupInfo.status || "Активна"}</td>
                                 <td>
                                     <div className="bt">
                                         <button className="approve-btn" onClick={() => handleViewMembers(group._id)}>
                                             Просмотр участников
                                         </button>
-
                                         {!isCompleted && (
                                             <>
                                                 {isEmpty ? (
@@ -487,11 +474,9 @@ const AdminGroupManagement = () => {
                                                         )}
                                                     </>
                                                 ) : hasActiveMembers ? (
-                                                    <>
-                                                        <button className="approve-btn" onClick={() => handleExpelGroup(group._id, false)}>
-                                                            Завершить
-                                                        </button>
-                                                    </>
+                                                    <button className="approve-btn" onClick={() => handleExpelGroup(group._id, false)}>
+                                                        Завершить
+                                                    </button>
                                                 ) : null}
                                             </>
                                         )}
@@ -528,13 +513,10 @@ const AdminGroupManagement = () => {
                                                     className="toggle-info-button"
                                                     onClick={() => navigate(`/admin/profile?username=${member.username}`)}
                                                 >
-                                                    Посмотреть данные
+                                                    Данные
                                                 </button>
                                                 {member.status === "Проходит курс" && (
-                                                    <button
-                                                        className="reject-btn"
-                                                        onClick={() => handleExpelMember(member._id)}
-                                                    >
+                                                    <button className="reject-btn" onClick={() => handleExpelMember(member._id)}>
                                                         Отчислить
                                                     </button>
                                                 )}
@@ -545,8 +527,8 @@ const AdminGroupManagement = () => {
                             </tbody>
                         </table>
                         <div className="button">
-                            {groupMembers.some(member => member.status === "Проходит курс") && (
-                                <button className="reject-btn" onClick={handleExpelSelectedMembers}>
+                            {groupMembers.some(m => m.status === "Проходит курс") && (
+                                <button className="reject-btn" onClick={handleSelectMembersModal}>
                                     Отчислить выбранных
                                 </button>
                             )}
@@ -572,7 +554,7 @@ const AdminGroupManagement = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {groupMembers.filter(member => member.status === "Проходит курс").map(member => (
+                                {groupMembers.filter(m => m.status === "Проходит курс").map(member => (
                                     <tr key={member._id}>
                                         <td>
                                             <input
@@ -673,12 +655,14 @@ const AdminGroupManagement = () => {
                             onChange={(e) => setRejectReason(e.target.value)}
                             placeholder="Причина отклонения (например, мало людей)"
                         />
-                        <button className="approve-btn" onClick={confirmReject}>
-                            Подтвердить
-                        </button>
-                        <button className="reject-btn" onClick={handleCloseAllModals}>
-                            Отмена
-                        </button>
+                        <div className="button">
+                            <button className="approve-btn" onClick={confirmReject}>
+                                Подтвердить
+                            </button>
+                            <button className="reject-btn" onClick={handleCloseAllModals}>
+                                Отмена
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

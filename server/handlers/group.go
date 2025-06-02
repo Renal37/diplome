@@ -22,6 +22,79 @@ func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
 	json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
 
+func GetGroups(w http.ResponseWriter, r *http.Request) {
+	collection := db.GetCollection(db.GroupsCollection)
+
+	pipeline := bson.A{
+		bson.M{"$lookup": bson.M{
+			"from":         db.CourseRegistrationsCollection,
+			"localField":   "_id",
+			"foreignField": "groupId",
+			"as":           "registrations",
+		}},
+		bson.M{"$project": bson.M{
+			"_id":       1,
+			"groupName": 1,
+			"courseId":  1,
+			"status": bson.M{
+				"$cond": bson.M{
+					"if": bson.M{
+						"$gt": bson.A{
+							bson.M{"$size": bson.M{
+								"$filter": bson.M{
+									"input": "$registrations",
+									"as":    "reg",
+									"cond":  bson.M{"$eq": bson.A{"$$reg.status", "Завершил"}},
+								},
+							}},
+							0,
+						},
+					},
+					"then": "Завершена",
+					"else": "Активна",
+				},
+			},
+			"currentStudents": bson.M{
+				"$size": bson.M{
+					"$filter": bson.M{
+						"input": "$registrations",
+						"as":    "reg",
+						"cond":  bson.M{"$eq": bson.A{"$$reg.status", "Проходит курс"}},
+					},
+				},
+			},
+		}},
+	}
+
+	cursor, err := collection.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		log.Printf("Ошибка при получении групп: %v", err)
+		writeJSONError(w, "Ошибка при получении групп", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var groups []bson.M
+	if err = cursor.All(context.Background(), &groups); err != nil {
+		log.Printf("Ошибка при обработке данных групп: %v", err)
+		writeJSONError(w, "Ошибка при обработке данных групп", http.StatusInternalServerError)
+		return
+	}
+
+	for i := range groups {
+		if groupId, ok := groups[i]["_id"].(primitive.ObjectID); ok {
+			groups[i]["_id"] = groupId.Hex()
+		}
+		if courseId, ok := groups[i]["courseId"].(primitive.ObjectID); ok {
+			groups[i]["courseId"] = courseId.Hex()
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"groups": groups})
+}
+
+// Остальные функции остаются без изменений
 func CreateGroup(w http.ResponseWriter, r *http.Request) {
 	var group models.Group
 	err := json.NewDecoder(r.Body).Decode(&group)
@@ -56,61 +129,6 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
-}
-
-func GetGroups(w http.ResponseWriter, r *http.Request) {
-	collection := db.GetCollection(db.GroupsCollection)
-	cursor, err := collection.Find(context.Background(), bson.M{})
-	if err != nil {
-		writeJSONError(w, "Ошибка при получении групп", http.StatusInternalServerError)
-		return
-	}
-	defer cursor.Close(context.Background())
-
-	var groups []bson.M
-	if err = cursor.All(context.Background(), &groups); err != nil {
-		writeJSONError(w, "Ошибка при обработке данных групп", http.StatusInternalServerError)
-		return
-	}
-
-	regCollection := db.GetCollection(db.CourseRegistrationsCollection)
-	for i := range groups {
-		groupId, ok := groups[i]["_id"].(primitive.ObjectID)
-		if !ok {
-			writeJSONError(w, "Неверный формат ID группы", http.StatusInternalServerError)
-			return
-		}
-		groups[i]["_id"] = groupId.Hex()
-		if courseId, ok := groups[i]["courseId"].(primitive.ObjectID); ok {
-			groups[i]["courseId"] = courseId.Hex()
-		}
-		count, err := regCollection.CountDocuments(
-			context.Background(),
-			bson.M{"groupId": groupId, "status": bson.M{"$ne": "Отчислен"}},
-		)
-		if err != nil {
-			writeJSONError(w, "Ошибка при подсчете участников", http.StatusInternalServerError)
-			return
-		}
-		groups[i]["currentStudents"] = count
-
-		hasCompleted, err := regCollection.CountDocuments(
-			context.Background(),
-			bson.M{"groupId": groupId, "status": "Завершил"},
-		)
-		if err != nil {
-			writeJSONError(w, "Ошибка при проверке статуса группы", http.StatusInternalServerError)
-			return
-		}
-		if hasCompleted > 0 {
-			groups[i]["status"] = "Завершена"
-		} else {
-			groups[i]["status"] = "Активна"
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"groups": groups})
 }
 
 func UpdateGroup(w http.ResponseWriter, r *http.Request) {
@@ -623,8 +641,8 @@ func ExpelRegistration(w http.ResponseWriter, r *http.Request) {
 
 func ExpelMultipleRegistrations(w http.ResponseWriter, r *http.Request) {
 	var requestBody struct {
-		RegistrationIDs []string   `json:"registrationIds"`
-		OrderID         string `json:"orderId"`
+		RegistrationIDs []string `json:"registrationIds"`
+		OrderID         string   `json:"orderId"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {

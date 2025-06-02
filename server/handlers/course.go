@@ -527,11 +527,11 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		bson.M{
 			"$project": bson.M{
 				"activeStudentsCount": 1,
-				"maxStudents":        1,
-				"registrationStart":  1,
-				"registrationEnd":    1,
-				"type":               1,
-				"price":              1,
+				"maxStudents":         1,
+				"registrationStart":   1,
+				"registrationEnd":     1,
+				"type":                1,
+				"price":               1,
 			},
 		},
 	}
@@ -881,6 +881,7 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 		},
 		bson.M{
 			"$project": bson.M{
+				"courseId": 1, // Добавляем courseId
 				"courseTitle": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$course.title", 0}},
@@ -899,7 +900,7 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 				"userId":           1,
 				"rejectReason":     1,
 				"expelOrderId":     1,
-				"price":            1, // Убедимся, что price включен
+				"price":            1,
 				"orderType": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$order.orderType", 0}},
@@ -993,6 +994,7 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 
 	cursor, err := collection.Aggregate(context.Background(), pipeline)
 	if err != nil {
+		log.Printf("Ошибка при получении заявок: %v", err)
 		writeJSONError(w, "Ошибка при получении заявок", http.StatusInternalServerError)
 		return
 	}
@@ -1000,8 +1002,24 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 
 	var registrations []bson.M
 	if err = cursor.All(context.Background(), &registrations); err != nil {
+		log.Printf("Ошибка при обработке данных заявок: %v", err)
 		writeJSONError(w, "Ошибка при обработке данных заявок", http.StatusInternalServerError)
 		return
+	}
+
+	for i := range registrations {
+		if id, ok := registrations[i]["_id"].(primitive.ObjectID); ok {
+			registrations[i]["_id"] = id.Hex()
+		}
+		if courseId, ok := registrations[i]["courseId"].(primitive.ObjectID); ok {
+			registrations[i]["courseId"] = courseId.Hex()
+		}
+		if groupId, ok := registrations[i]["groupId"].(primitive.ObjectID); ok {
+			registrations[i]["groupId"] = groupId.Hex()
+		}
+		if userId, ok := registrations[i]["userId"].(primitive.ObjectID); ok {
+			registrations[i]["userId"] = userId.Hex()
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
