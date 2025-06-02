@@ -4,26 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/Renal37/db"
+	"github.com/Renal37/models"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"net/http"
-	"time"
 )
 
-// Price структура для хранения информации о стоимости
-type Price struct {
-	ID          primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	Amount      int                `bson:"amount" json:"amount"`
-	CreatedAt   time.Time          `bson:"createdAt" json:"createdAt"`
-	Description string             `bson:"description" json:"description"`
-}
-
-// AddPrice добавляет новую стоимость
 func AddPrice(w http.ResponseWriter, r *http.Request) {
-
 	var request struct {
 		Amount      int    `json:"amount"`
 		Description string `json:"description"`
@@ -34,10 +26,17 @@ func AddPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	price := Price{
+	if request.Amount <= 0 {
+		sendError(w, "Сумма должна быть положительной", http.StatusBadRequest)
+		return
+	}
+
+	now := time.Now()
+	price := models.Price{
 		Amount:      request.Amount,
 		Description: request.Description,
-		CreatedAt:   time.Now(),
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
 	collection := db.GetCollection(db.PricesCollection)
@@ -54,13 +53,14 @@ func AddPrice(w http.ResponseWriter, r *http.Request) {
 			"amount":      price.Amount,
 			"description": price.Description,
 			"createdAt":   price.CreatedAt,
+			"updatedAt":   price.UpdatedAt,
 		},
 	})
 }
 
 // GetPrices возвращает список всех стоимостей, отсортированных по дате (новые сначала)
 func GetPrices(w http.ResponseWriter, r *http.Request) {
-	
+
 	collection := db.GetCollection(db.PricesCollection)
 
 	// Сортировка по дате создания (новые сначала)
@@ -89,9 +89,7 @@ func GetPrices(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(prices)
 }
 
-// UpdatePrice обновляет существующую стоимость
 func UpdatePrice(w http.ResponseWriter, r *http.Request) {
-
 	vars := mux.Vars(r)
 	id, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
@@ -109,12 +107,18 @@ func UpdatePrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if request.Amount <= 0 {
+		sendError(w, "Сумма должна быть положительной", http.StatusBadRequest)
+		return
+	}
+
 	collection := db.GetCollection(db.PricesCollection)
 	filter := bson.M{"_id": id}
 	update := bson.M{
 		"$set": bson.M{
 			"amount":      request.Amount,
 			"description": request.Description,
+			"updatedAt":   time.Now(),
 		},
 	}
 
@@ -166,10 +170,10 @@ func DeletePrice(w http.ResponseWriter, r *http.Request) {
 }
 
 // BulkUpdatePrices массово обновляет стоимости
-func BulkUpdatePrices(w http.ResponseWriter, r *http.Request) {
 
+func BulkUpdatePrices(w http.ResponseWriter, r *http.Request) {
 	var request struct {
-		PriceIDs []string `json:"priceIds"`
+		PriceIds []string `json:"priceIds"`
 		Percent  float64  `json:"percent"`
 	}
 
@@ -178,36 +182,84 @@ func BulkUpdatePrices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var objectIDs []primitive.ObjectID
-	for _, id := range request.PriceIDs {
-		objID, err := primitive.ObjectIDFromHex(id)
+	if request.Percent <= 0 {
+		sendError(w, "Процент должен быть положительным", http.StatusBadRequest)
+		return
+	}
+
+	if len(request.PriceIds) == 0 {
+		sendError(w, "Не выбраны стоимости для обновления", http.StatusBadRequest)
+		return
+	}
+
+	// Convert priceIds to ObjectIDs
+	var objectIds []primitive.ObjectID
+	for _, id := range request.PriceIds {
+		objId, err := primitive.ObjectIDFromHex(id)
 		if err != nil {
 			sendError(w, fmt.Sprintf("Неверный формат ID: %s", id), http.StatusBadRequest)
 			return
 		}
-		objectIDs = append(objectIDs, objID)
+		objectIds = append(objectIds, objId)
 	}
 
 	collection := db.GetCollection(db.PricesCollection)
-	filter := bson.M{"_id": bson.M{"$in": objectIDs}}
-	update := bson.M{
-		"$mul": bson.M{
-			"amount": 1 + request.Percent/100,
-		},
+
+	// Fetch current prices to calculate new amounts
+	cursor, err := collection.Find(context.Background(), bson.M{"_id": bson.M{"$in": objectIds}})
+	if err != nil {
+		sendError(w, "Ошибка при получении стоимостей", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var prices []struct {
+		ID     primitive.ObjectID `bson:"_id"`
+		Amount int                `bson:"amount"`
+	}
+	if err = cursor.All(context.Background(), &prices); err != nil {
+		sendError(w, "Ошибка при обработке стоимостей", http.StatusInternalServerError)
+		return
 	}
 
-	result, err := collection.UpdateMany(context.Background(), filter, update)
-	if err != nil {
-		sendError(w, "Ошибка при массовом обновлении стоимостей", http.StatusInternalServerError)
+	if len(prices) == 0 {
+		sendError(w, "Ни одна стоимость не найдена", http.StatusNotFound)
 		return
+	}
+
+	// Update each price
+	now := time.Now()
+	updatedCount := 0
+	for _, price := range prices {
+		newAmount := int(float64(price.Amount) * (1 + request.Percent/100))
+		if newAmount <= 0 {
+			sendError(w, "Новая сумма должна быть положительной", http.StatusBadRequest)
+			return
+		}
+
+		filter := bson.M{"_id": price.ID}
+		update := bson.M{
+			"$set": bson.M{
+				"amount":    newAmount,
+				"updatedAt": now,
+			},
+		}
+
+		result, err := collection.UpdateOne(context.Background(), filter, update)
+		if err != nil {
+			sendError(w, "Ошибка при обновлении стоимости", http.StatusInternalServerError)
+			return
+		}
+		if result.ModifiedCount > 0 {
+			updatedCount++
+		}
 	}
 
 	sendJSON(w, map[string]interface{}{
 		"success": true,
-		"message": fmt.Sprintf("Обновлено %d стоимостей", result.ModifiedCount),
+		"message": fmt.Sprintf("%d стоимостей успешно обновлено", updatedCount),
 	})
 }
-
 
 func sendJSON(w http.ResponseWriter, data interface{}) {
 	json.NewEncoder(w).Encode(data)

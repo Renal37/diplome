@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"time"
-
 	"github.com/Renal37/db"
 	"github.com/Renal37/models"
 	"github.com/Renal37/utils"
@@ -15,8 +12,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"log"
+	"net/http"
+	"time"
 )
-
 
 func AddCourse(w http.ResponseWriter, r *http.Request) {
 	var course models.Course
@@ -133,7 +132,6 @@ func AddCourse(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
-
 func GetCourses(w http.ResponseWriter, r *http.Request) {
 	collection := db.GetCollection(db.CoursesCollection)
 
@@ -155,25 +153,56 @@ func GetCourses(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		bson.M{
+			"$lookup": bson.M{
+				"from":         db.CourseRegistrationsCollection,
+				"localField":   "_id",
+				"foreignField": "courseId",
+				"as":           "registrations",
+			},
+		},
+		bson.M{
+			"$addFields": bson.M{
+				"activeStudentsCount": bson.M{
+					"$size": bson.M{
+						"$filter": bson.M{
+							"input": "$registrations",
+							"as":    "reg",
+							"cond": bson.M{
+								"$in": bson.A{
+									"$$reg.status",
+									bson.A{"Ожидание", "Одобренный", "Принят", "Оплаченный"},
+								},
+							},
+						},
+					},
+				},
+				"studentsCount": bson.M{
+					"$size": "$registrations",
+				},
+			},
+		},
+		bson.M{
 			"$project": bson.M{
-				"title":             1,
-				"description":       1,
-				"duration":          1,
-				"price":             bson.M{"$arrayElemAt": bson.A{"$priceInfo.amount", 0}},
-				"priceId":           1,
-				"typeId":            1,
-				"type":              bson.M{"$arrayElemAt": bson.A{"$typeInfo.name", 0}},
-				"createdAt":         1,
-				"registrationStart": 1,
-				"registrationEnd":   1,
-				"studentsCount":     1,
-				"maxStudents":       1, // Добавляем maxStudents
+				"title":               1,
+				"description":         1,
+				"duration":            1,
+				"price":               bson.M{"$arrayElemAt": bson.A{"$priceInfo.amount", 0}},
+				"priceId":             1,
+				"typeId":              1,
+				"type":                bson.M{"$arrayElemAt": bson.A{"$typeInfo.name", 0}},
+				"createdAt":           1,
+				"registrationStart":   1,
+				"registrationEnd":     1,
+				"studentsCount":       1,
+				"activeStudentsCount": 1,
+				"maxStudents":         1,
 			},
 		},
 	}
 
 	cursor, err := collection.Aggregate(context.Background(), pipeline)
 	if err != nil {
+		log.Printf("Ошибка при выполнении агрегации курсов: %v", err)
 		writeJSONError(w, "Ошибка при получении курсов из базы данных", http.StatusInternalServerError)
 		return
 	}
@@ -181,6 +210,7 @@ func GetCourses(w http.ResponseWriter, r *http.Request) {
 
 	var courses []bson.M
 	if err = cursor.All(context.Background(), &courses); err != nil {
+		log.Printf("Ошибка при обработке данных курсов: %v", err)
 		writeJSONError(w, "Ошибка при обработке данных курсов", http.StatusInternalServerError)
 		return
 	}
@@ -193,6 +223,7 @@ func GetCourses(w http.ResponseWriter, r *http.Request) {
 		if courses[i]["typeId"] != nil {
 			courses[i]["typeId"] = courses[i]["typeId"].(primitive.ObjectID).Hex()
 		}
+		log.Printf("Курс %s: activeStudentsCount=%v, studentsCount=%v", courses[i]["title"], courses[i]["activeStudentsCount"], courses[i]["studentsCount"])
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -374,7 +405,7 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверка обязательных полей пользователя (без изменений)
+	// Проверка обязательных полей пользователя
 	requiredFields := map[string]string{
 		"lastname":          "Фамилия не заполнена",
 		"firstname":         "Имя не заполнено",
@@ -434,37 +465,124 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 
 	// Проверяем, что курс существует и даты регистрации актуальны
 	courseCollection := db.GetCollection(db.CoursesCollection)
-	var course models.Course
-	err = courseCollection.FindOne(context.Background(), bson.M{"_id": request.CourseID}).Decode(&course)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			writeJSONError(w, "Курс не найден", http.StatusNotFound)
-		} else {
-			writeJSONError(w, "Ошибка при получении курса", http.StatusInternalServerError)
-		}
+	registrationCollection := db.GetCollection(db.CourseRegistrationsCollection)
+
+	// Проверка, завершил ли пользователь курс
+	err = registrationCollection.FindOne(context.Background(), bson.M{
+		"courseId": request.CourseID,
+		"userId":   request.UserID,
+		"status":   "Завершил",
+	}).Err()
+	if err == nil {
+		log.Printf("Пользователь %s уже завершил курс %s, повторная регистрация запрещена", request.UserID.Hex(), request.CourseID.Hex())
+		writeJSONError(w, "Вы уже завершили этот курс и не можете записаться повторно", http.StatusBadRequest)
+		return
+	}
+	if err != mongo.ErrNoDocuments {
+		log.Printf("Ошибка при проверке статуса завершения курса %s для пользователя %s: %v", request.CourseID.Hex(), request.UserID.Hex(), err)
+		writeJSONError(w, "Ошибка при проверке статуса курса", http.StatusInternalServerError)
 		return
 	}
 
-	// Проверка maxStudents
-	if course.StudentsCount >= course.MaxStudents {
+	// Проверка количества активных студентов с использованием агрегации
+	pipeline := bson.A{
+		bson.M{
+			"$match": bson.M{
+				"_id": request.CourseID,
+			},
+		},
+		bson.M{
+			"$lookup": bson.M{
+				"from":         db.CourseRegistrationsCollection,
+				"localField":   "_id",
+				"foreignField": "courseId",
+				"as":           "registrations",
+			},
+		},
+		bson.M{
+			"$addFields": bson.M{
+				"activeStudentsCount": bson.M{
+					"$size": bson.M{
+						"$filter": bson.M{
+							"input": "$registrations",
+							"as":    "reg",
+							"cond": bson.M{
+								"$and": bson.A{
+									bson.M{
+										"$in": bson.A{
+											"$$reg.status",
+											bson.A{"Ожидание", "Одобренный", "Принят", "Оплаченный", "Проходит курс"},
+										},
+									},
+									bson.M{
+										"$ne": bson.A{"$$reg.status", nil},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		bson.M{
+			"$project": bson.M{
+				"activeStudentsCount": 1,
+				"maxStudents":        1,
+				"registrationStart":  1,
+				"registrationEnd":    1,
+				"type":               1,
+				"price":              1,
+			},
+		},
+	}
+
+	cursor, err := courseCollection.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		log.Printf("Ошибка при проверке курса %s: %v", request.CourseID.Hex(), err)
+		writeJSONError(w, "Ошибка при проверке курса", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var courses []bson.M
+	if err = cursor.All(context.Background(), &courses); err != nil {
+		log.Printf("Ошибка при обработке данных курса %s: %v", request.CourseID.Hex(), err)
+		writeJSONError(w, "Ошибка при обработке данных курса", http.StatusInternalServerError)
+		return
+	}
+
+	if len(courses) == 0 {
+		writeJSONError(w, "Курс не найден", http.StatusNotFound)
+		return
+	}
+
+	course := courses[0]
+	activeStudentsCount := int(course["activeStudentsCount"].(int32))
+	maxStudents := int(course["maxStudents"].(int32))
+
+	if activeStudentsCount >= maxStudents {
+		log.Printf("Регистрация на курс %s отклонена: activeStudentsCount=%d, maxStudents=%d", request.CourseID.Hex(), activeStudentsCount, maxStudents)
 		writeJSONError(w, "Курс достиг максимального количества студентов", http.StatusBadRequest)
 		return
 	}
 
+	// Проверка дат регистрации
 	currentTime := time.Now()
+	registrationStart := course["registrationStart"].(primitive.DateTime).Time()
+	registrationEnd := course["registrationEnd"].(primitive.DateTime).Time()
 	fmt.Printf("currentTime: %v, registrationStart: %v, registrationEnd: %v\n",
-		currentTime, course.RegistrationStart, course.RegistrationEnd)
-	if currentTime.Before(course.RegistrationStart) {
+		currentTime, registrationStart, registrationEnd)
+	if currentTime.Before(registrationStart) {
 		writeJSONError(w, "Регистрация на курс ещё не началась", http.StatusBadRequest)
 		return
 	}
-	if currentTime.After(course.RegistrationEnd) {
+	if currentTime.After(registrationEnd) {
 		writeJSONError(w, "Регистрация на курс уже закончилась", http.StatusBadRequest)
 		return
 	}
 
-	// Проверка уровня образования для курсов типа "Профессиональная переподготовка" (без изменений)
-	if course.Type == "Профессиональная переподготовка" {
+	// Проверка уровня образования для курсов типа "Профессиональная переподготовка"
+	if course["type"] == "Профессиональная переподготовка" {
 		educationCollection := db.GetCollection(db.EducationsCollection)
 		var education bson.M
 		err = educationCollection.FindOne(context.Background(), bson.M{"_id": user.EducationID}).Decode(&education)
@@ -493,13 +611,19 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Проверка, не зарегистрирован ли пользователь уже на этот курс
-	registrationCollection := db.GetCollection(db.CourseRegistrationsCollection)
-	var existingRegistration bson.M
-	err = registrationCollection.FindOne(context.Background(),
-		bson.M{"courseId": request.CourseID, "userId": request.UserID}).Decode(&existingRegistration)
-	if err == nil {
-		writeJSONError(w, "Вы уже зарегистрированы на этот курс", http.StatusBadRequest)
+	// Проверка, не зарегистрирован ли пользователь уже на этот курс с активным статусом
+	count, err := registrationCollection.CountDocuments(context.Background(), bson.M{
+		"courseId": request.CourseID,
+		"userId":   request.UserID,
+		"status":   bson.M{"$in": []string{"Ожидание", "Одобренный", "Принят", "Оплаченный", "Проходит курс"}},
+	})
+	if err != nil {
+		log.Printf("Ошибка при проверке активной регистрации пользователя %s на курс %s: %v", request.UserID.Hex(), request.CourseID.Hex(), err)
+		writeJSONError(w, "Ошибка при проверке регистрации", http.StatusInternalServerError)
+		return
+	}
+	if count > 0 {
+		writeJSONError(w, "Вы уже зарегистрированы на этот курс с активным статусом или проходите его", http.StatusBadRequest)
 		return
 	}
 
@@ -523,25 +647,27 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 		"userId":            request.UserID,
 		"status":            "Ожидание",
 		"registerDate":      time.Now().Format("2006-01-02"),
-		"registrationStart": course.RegistrationStart,
-		"registrationEnd":   course.RegistrationEnd,
-		"price":             course.Price, // Добавляем цену из курса
+		"registrationStart": course["registrationStart"],
+		"registrationEnd":   course["registrationEnd"],
+		"price":             course["price"],
 	}
 
 	_, err = registrationCollection.InsertOne(context.Background(), registration)
 	if err != nil {
 		session.AbortTransaction(context.Background())
+		log.Printf("Ошибка при регистрации пользователя %s на курс %s: %v", request.UserID.Hex(), request.CourseID.Hex(), err)
 		writeJSONError(w, "Ошибка при записи на курс", http.StatusInternalServerError)
 		return
 	}
 
-	// Увеличиваем studentsCount
+	// Увеличиваем activeStudentsCount
 	_, err = courseCollection.UpdateOne(context.Background(),
 		bson.M{"_id": request.CourseID},
-		bson.M{"$inc": bson.M{"studentsCount": 1}},
+		bson.M{"$inc": bson.M{"activeStudentsCount": 1}},
 	)
 	if err != nil {
 		session.AbortTransaction(context.Background())
+		log.Printf("Ошибка при обновлении количества активных студентов для курса %s: %v", request.CourseID.Hex(), err)
 		writeJSONError(w, "Ошибка при обновлении количества студентов", http.StatusInternalServerError)
 		return
 	}
@@ -549,6 +675,7 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 	err = session.CommitTransaction(context.Background())
 	if err != nil {
 		session.AbortTransaction(context.Background())
+		log.Printf("Ошибка при фиксации транзакции для курса %s: %v", request.CourseID.Hex(), err)
 		writeJSONError(w, "Ошибка при фиксации транзакции", http.StatusInternalServerError)
 		return
 	}
@@ -881,30 +1008,166 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(registrations)
 }
 
-func GetCourseByID(w http.ResponseWriter, r *http.Request) {
+func GetCourseById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	courseID, err := primitive.ObjectIDFromHex(vars["id"])
+	id, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
-		writeJSONError(w, "Неверный формат идентификатора курса", http.StatusBadRequest)
+		log.Printf("Неверный формат ID курса: %s", vars["id"])
+		writeJSONError(w, "Неверный формат ID курса", http.StatusBadRequest)
 		return
 	}
 
 	collection := db.GetCollection(db.CoursesCollection)
 
-	var course models.Course
-	filter := bson.M{"_id": courseID}
-	err = collection.FindOne(context.Background(), filter).Decode(&course)
+	pipeline := bson.A{
+		bson.M{
+			"$match": bson.M{
+				"_id": id,
+			},
+		},
+		bson.M{
+			"$lookup": bson.M{
+				"from":         db.PricesCollection,
+				"localField":   "priceId",
+				"foreignField": "_id",
+				"as":           "priceInfo",
+			},
+		},
+		bson.M{
+			"$lookup": bson.M{
+				"from":         db.CourseTypesCollection,
+				"localField":   "typeId",
+				"foreignField": "_id",
+				"as":           "typeInfo",
+			},
+		},
+		bson.M{
+			"$lookup": bson.M{
+				"from":         db.CourseRegistrationsCollection,
+				"localField":   "_id",
+				"foreignField": "courseId",
+				"as":           "registrations",
+			},
+		},
+		bson.M{
+			"$addFields": bson.M{
+				"activeStudentsCount": bson.M{
+					"$size": bson.M{
+						"$filter": bson.M{
+							"input": "$registrations",
+							"as":    "reg",
+							"cond": bson.M{
+								"$and": bson.A{
+									bson.M{
+										"$in": bson.A{
+											"$$reg.status",
+											bson.A{"Ожидание", "Одобренный", "Принят", "Оплаченный"},
+										},
+									},
+									bson.M{
+										"$ne": bson.A{"$$reg.status", nil},
+									},
+								},
+							},
+						},
+					},
+				},
+				"studentsCount": bson.M{
+					"$size": bson.M{
+						"$filter": bson.M{
+							"input": "$registrations",
+							"as":    "reg",
+							"cond": bson.M{
+								"$ne": bson.A{"$$reg.status", nil},
+							},
+						},
+					},
+				},
+			},
+		},
+		bson.M{
+			"$project": bson.M{
+				"title":               1,
+				"description":         1,
+				"duration":            1,
+				"price":               bson.M{"$arrayElemAt": bson.A{"$priceInfo.amount", 0}},
+				"priceId":             1,
+				"typeId":              1,
+				"type":                bson.M{"$arrayElemAt": bson.A{"$typeInfo.name", 0}},
+				"createdAt":           1,
+				"registrationStart":   1,
+				"registrationEnd":     1,
+				"studentsCount":       1,
+				"activeStudentsCount": 1,
+				"maxStudents":         1,
+			},
+		},
+	}
+
+	cursor, err := collection.Aggregate(context.Background(), pipeline)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			writeJSONError(w, "Курс не найден", http.StatusNotFound)
-		} else {
-			writeJSONError(w, "Ошибка при получении курса", http.StatusInternalServerError)
-		}
+		log.Printf("Ошибка при выполнении агрегации курса %s: %v", id.Hex(), err)
+		writeJSONError(w, "Ошибка при получении курса из базы данных", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var courses []bson.M
+	if err = cursor.All(context.Background(), &courses); err != nil {
+		log.Printf("Ошибка при обработке данных курса %s: %v", id.Hex(), err)
+		writeJSONError(w, "Ошибка при обработке данных курса", http.StatusInternalServerError)
 		return
 	}
 
+	if len(courses) == 0 {
+		log.Printf("Курс с ID %s не найден", id.Hex())
+		writeJSONError(w, "Курс не найден", http.StatusNotFound)
+		return
+	}
+
+	course := courses[0]
+	course["_id"] = course["_id"].(primitive.ObjectID).Hex()
+	if course["priceId"] != nil {
+		course["priceId"] = course["priceId"].(primitive.ObjectID).Hex()
+	}
+	if course["typeId"] != nil {
+		course["typeId"] = course["typeId"].(primitive.ObjectID).Hex()
+	}
+
+	// Log registration statuses for debugging
+	registrations, ok := course["registrations"].(bson.A)
+	if !ok {
+		log.Printf("Курс %s: registrations не является массивом", course["title"])
+	}
+	activeStatuses := []string{"Ожидание", "Одобренный", "Принят", "Оплаченный"}
+	statusCounts := make(map[string]int)
+	for _, reg := range registrations {
+		regDoc := reg.(bson.M)
+		status, ok := regDoc["status"].(string)
+		if !ok {
+			statusCounts["undefined"]++
+			continue
+		}
+		if contains(activeStatuses, status) {
+			statusCounts["active_"+status]++
+		} else {
+			statusCounts["inactive"]++
+		}
+	}
+	log.Printf("Курс %s (ID: %s): activeStudentsCount=%d, studentsCount=%d, maxStudents=%d, statusCounts=%v",
+		course["title"], id.Hex(), course["activeStudentsCount"], course["studentsCount"], course["maxStudents"], statusCounts)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(course)
+}
+
+func contains(slice []string, str string) bool {
+	for _, v := range slice {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }
 
 func ApproveCourseRegistration(w http.ResponseWriter, r *http.Request) {

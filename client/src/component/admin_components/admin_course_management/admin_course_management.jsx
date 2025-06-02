@@ -344,12 +344,62 @@ const AdminCourseManagement = () => {
       alert(err.message);
     }
   };
+  const handleDeletePrice = async (priceId) => {
+    if (!window.confirm('Вы уверены, что хотите удалить эту стоимость?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/delete-price/${priceId}`, {
+        method: 'DELETE',
+        credentials: 'include', // Ensure credentials are sent
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка при удалении стоимости');
+      }
+
+      alert('Стоимость успешно удалена');
+      fetchPrices();
+    } catch (error) {
+      console.error('Ошибка:', error);
+      alert(error.message);
+    }
+  };
+  const handleUpdatePrice = async (priceId, amount, description) => {
+    if (!amount || isNaN(amount) || amount <= 0) {
+      alert('Сумма должна быть положительным числом');
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/update-price/${priceId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Ensure authentication
+        body: JSON.stringify({
+          amount: Number(amount),
+          description: description || "",
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка при обновлении стоимости');
+      }
+
+      alert('Стоимость успешно обновлена');
+      fetchPrices();
+    } catch (error) {
+      console.error('Ошибка:', error);
+      alert(error.message);
+    }
+  };
 
   // Работа с ценами
   const handleAddPrice = async (e) => {
     e.preventDefault();
-    if (!newPrice.amount || isNaN(newPrice.amount)) {
-      alert('Пожалуйста, введите корректную сумму');
+    if (!newPrice.amount || isNaN(newPrice.amount) || newPrice.amount <= 0) {
+      alert('Пожалуйста, введите корректную положительную сумму');
       return;
     }
 
@@ -357,6 +407,7 @@ const AdminCourseManagement = () => {
       const response = await fetch('http://localhost:5000/add-price', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Ensure authentication
         body: JSON.stringify({
           amount: Number(newPrice.amount),
           description: newPrice.description || "",
@@ -364,7 +415,6 @@ const AdminCourseManagement = () => {
       });
 
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.error || 'Ошибка при добавлении стоимости');
       }
@@ -394,6 +444,7 @@ const AdminCourseManagement = () => {
       const response = await fetch('http://localhost:5000/bulk-update-prices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Ensure authentication
         body: JSON.stringify({
           priceIds: selectedPrices,
           percent: parseFloat(percentIncrease),
@@ -637,6 +688,7 @@ const AdminCourseManagement = () => {
                 value={newPrice.amount}
                 onChange={(e) => setNewPrice({ ...newPrice, amount: e.target.value })}
                 required
+                min="1"
               />
               <textarea
                 placeholder="Описание"
@@ -665,11 +717,12 @@ const AdminCourseManagement = () => {
                   placeholder="Процент изменения"
                   value={percentIncrease}
                   onChange={(e) => setPercentIncrease(e.target.value)}
+                  min="0"
                 />
                 <button
                   className='approve-btn'
                   onClick={handleBulkUpdate}
-                  disabled={selectedPrices.length === 0 || !percentIncrease}
+                  disabled={selectedPrices.length === 0 || !percentIncrease || percentIncrease <= 0}
                 >
                   Применить к выбранным ({selectedPrices.length})
                 </button>
@@ -683,7 +736,8 @@ const AdminCourseManagement = () => {
                   <thead>
                     <tr>
                       <th>Выбор</th>
-                      <th>Дата</th>
+                      <th>Дата создания</th>
+                      <th>Дата изменения</th>
                       <th>Сумма</th>
                       <th>Описание</th>
                       <th>Действия</th>
@@ -700,6 +754,7 @@ const AdminCourseManagement = () => {
                           />
                         </td>
                         <td>{new Date(price.createdAt).toLocaleDateString()}</td>
+                        <td>{price.updatedAt ? new Date(price.updatedAt).toLocaleDateString() : '-'}</td>
                         <td>
                           <EditableField
                             value={price.amount}
@@ -708,16 +763,18 @@ const AdminCourseManagement = () => {
                               parseInt(newValue),
                               price.description
                             )}
+                            type="number"
                           />
                         </td>
                         <td>
                           <EditableField
-                            value={price.description}
+                            value={price.description || ''}
                             onSave={(newValue) => handleUpdatePrice(
                               price._id,
                               price.amount,
                               newValue
                             )}
+                            type="text"
                           />
                         </td>
                         <td>
@@ -872,7 +929,7 @@ const AdminCourseManagement = () => {
                 <td>{course.type}</td>
                 <td>{course.registrationStart ? new Date(course.registrationStart).toLocaleDateString() : '-'}</td>
                 <td>{course.registrationEnd ? new Date(course.registrationEnd).toLocaleDateString() : '-'}</td>
-                <td>{course.studentsCount || 0}/{course.maxStudents || '∞'}</td>
+                <td>{course.activeStudentsCount || 0}/{course.maxStudents || '∞'}</td>
                 <td>
                   <button
                     className='reject-btn'
@@ -990,23 +1047,40 @@ const AdminCourseManagement = () => {
 };
 
 // Компонент для редактируемых полей
-const EditableField = ({ value, onSave }) => {
+const EditableField = ({ value, onSave, type = 'text' }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentValue, setCurrentValue] = useState(value);
 
+  useEffect(() => {
+    setCurrentValue(value);
+  }, [value]);
+
   const handleSave = () => {
+    if (type === 'number' && (isNaN(currentValue) || currentValue <= 0)) {
+      alert('Пожалуйста, введите положительное число');
+      return;
+    }
     onSave(currentValue);
     setIsEditing(false);
   };
 
   return isEditing ? (
     <div className="editable-field">
-      <input
-        type={typeof value === 'number' ? 'number' : 'text'}
-        value={currentValue}
-        onChange={(e) => setCurrentValue(e.target.value)}
-        autoFocus
-      />
+      {type === 'text' ? (
+        <textarea
+          value={currentValue}
+          onChange={(e) => setCurrentValue(e.target.value)}
+          autoFocus
+        />
+      ) : (
+        <input
+          type={type}
+          value={currentValue}
+          onChange={(e) => setCurrentValue(e.target.value)}
+          autoFocus
+          min={type === 'number' ? 1 : undefined}
+        />
+      )}
       <button className='approve-btn' onClick={handleSave}>✓</button>
       <button className='reject-btn' onClick={() => {
         setCurrentValue(value);
@@ -1015,7 +1089,7 @@ const EditableField = ({ value, onSave }) => {
     </div>
   ) : (
     <div onClick={() => setIsEditing(true)} className="editable-field">
-      {value}
+      {value || 'Без описания'}
     </div>
   );
 };

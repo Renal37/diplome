@@ -9,26 +9,26 @@ const CourseRegistration = () => {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        // Загружаем данные курса
-        fetch(`http://localhost:5000/courses/${courseId}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Ошибка при загрузке курса');
-                }
-                return response.json();
-            })
-            .then(data => {
-                setCourse(data);
-                setIsLoading(false);
-            })
-            .catch(error => {
-                console.error('Error fetching course:', error);
-                alert(error.message);
-                setIsLoading(false);
-            });
+    const fetchCourseData = async () => {
+        try {
+            const response = await fetch(`http://localhost:5000/courses/${courseId}`);
+            if (!response.ok) {
+                throw new Error('Ошибка при загрузке курса');
+            }
+            const data = await response.json();
+            console.log('Course data:', data);
+            setCourse(data);
+            setIsLoading(false);
+        } catch (error) {
+            console.error('Error fetching course:', error);
+            alert(error.message);
+            setIsLoading(false);
+        }
+    };
 
-        // Загружаем данные пользователя
+    useEffect(() => {
+        fetchCourseData();
+
         fetch('http://localhost:5000/profile', {
             method: "GET",
             credentials: "include",
@@ -44,7 +44,7 @@ const CourseRegistration = () => {
                     navigate('/auth/login');
                 } else {
                     setUser(data);
-                    console.log(data);
+                    console.log('User data:', data);
                 }
             })
             .catch(error => {
@@ -54,14 +54,15 @@ const CourseRegistration = () => {
             });
     }, [courseId, navigate]);
 
-    const handleRegister = () => {
+    const handleRegister = async () => {
         if (!user || !user._id) {
             alert('Пользователь не авторизован');
             navigate('/auth/login');
             return;
         }
 
-        // Проверка дат регистрации
+        await fetchCourseData();
+
         const currentDate = new Date();
         const registrationStart = new Date(course.registrationStart);
         const registrationEnd = new Date(course.registrationEnd);
@@ -75,7 +76,11 @@ const CourseRegistration = () => {
             return;
         }
 
-        // Проверка уровня образования для курсов типа "Профессиональная переподготовка"
+        if (course.activeStudentsCount >= course.maxStudents) {
+            alert(`Курс достиг максимального количества студентов (${course.activeStudentsCount}/${course.maxStudents}). Свободных мест нет.`);
+            return;
+        }
+
         if (course.type === "Профессиональная переподготовка") {
             const allowedEducations = [
                 "Среднее профессиональное",
@@ -90,7 +95,6 @@ const CourseRegistration = () => {
             }
         }
 
-        // Проверка заполненности обязательных полей
         const requiredFields = [
             { field: 'lastname', message: 'Фамилия не заполнена' },
             { field: 'firstname', message: 'Имя не заполнено' },
@@ -98,7 +102,7 @@ const CourseRegistration = () => {
             { field: 'birthdate', message: 'Дата рождения не указана' },
             { field: 'birthplace', message: 'Место рождения не указано' },
             { field: 'education', message: 'Образование не указано' },
-            { field: 'email', message: 'Email не указан' },
+            { field: 'email', message: '' },
             { field: 'homeaddress', message: 'Домашний адрес не указан' },
             { field: 'jobtitle', message: 'Должность не указана' },
             { field: 'passportdata', message: 'Паспортные данные не указаны' },
@@ -118,10 +122,9 @@ const CourseRegistration = () => {
                     navigate('/auth/edit_profile');
                     return;
                 }
-            } else if (field === 'agreetoprocessing' || field === 'contractUploaded') {
+            } else if (field === 'agreetoprocessing' || field === 'contract') {
                 if (!user[field]) {
                     alert(message);
-                    navigate('/auth/edit_profile');
                     return;
                 }
             } else if (!user[field]) {
@@ -131,37 +134,34 @@ const CourseRegistration = () => {
             }
         }
 
-        fetch('http://localhost:5000/courses/register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                courseId: courseId,
-                userId: user._id,
-            }),
-        })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.error || 'Ошибка при записи на курс');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    alert('Вы успешно записаны на курс! Ожидайте одобрения администратора.');
-                    navigate('/');
-                } else {
-                    alert(data.error || 'Ошибка при записи на курс');
-                }
-            })
-            .catch(error => {
-                console.error('Error registering for course:', error);
-                alert(error.message);
+        try {
+            const response = await fetch('http://localhost:5000/courses/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    courseId: courseId,
+                    userId: user._id,
+                }),
             });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Ошибка при записи на курс');
+            }
+
+            if (data.success) {
+                alert('Вы успешно записаны на курс! Ожидайте одобрения администратора.');
+                navigate('/');
+            } else {
+                alert(data.error || 'Ошибка при записи на курс');
+            }
+        } catch (error) {
+            console.error('Error registering for course:', error);
+            alert(error.message);
+        }
     };
 
     const isProfileComplete = () => {
@@ -185,7 +185,7 @@ const CourseRegistration = () => {
                     <p><strong>Тип:</strong> {course.type}</p>
                     <p><strong>Начало регистрации:</strong> {new Date(course.registrationStart).toLocaleDateString()}</p>
                     <p><strong>Окончание регистрации:</strong> {new Date(course.registrationEnd).toLocaleDateString()}</p>
-                    <p><strong>Осталось мест:</strong> {course.maxStudents - course.studentsCount}</p>
+                    <p><strong>Осталось мест:</strong> {course.maxStudents - (course.activeStudentsCount || 0)}</p>
                 </div>
                 <div className="course_btn">
                     {isProfileComplete() && (

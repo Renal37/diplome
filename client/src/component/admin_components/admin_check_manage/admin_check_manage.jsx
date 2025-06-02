@@ -62,6 +62,7 @@ const AdminCoursesManagement = () => {
                         : reg
                 )
             );
+
             setSelectedRegistrations([]);
         } catch (error) {
             console.error("Ошибка массового одобрения:", error);
@@ -125,6 +126,7 @@ const AdminCoursesManagement = () => {
                 } else {
                     console.log("Загруженные заявки:", data); // Отладка
                     setRegistrations(data);
+                    console.log(data)
                 }
                 setIsLoading(false);
             } catch (error) {
@@ -339,6 +341,9 @@ const AdminCoursesManagement = () => {
                             <option value="Отклоненный">Отклоненный</option>
                             <option value="Принят">Принят</option>
                             <option value="Оплаченный">Оплаченный</option>
+                            <option value="Проходит курс">Проходит курс</option>
+                            <option value="Отчисленный">Отчисленный</option>
+                            <option value="Завершил">Завершил</option>
                         </select>
                     </div>
                 </div>
