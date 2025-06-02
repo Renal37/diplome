@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import "./check_course_component.css";
-import { PDFDocument, StandardFonts, rgb, PDFTextField } from "pdf-lib";
+import { PDFDocument, PDFTextField } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import qr from "../../../assets/mustafin_qr.jpg";
 import ArialFont from "../../../assets/fonts/Arial.ttf";
@@ -45,9 +45,8 @@ const CheckCourse = () => {
         fetchCourses(selectedStatus);
     }, [selectedStatus]);
 
-   const handleDownloadContract = async (courseId) => {
+    const handleDownloadContract = async (courseId) => {
         try {
-            // 1. Получить данные договора
             const dataResponse = await fetch(`http://localhost:5000/user/contract-data/${courseId}`, {
                 method: "GET",
                 credentials: "include",
@@ -57,18 +56,15 @@ const CheckCourse = () => {
             }
             const formData = await dataResponse.json();
 
-            // 2. Загрузить шаблон PDF
             const pdfResponse = await fetch("http://localhost:5000/contract-template");
             if (!pdfResponse.ok) {
                 throw new Error("Ошибка при загрузке шаблона PDF");
             }
             const pdfBytes = await pdfResponse.arrayBuffer();
 
-            // 3. Загрузить PDF в pdf-lib
             const pdfDoc = await PDFDocument.load(pdfBytes);
             const form = pdfDoc.getForm();
 
-            // 4. Регистрация fontkit и загрузка шрифта Arial
             pdfDoc.registerFontkit(fontkit);
             let font;
             try {
@@ -83,88 +79,183 @@ const CheckCourse = () => {
                 throw new Error(`Не удалось загрузить шрифт Arial: ${fontError.message}`);
             }
 
-            // 5. Заполнить поля формы
-            try {
-                const fieldNames = form.getFields().map(field => field.getName());
-                console.log("Доступные поля формы:", fieldNames);
+            const fieldNames = form.getFields().map(field => field.getName());
+            console.log("Доступные поля формы:", fieldNames);
 
-                const fieldMap = {
-                    FullName: ["FullName"],
-                    CourseTitle: ["CourseTitle"],
-                    CourseDuration: ["CourseDuration"],
-                    CoursePrice: ["CoursePrice"],
-                    DocumentId: ["DocumentId"],
-                    Adress: ["Adress"],
-                    PasportDate: ["PasportDate"],
-                    SNILS: ["SNILS"],
-                    Phone: ["Phone"],
-                    Email: ["Email"],
-                    DocumentDay: ["DocumentDay"],
-                    CourseEnd: ["CourseEnd"],
-                    Time: ["Time"],
-                    TimeDayStart: ["TimeDayStart"],
-                    TimeMonthStart: ["TimeMonthStart"],
-                    TimeDayEnd: ["TimeDayEnd"],
-                    TimeMonthEnd: ["TimeMonthEnd"],
-                    HowGive: ["HowGive"],
-                };
+            const fieldMap = {
+                FullName: ["FullName"],
+                CourseTitle: ["CourseTitle"],
+                CourseDuration: ["CourseDuration"],
+                CoursePrice: ["CoursePrice"],
+                DocumentId: ["DocumentId"],
+                Adress: ["Adress"],
+                PasportDate: ["PasportDate"],
+                SNILS: ["SNILS"],
+                Phone: ["Phone"],
+                Email: ["Email"],
+                DocumentDay: ["DocumentDay"],
+                CourseEnd: ["CourseEnd"],
+                Time: ["Time"],
+                TimeDayStart: ["TimeDayStart"],
+                TimeMonthStart: ["TimeMonthStart"],
+                TimeDayEnd: ["TimeDayEnd"],
+                TimeMonthEnd: ["TimeMonthEnd"],
+                HowGive: ["HowGive"],
+            };
 
-                for (const [key, value] of Object.entries(formData)) {
-                    const possibleNames = fieldMap[key] || [key];
-                    let fieldFilled = false;
-                    for (const fieldName of possibleNames) {
-                        try {
-                            const field = form.getTextField(fieldName);
-                            if (field) {
-                                console.log(`Попытка заполнить поле ${fieldName} значением: ${value}`);
-                                field.setText(value);
-                                field.updateAppearances(font); // Удаляем { encoding: "unicode" }
-                                field.enableMultiline();
-                                console.log(`Успешно заполнено поле ${fieldName}: ${value}`);
-                                fieldFilled = true;
-                                break;
-                            } else {
-                                console.warn(`Поле ${fieldName} не найдено в форме`);
-                            }
-                        } catch (fieldError) {
-                            console.warn(`Ошибка при заполнении поля ${fieldName}: ${fieldError.message}`);
+            for (const [key, value] of Object.entries(formData)) {
+                const possibleNames = fieldMap[key] || [key];
+                let fieldFilled = false;
+                for (const fieldName of possibleNames) {
+                    try {
+                        const field = form.getTextField(fieldName);
+                        if (field) {
+                            console.log(`Попытка заполнить поле ${fieldName} значением: ${value}`);
+                            field.setText(value);
+                            field.updateAppearances(font);
+                            field.enableMultiline();
+                            console.log(`Успешно заполнено поле ${fieldName}: ${value}`);
+                            fieldFilled = true;
+                            break;
+                        } else {
+                            console.warn(`Поле ${fieldName} не найдено в форме`);
                         }
-                    }
-                    if (!fieldFilled) {
-                        console.warn(`Поле для ключа ${key} не найдено среди ${possibleNames.join(", ")}`);
+                    } catch (fieldError) {
+                        console.warn(`Ошибка при заполнении поля ${fieldName}: ${fieldError.message}`);
                     }
                 }
-
-                // Применяем шрифт ко всем текстовым полям
-                form.getFields().forEach(field => {
-                    if (field instanceof PDFTextField) {
-                        try {
-                            field.updateAppearances(font); // Удаляем { encoding: "unicode" }
-                        } catch (appearanceError) {
-                            console.warn(`Ошибка при обновлении внешнего вида поля ${field.getName()}: ${appearanceError.message}`);
-                        }
-                    }
-                });
-
-                // 6. Сохранить PDF
-                form.flatten();
-                const updatedPdfBytes = await pdfDoc.save();
-
-                // 7. Скачать PDF
-                const blob = new Blob([updatedPdfBytes], { type: "application/pdf" });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.style.display = "none";
-                a.href = url;
-                a.download = `contract_${courseId}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-
-                alert("Договор успешно скачан! Заполните его и отправьте нам!");
-            } catch (formError) {
-                throw new Error(`Ошибка при обработке формы PDF: ${formError.message}`);
+                if (!fieldFilled) {
+                    console.warn(`Поле для ключа ${key} не найдено среди ${possibleNames.join(", ")}`);
+                }
             }
+
+            form.getFields().forEach(field => {
+                if (field instanceof PDFTextField) {
+                    try {
+                        field.updateAppearances(font);
+                    } catch (appearanceError) {
+                        console.warn(`Ошибка при обновлении внешнего вида поля ${field.getName()}: ${appearanceError.message}`);
+                    }
+                }
+            });
+
+            form.flatten();
+            const updatedPdfBytes = await pdfDoc.save();
+
+            const blob = new Blob([updatedPdfBytes], { type: "application/pdf" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = `contract_${courseId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+
+            alert("Договор успешно скачан! Заполните его и отправьте нам!");
+        } catch (err) {
+            console.error("Ошибка:", err);
+            alert(err.message);
+        }
+    };
+
+    const handleDownloadDocument = async (courseId, status) => {
+        try {
+            const dataResponse = await fetch(`http://localhost:5000/user/download-document/${courseId}`, {
+                method: "GET",
+                credentials: "include",
+            });
+            if (!dataResponse.ok) {
+                throw new Error("Ошибка при получении данных документа");
+            }
+            const formData = await dataResponse.json();
+
+            const pdfResponse = await fetch(`http://localhost:5000/user/document-template/${courseId}`);
+            if (!pdfResponse.ok) {
+                throw new Error("Ошибка при загрузке шаблона PDF");
+            }
+            const pdfBytes = await pdfResponse.arrayBuffer();
+
+            const pdfDoc = await PDFDocument.load(pdfBytes);
+            const form = pdfDoc.getForm();
+
+            pdfDoc.registerFontkit(fontkit);
+            let font;
+            try {
+                const fontResponse = await fetch(ArialFont);
+                if (!fontResponse.ok) {
+                    throw new Error("Не удалось загрузить шрифт Arial");
+                }
+                const fontBytes = await fontResponse.arrayBuffer();
+                font = await pdfDoc.embedFont(fontBytes, { subset: true });
+                console.log("Шрифт Arial успешно загружен");
+            } catch (fontError) {
+                throw new Error(`Не удалось загрузить шрифт Arial: ${fontError.message}`);
+            }
+
+            const fieldNames = form.getFields().map(field => field.getName());
+            console.log("Доступные поля формы:", fieldNames);
+
+            const fieldMap = {
+                Full_Name: ["Full_Name"],
+                Course_Title: ["Course_Title"],
+                Start_course: ["Start_course"],
+                End_course: ["End_course"],
+                Date: ["Date"],
+                Random_number: ["Random_number"],
+            };
+
+            for (const [key, value] of Object.entries(formData)) {
+                const possibleNames = fieldMap[key] || [key];
+                let fieldFilled = false;
+                for (const fieldName of possibleNames) {
+                    try {
+                        const field = form.getTextField(fieldName);
+                        if (field) {
+                            console.log(`Попытка заполнить поле ${fieldName} значением: ${value}`);
+                            field.setText(value);
+                            field.updateAppearances(font);
+                            field.enableMultiline();
+                            console.log(`Успешно заполнено поле ${fieldName}: ${value}`);
+                            fieldFilled = true;
+                            break;
+                        } else {
+                            console.warn(`Поле ${fieldName} не найдено в форме`);
+                        }
+                    } catch (fieldError) {
+                        console.warn(`Ошибка при заполнении поля ${fieldName}: ${fieldError.message}`);
+                    }
+                }
+                if (!fieldFilled) {
+                    console.warn(`Поле для ключа ${key} не найдено среди ${possibleNames.join(", ")}`);
+                }
+            }
+
+            form.getFields().forEach(field => {
+                if (field instanceof PDFTextField) {
+                    try {
+                        field.updateAppearances(font);
+                    } catch (appearanceError) {
+                        console.warn(`Ошибка при обновлении внешнего вида поля ${field.getName()}: ${appearanceError.message}`);
+                    }
+                }
+            });
+
+            form.flatten();
+            const updatedPdfBytes = await pdfDoc.save();
+
+            const docType = status === "Завершил" ? "диплом" : "сертификат";
+            const blob = new Blob([updatedPdfBytes], { type: "application/pdf" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = `${docType}_${courseId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+
+            alert(`${docType.charAt(0).toUpperCase() + docType.slice(1)} успешно скачан!`);
         } catch (err) {
             console.error("Ошибка:", err);
             alert(err.message);
@@ -291,6 +382,12 @@ const CheckCourse = () => {
                 >
                     Отчисленный
                 </button>
+                <button
+                    onClick={() => setSelectedStatus("Завершил")}
+                    className={`prifle_nav_button ${selectedStatus === "Завершил" ? "active" : ""}`}
+                >
+                    Завершённые
+                </button>
             </div>
 
             <div className="course-list-container">
@@ -364,6 +461,14 @@ const CheckCourse = () => {
                                         onClick={() => handleOpenPaymentModal(course)}
                                     >
                                         Оплатить
+                                    </button>
+                                )}
+                                {(course.status === "Завершил" || course.status === "Отчисленный") && (
+                                    <button
+                                        className="download-document-button"
+                                        onClick={() => handleDownloadDocument(course._id, course.status)}
+                                    >
+                                        {course.status === "Завершил" ? "Скачать диплом" : "Скачать сертификат"}
                                     </button>
                                 )}
                             </li>

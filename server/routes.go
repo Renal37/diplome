@@ -22,8 +22,6 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/admin/enroll-registration/{id}", handlers.EnrollRegistration).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/issue-document/{id}", handlers.IssueDocument).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/approve-contract/{id}", handlers.ApproveContract).Methods("POST")
-
-
 	r.HandleFunc("/admin/expel-registration/{id}", handlers.ExpelRegistration).Methods("POST", "OPTIONS")
 	r.HandleFunc("/admin/expel-registrations", handlers.ExpelMultipleRegistrations).Methods("POST", "OPTIONS")
 
@@ -53,6 +51,8 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/user/download-contract/{courseId}", handlers.DownloadContract).Methods("GET")
 	r.HandleFunc("/user/upload-contract/{courseId}", handlers.UploadContract).Methods("POST")
 	r.HandleFunc("/user/download-document", handlers.DownloadDocument).Methods("GET")
+	r.HandleFunc("/user/download-document/{courseId}", handlers.DownloadDocs).Methods("GET")
+	r.HandleFunc("/user/document-template/{courseId}", handlers.GetDocsTemplate).Methods("GET")
 	r.HandleFunc("/user/upload-document/{userId}", handlers.UploadDocument).Methods("POST")
 	r.HandleFunc("/user/view-consent/{userId}", handlers.ViewConsent).Methods("GET")
 	r.HandleFunc("/user/fill-consent", handlers.FillConsent).Methods("GET")
