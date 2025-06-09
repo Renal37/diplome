@@ -8,8 +8,7 @@ const AdminOrders = () => {
     const [newOrder, setNewOrder] = useState({
         number: '',
         date: new Date().toISOString().slice(0, 10),
-        orderTypeId: '',
-        description: ''
+        orderTypeId: ''
     });
     const [newOrderType, setNewOrderType] = useState('');
     const [editingOrderType, setEditingOrderType] = useState(null);
@@ -32,16 +31,19 @@ const AdminOrders = () => {
 
             setOrderTypes(typesData || []);
             setOrders(ordersData || []);
-            console.log(ordersData);
         } catch (error) {
-            console.error('Error fetching data:', error);
+            console.error('Ошибка получения данных:', error);
+            setError('Не удалось загрузить данные');
         } finally {
             setLoading(false);
         }
     };
 
     const handleAddOrderType = async () => {
-        if (!newOrderType.trim()) return;
+        if (!newOrderType.trim()) {
+            setError('Введите название типа приказа');
+            return;
+        }
 
         try {
             const response = await fetch('http://localhost:5000/admin/order-types/add', {
@@ -52,10 +54,16 @@ const AdminOrders = () => {
             });
 
             const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Ошибка сервера');
+            }
+
             setOrderTypes(prev => [...prev, data]);
             setNewOrderType('');
+            setError('');
         } catch (error) {
-            console.error('Error adding order type:', error);
+            console.error('Ошибка добавления типа приказа:', error);
+            setError(error.message);
         }
     };
 
@@ -68,31 +76,25 @@ const AdminOrders = () => {
 
     const handleAddOrder = async () => {
         if (!isValidDate(newOrder.date)) {
-            setError("Укажите корректную дату в формате ГГГГ-ММ-ДД");
+            setError('Укажите корректную дату в формате ГГГГ-ММ-ДД');
             return;
         }
 
         if (!newOrder.orderTypeId) {
-            setError("Выберите тип приказа");
+            setError('Выберите тип приказа');
             return;
         }
-
-        if (!newOrder.file) {
-            setError("Прикрепите файл приказа (PDF)");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('number', newOrder.number);
-        formData.append('date', newOrder.date);
-        formData.append('orderTypeId', newOrder.orderTypeId);
-        formData.append('file', newOrder.file);
 
         try {
             const response = await fetch('http://localhost:5000/admin/orders/add', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: formData,
+                body: JSON.stringify({
+                    number: newOrder.number,
+                    date: newOrder.date,
+                    orderTypeId: newOrder.orderTypeId
+                }),
             });
 
             const data = await response.json();
@@ -105,18 +107,20 @@ const AdminOrders = () => {
             setNewOrder({
                 number: '',
                 date: new Date().toISOString().slice(0, 10),
-                orderTypeId: '',
-                file: null
+                orderTypeId: ''
             });
             setError('');
         } catch (error) {
-            console.error('Error adding order:', error);
+            console.error('Ошибка добавления приказа:', error);
             setError(error.message);
         }
     };
 
     const handleUpdateOrderType = async () => {
-        if (!editingOrderType || !editingOrderType.name.trim()) return;
+        if (!editingOrderType || !editingOrderType.name.trim()) {
+            setError('Введите название типа приказа');
+            return;
+        }
 
         try {
             const response = await fetch(`http://localhost:5000/admin/order-types/update?id=${editingOrderType.id}`, {
@@ -127,12 +131,17 @@ const AdminOrders = () => {
             });
 
             const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Ошибка сервера');
+            }
+
             setOrderTypes(prev => prev.map(type =>
                 type.id === editingOrderType.id ? data : type
             ));
             setEditingOrderType(null);
+            setError('');
         } catch (error) {
-            console.error('Error updating order type:', error);
+            console.error('Ошибка обновления типа приказа:', error);
             setError(error.message);
         }
     };
@@ -152,14 +161,25 @@ const AdminOrders = () => {
 
             setOrderTypes(prev => prev.filter(type => type.id !== id));
             setOrders(prev => prev.filter(order => order.orderTypeId !== id));
+            setError('');
         } catch (error) {
-            console.error('Error deleting order type:', error);
+            console.error('Ошибка удаления типа приказа:', error);
             setError(error.message);
         }
     };
 
     const handleUpdateOrder = async () => {
         if (!editingOrder) return;
+
+        if (!isValidDate(editingOrder.date)) {
+            setError('Укажите корректную дату в формате ГГГГ-ММ-ДД');
+            return;
+        }
+
+        if (!editingOrder.orderTypeId) {
+            setError('Выберите тип приказа');
+            return;
+        }
 
         try {
             const response = await fetch(`http://localhost:5000/admin/orders/update?id=${editingOrder.id}`, {
@@ -169,24 +189,28 @@ const AdminOrders = () => {
                 body: JSON.stringify({
                     number: editingOrder.number,
                     date: editingOrder.date,
-                    orderTypeId: editingOrder.orderTypeId,
-                    description: editingOrder.description
+                    orderTypeId: editingOrder.orderTypeId
                 }),
             });
 
             const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Ошибка сервера');
+            }
+
             setOrders(prev => prev.map(order =>
                 order.id === editingOrder.id ? data : order
             ));
             setEditingOrder(null);
+            setError('');
         } catch (error) {
-            console.error('Error updating order:', error);
+            console.error('Ошибка обновления приказа:', error);
             setError(error.message);
         }
     };
 
     const handleDeleteOrder = async (id) => {
-        if (!window.confirm('Удалить этот приказ?')) return;
+        if (!window.confirm('Вы уверены, что хотите удалить этот приказ?')) return;
 
         try {
             const response = await fetch(`http://localhost:5000/admin/orders/delete?id=${id}`, {
@@ -194,18 +218,20 @@ const AdminOrders = () => {
                 credentials: 'include',
             });
 
+            const data = await response.json();
             if (!response.ok) {
-                throw new Error('Ошибка при удалении');
+                throw new Error(data.error || 'Ошибка при удалении');
             }
 
             setOrders(prev => prev.filter(order => order.id !== id));
+            setError('');
         } catch (error) {
-            console.error('Error deleting order:', error);
+            console.error('Ошибка удаления приказа:', error);
             setError(error.message);
         }
     };
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) return <div>Загрузка...</div>;
 
     return (
         <div className="admin-orders-container">
@@ -236,10 +262,15 @@ const AdminOrders = () => {
                     {orderTypes.map(type => (
                         <li key={type.id}>
                             {type.name}
-                            <button onClick={() => setEditingOrderType(type)}>✏️</button>
-                            <button onClick={() => handleDeleteOrderType(type.id)}>🗑️</button>
+                            <div className="btn">
+
+                                <button onClick={() => setEditingOrderType(type)}>Изменить</button>
+                                <button onClick={() => handleDeleteOrderType(type.id)}>Удалить</button>
+                            </div>
+
                         </li>
                     ))}
+
                 </ul>
             </div>
 
@@ -272,12 +303,6 @@ const AdminOrders = () => {
                             <option key={type.id} value={type.id}>{type.name}</option>
                         ))}
                     </select>
-
-                    <input
-                        type="file"
-                        accept=".pdf"
-                        onChange={(e) => setNewOrder({ ...newOrder, file: e.target.files[0] })}
-                    />
                     {editingOrder ? (
                         <>
                             <button onClick={handleUpdateOrder}>Сохранить</button>
@@ -295,7 +320,6 @@ const AdminOrders = () => {
                             <th>Номер</th>
                             <th>Дата</th>
                             <th>Тип</th>
-                            <th>Файл</th>
                             <th>Действия</th>
                         </tr>
                     </thead>
@@ -306,19 +330,13 @@ const AdminOrders = () => {
                                 <td>{new Date(order.date).toLocaleDateString()}</td>
                                 <td>{order.orderType}</td>
                                 <td>
-                                    {order.fileUrl && (
-                                        <a
-                                            href={`http://localhost:5000${order.fileUrl}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                        >
-                                            {order.fileName || "Просмотреть приказ"}
-                                        </a>
-                                    )}
-                                </td>
-                                <td>
-                                    <button onClick={() => setEditingOrder(order)}>✏️</button>
-                                    <button onClick={() => handleDeleteOrder(order.id)}>🗑️</button>
+                                    <button onClick={() => setEditingOrder({
+                                        id: order.id,
+                                        number: order.number,
+                                        date: new Date(order.date).toISOString().slice(0, 10),
+                                        orderTypeId: order.orderTypeId
+                                    })}>Изменить</button>
+                                    <button onClick={() => handleDeleteOrder(order.id)}>Удалить</button>
                                 </td>
                             </tr>
                         ))}

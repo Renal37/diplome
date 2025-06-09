@@ -29,23 +29,35 @@ const AdminGroupManagement = () => {
     const fetchGroups = async () => {
         try {
             const response = await fetch("http://localhost:5000/groups", { credentials: "include" });
-            if (!response.ok) throw new Error("Ошибка при загрузке групп");
+            if (!response.ok) {
+                if (response.status === 401) navigate("/login");
+                throw new Error(`Ошибка ${response.status}: Не удалось загрузить группы`);
+            }
             const data = await response.json();
-            if (!data?.groups) throw new Error("Данные не получены");
+            if (!data?.groups) throw new Error("Данные групп не получены");
 
             const groupsWithMembersInfo = {};
             for (const group of data.groups) {
                 const membersResponse = await fetch(`http://localhost:5000/admin/group-members/${group._id}`, { credentials: "include" });
-                if (!membersResponse.ok) throw new Error("Ошибка при загрузке участников группы");
+                if (!membersResponse.ok) throw new Error(`Ошибка ${membersResponse.status}: Не удалось загрузить участников группы ${group._id}`);
                 const membersData = await membersResponse.json();
+
+                const hasPaid = membersData.members?.some(m => m.status === "Оплаченный");
+                const hasEnrolled = membersData.members?.some(m => m.status === "Проходит курс");
+                const hasCompleted = membersData.members?.some(m => m.status === "Завершил");
+                const hasRejected = membersData.members?.some(m => m.status === "Отклоненный");
+                const currentStudents = membersData.members?.filter(m =>
+                    ["Оплаченный", "Проходит курс", "Завершил"].includes(m.status)
+                ).length || 0;
+
                 groupsWithMembersInfo[group._id] = {
                     hasMembers: membersData.members?.length > 0,
-                    hasPaidMembers: membersData.members?.some(m => m.status === "Оплаченный"),
-                    hasEnrolledMembers: membersData.members?.some(m => m.status === "Проходит курс"),
-                    hasCompletedMembers: membersData.members?.some(m => m.status === "Завершил"),
-                    hasRejectedMembers: membersData.members?.some(m => m.status === "Отклоненный"),
-                    status: group.status,
-                    currentStudents: group.currentStudents,
+                    hasPaidMembers: hasPaid,
+                    hasEnrolledMembers: hasEnrolled,
+                    hasCompletedMembers: hasCompleted,
+                    hasRejectedMembers: hasRejected,
+                    status: group.status || "Активна",
+                    currentStudents,
                     members: membersData.members || []
                 };
             }
@@ -55,31 +67,31 @@ const AdminGroupManagement = () => {
             setGroupsWithMembers(groupsWithMembersInfo);
         } catch (error) {
             console.error("Ошибка загрузки групп:", error);
-            setError("Ошибка при загрузке групп");
+            setError(error.message || "Ошибка при загрузке групп");
         }
     };
 
     const fetchCourses = async () => {
         try {
             const response = await fetch("http://localhost:5000/courses", { credentials: "include" });
-            if (!response.ok) throw new Error("Ошибка при загрузке курсов");
+            if (!response.ok) throw new Error(`Ошибка ${response.status}: Не удалось загрузить курсы`);
             const data = await response.json();
             setCourses(data || []);
         } catch (error) {
             console.error("Ошибка загрузки курсов:", error);
-            setError("Ошибка при загрузке курсов");
+            setError(error.message || "Ошибка при загрузке курсов");
         }
     };
 
     const fetchOrders = async () => {
         try {
             const response = await fetch("http://localhost:5000/admin/orders", { credentials: "include" });
-            if (!response.ok) throw new Error("Ошибка при загрузке приказов");
+            if (!response.ok) throw new Error(`Ошибка ${response.status}: Не удалось загрузить приказы`);
             const data = await response.json();
             setOrders(data || []);
         } catch (error) {
             console.error("Ошибка загрузки приказов:", error);
-            setError("Ошибка при загрузке приказов");
+            setError(error.message || "Ошибка при загрузке приказов");
         }
     };
 
@@ -199,7 +211,7 @@ const AdminGroupManagement = () => {
                 handleCloseAllModals();
                 fetchGroups();
             } else {
-                setError(data.error || "Ошибка создания группы");
+                setError(data.error || "Ошибка при создании группы");
             }
         } catch (error) {
             console.error("Ошибка создания группы:", error);
@@ -210,12 +222,12 @@ const AdminGroupManagement = () => {
     const fetchGroupMembers = async (groupId) => {
         try {
             const response = await fetch(`http://localhost:5000/admin/group-members/${groupId}`, { credentials: "include" });
-            if (!response.ok) throw new Error("Ошибка при загрузке участников");
+            if (!response.ok) throw new Error(`Ошибка ${response.status}: Не удалось загрузить участников`);
             const data = await response.json();
             setGroupMembers(data.members || []);
         } catch (error) {
             console.error("Ошибка загрузки участников:", error);
-            setError("Ошибка загрузки участников");
+            setError(error.message || "Ошибка при загрузке участников");
         }
     };
 
@@ -231,6 +243,11 @@ const AdminGroupManagement = () => {
     };
 
     const handleEnrollGroup = (groupId) => {
+        const groupInfo = groupsWithMembers[groupId];
+        if (groupInfo?.hasCompletedMembers) {
+            setError("Группа содержит участников со статусом 'Завершил'. Создайте новую группу для зачисления.");
+            return;
+        }
         setSelectedGroupId(groupId);
         setIsEnrollModalOpen(true);
     };
@@ -244,7 +261,7 @@ const AdminGroupManagement = () => {
         }
     };
 
-    const handleSelectMembersModal = () => {
+    const handleExpelSelectedMembers = () => {
         setIsSelectMembersModalOpen(true);
     };
 
@@ -254,6 +271,12 @@ const AdminGroupManagement = () => {
             return;
         }
         try {
+            const groupInfo = groupsWithMembers[selectedGroupId];
+            if (groupInfo?.hasCompletedMembers) {
+                setError("Группа содержит участников со статусом 'Завершил'. Создайте новую группу.");
+                handleCloseAllModals();
+                return;
+            }
             const response = await fetch(`http://localhost:5000/admin/enroll-group/${selectedGroupId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -436,10 +459,8 @@ const AdminGroupManagement = () => {
                             <tr key={group._id}>
                                 <td>{group.groupName}</td>
                                 <td>{courses.find(c => c._id === group.courseId)?.title || "Неизвестный курс"}</td>
-                                <td>
-                                    {`${groupInfo.currentStudents || 0} / ${courses.find((course) => course._id === group.courseId)?.maxStudents || "Не указано"}`}
-                                </td>
-                                <td>{groupInfo.status || "Активна"}</td>
+                                <td>{`${groupInfo.currentStudents || 0} / ${courses.find(c => c._id === group.courseId)?.maxStudents || "N/A"}`}</td>
+                                <td>{groupInfo.status}</td>
                                 <td>
                                     <div className="bt">
                                         <button className="approve-btn" onClick={() => handleViewMembers(group._id)}>
@@ -528,7 +549,7 @@ const AdminGroupManagement = () => {
                         </table>
                         <div className="button">
                             {groupMembers.some(m => m.status === "Проходит курс") && (
-                                <button className="reject-btn" onClick={handleSelectMembersModal}>
+                                <button className="reject-btn" onClick={handleExpelSelectedMembers}>
                                     Отчислить выбранных
                                 </button>
                             )}
@@ -572,7 +593,7 @@ const AdminGroupManagement = () => {
                         </table>
                         <div className="button">
                             <button className="approve-btn" onClick={confirmSelectMembers}>
-                                Подтвердить выбор
+                                Подтвердить
                             </button>
                             <button className="reject-btn" onClick={handleCloseAllModals}>
                                 Отмена
@@ -588,14 +609,11 @@ const AdminGroupManagement = () => {
                         <h3>Зачисление группы</h3>
                         <div className="form-group">
                             <label>Приказ о зачислении:</label>
-                            <select
-                                value={selectedOrderId || ""}
-                                onChange={(e) => setSelectedOrderId(e.target.value)}
-                            >
+                            <select value={selectedOrderId || ""} onChange={e => setSelectedOrderId(e.target.value)}>
                                 <option value="">Выберите приказ</option>
                                 {orders
-                                    .filter((order) => order.orderType === "О зачислении обучающихся")
-                                    .map((order) => (
+                                    .filter(order => order.orderType === "О зачислении обучающихся")
+                                    .map(order => (
                                         <option key={order.id} value={order.id}>
                                             {order.number} от {new Date(order.date).toLocaleDateString()} ({order.orderType})
                                         </option>
@@ -618,18 +636,11 @@ const AdminGroupManagement = () => {
                         <h3>Выбор приказа</h3>
                         <div className="form-group">
                             <label>Приказ:</label>
-                            <select
-                                value={selectedOrderId || ""}
-                                onChange={(e) => setSelectedOrderId(e.target.value)}
-                            >
+                            <select value={selectedOrderId || ""} onChange={e => setSelectedOrderId(e.target.value)}>
                                 <option value="">Выберите приказ</option>
                                 {orders
-                                    .filter(
-                                        (order) =>
-                                            order.orderType === "О выпуске обучающихся" ||
-                                            order.orderType === "Об отчислении обучающихся"
-                                    )
-                                    .map((order) => (
+                                    .filter(order => order.orderType === "О выпуске обучающихся" || order.orderType === "Об отчислении обучающихся")
+                                    .map(order => (
                                         <option key={order.id} value={order.id}>
                                             {order.number} от {new Date(order.date).toLocaleDateString()} ({order.orderType})
                                         </option>
@@ -649,11 +660,11 @@ const AdminGroupManagement = () => {
             {isRejectModalOpen && (
                 <div className="modal">
                     <div className="modal-content">
-                        <h3>Укажите причину отклонения</h3>
+                        <h3>Причина отклонения</h3>
                         <textarea
                             value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="Причина отклонения (например, мало людей)"
+                            onChange={e => setRejectReason(e.target.value)}
+                            placeholder="Введите причину отклонения"
                         />
                         <div className="button">
                             <button className="approve-btn" onClick={confirmReject}>

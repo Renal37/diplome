@@ -11,8 +11,6 @@ type Order struct {
 	Date        time.Time          `json:"date" bson:"date"`
 	OrderTypeID primitive.ObjectID `json:"orderTypeId" bson:"orderTypeId"`
 	OrderType   string             `json:"orderType" bson:"orderType"`
-	FileURL     string             `json:"fileUrl" bson:"fileUrl"`   // URL к файлу приказа
-	FileName    string             `json:"fileName" bson:"fileName"` // Имя файла
 }
 
 type OrderType struct {
