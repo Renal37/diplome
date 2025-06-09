@@ -10,16 +10,18 @@
 }
 
 .admin-title {
+  font-size: 50PX;
   padding-top: 50px;
 }
 
 .nav-links {
+
   margin-top: 50px;
   list-style-type: none;
   padding: 0;
   display: flex;
   gap: 5px;
-  justify-content: center;
+  justify-content: space-between;
   margin-bottom: 20px;
 }
 
@@ -27,7 +29,7 @@
   text-decoration: none;
   color: #007bff;
   font-weight: bold;
-  padding: 5px 10px;
+  padding: 7px 10px;
   border: 1px solid #007bff;
   border-radius: 4px;
   transition: background-color 0.3s, color 0.3s;
@@ -79,7 +81,7 @@ td {
 
 button {
 
-  padding: 8px 12px;
+  padding: 10px 15px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -133,7 +135,11 @@ textarea {
   margin-bottom: 15px;
 }
 
-/* admin_approval_page.css */
+.approve-btn {
+    font-size: 16px;
+    background-color: #28a745;
+    color: white;
+}
 
 /* Модальное окно для информации о пользователе */
 .user-info-modal {

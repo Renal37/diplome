@@ -128,7 +128,7 @@ const AdminComponent = () => {
                  <li>
               <Link
                 to="/admin/analytic"
-                className={`nav-link ${isActive('/admin/prompt') ? 'active' : ''}`}
+                className={`nav-link ${isActive('/admin/analytic') ? 'active' : ''}`}
               >
                 Аналитики 
               </Link>

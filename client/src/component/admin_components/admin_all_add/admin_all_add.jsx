@@ -129,7 +129,6 @@ const AdminAllAdd = () => {
 
     return (
         <div className="admin-education-container">
-            <h2>Управление уровнями образования</h2>
 
             <div className="add-education-form">
                 <input
@@ -138,7 +137,7 @@ const AdminAllAdd = () => {
                     onChange={(e) => setNewEducation(e.target.value)}
                     placeholder="Новый уровень образования"
                 />
-                <button onClick={handleAddEducation}>Добавить</button>
+                <button class='approve-btn' onClick={handleAddEducation}>Добавить</button>
             </div>
 
             <div className="educations-list">
@@ -156,14 +155,14 @@ const AdminAllAdd = () => {
                                             value={editValue}
                                             onChange={(e) => setEditValue(e.target.value)}
                                         />
-                                        <button onClick={() => handleUpdateEducation(edu._id)}>Сохранить</button>
-                                        <button onClick={() => setEditingId(null)}>Отмена</button>
+                                        <button className='approve-btn' onClick={() => handleUpdateEducation(edu._id)}>Сохранить</button>
+                                        <button className='reject-btn' onClick={() => setEditingId(null)}>Отмена</button>
                                     </>
                                 ) : (
                                     <>
                                         <span>{edu.name}</span>
-                                        <button onClick={() => startEditing(edu._id, edu.name)}>Редактировать</button>
-                                        <button onClick={() => handleDeleteEducation(edu._id)}>Удалить</button>
+                                        <button className='approve-btn' onClick={() => startEditing(edu._id, edu.name)}>Редактировать</button>
+                                        <button className='reject-btn' onClick={() => handleDeleteEducation(edu._id)}>Удалить</button>
                                     </>
                                 )}
                             </li>

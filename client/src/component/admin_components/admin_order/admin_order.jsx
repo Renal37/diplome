@@ -234,9 +234,8 @@ const AdminOrders = () => {
     if (loading) return <div>Загрузка...</div>;
 
     return (
-        <div className="admin-orders-container">
+        <div className="admin-order">
             {error && <div className="error-message">{error}</div>}
-            <h2>Управление приказами</h2>
 
             <div className="order-types-section">
                 <h3>Типы приказов</h3>
@@ -251,11 +250,11 @@ const AdminOrders = () => {
                     />
                     {editingOrderType ? (
                         <>
-                            <button onClick={handleUpdateOrderType}>Сохранить</button>
-                            <button onClick={() => setEditingOrderType(null)}>Отмена</button>
+                            <button className='approve-btn' onClick={handleUpdateOrderType}>Сохранить</button>
+                            <button className='reject-btn' onClick={() => setEditingOrderType(null)}>Отмена</button>
                         </>
                     ) : (
-                        <button onClick={handleAddOrderType}>Добавить</button>
+                        <button className="approve-btn" onClick={handleAddOrderType}>Добавить</button>
                     )}
                 </div>
                 <ul>
@@ -305,11 +304,11 @@ const AdminOrders = () => {
                     </select>
                     {editingOrder ? (
                         <>
-                            <button onClick={handleUpdateOrder}>Сохранить</button>
-                            <button onClick={() => setEditingOrder(null)}>Отмена</button>
+                            <button className="approve-btn" onClick={handleUpdateOrder}>Сохранить</button>
+                            <button className="reject-btn" onClick={() => setEditingOrder(null)}>Отмена</button>
                         </>
                     ) : (
-                        <button onClick={handleAddOrder}>Создать приказ</button>
+                        <button className="approve-btn" onClick={handleAddOrder}>Создать приказ</button>
                     )}
                 </div>
 
@@ -330,13 +329,13 @@ const AdminOrders = () => {
                                 <td>{new Date(order.date).toLocaleDateString()}</td>
                                 <td>{order.orderType}</td>
                                 <td>
-                                    <button onClick={() => setEditingOrder({
+                                    <button className='approve-btn' onClick={() => setEditingOrder({
                                         id: order.id,
                                         number: order.number,
                                         date: new Date(order.date).toISOString().slice(0, 10),
                                         orderTypeId: order.orderTypeId
                                     })}>Изменить</button>
-                                    <button onClick={() => handleDeleteOrder(order.id)}>Удалить</button>
+                                    <button className='reject-btn' onClick={() => handleDeleteOrder(order.id)}>Удалить</button>
                                 </td>
                             </tr>
                         ))}

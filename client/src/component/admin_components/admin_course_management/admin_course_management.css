@@ -253,6 +253,7 @@ button.reject-btn {
 }
 
 .filter-section select {
+    background: white;
     padding: 8px;
     font-size: 16px;
     border: 1px solid #ccc;

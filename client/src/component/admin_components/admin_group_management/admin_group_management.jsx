@@ -470,11 +470,12 @@ const AdminGroupManagement = () => {
                                             <>
                                                 {isEmpty ? (
                                                     <>
-                                                        <button className="approve-btn" onClick={() => handleEdit(group)}>
-                                                            Редактировать
-                                                        </button>
+
                                                         <button className="reject-btn" onClick={() => handleRejectGroup(group._id)}>
                                                             Отклонить записи
+                                                        </button>
+                                                        <button className="approve-btn" onClick={() => handleEdit(group)}>
+                                                            Редактировать
                                                         </button>
                                                         <button className="reject-btn" onClick={() => handleDelete(group._id)}>
                                                             Удалить

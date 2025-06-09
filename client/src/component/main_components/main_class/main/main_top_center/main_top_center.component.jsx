@@ -60,7 +60,7 @@ const Main_top_center = () => {
                             {/* Слайд 3 */}
                             <div className="slide_wrapper">
                                 <div className="slider-item">
-                                    <div className="slider-content">
+                                    <div className="j">
                                         <h3>Когда и где?</h3>
                                         <p>Запись на курс 24/7</p>
                                         <p>Возможность обучения в любой момент времени, не дожидаясь формирования группы</p>
