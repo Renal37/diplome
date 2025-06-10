@@ -10,7 +10,7 @@ const AdminCoursesManagement = () => {
     const [selectedPdfRegistrationId, setSelectedPdfRegistrationId] = useState(null);
     const [pdfUrl, setPdfUrl] = useState("");
     const [selectedUser, setSelectedUser] = useState(null);
-    const [filterStatus, setFilterStatus] = useState("all");
+    const [filteredStatus, setFilterStatus] = useState("all");
     const [groups, setGroups] = useState([]);
     const [selectedRegistrations, setSelectedRegistrations] = useState([]);
     const [searchUserName, setSearchUserName] = useState("");
@@ -19,7 +19,7 @@ const AdminCoursesManagement = () => {
     const deletableStatuses = ["Ожидание", "Одобренный", "Отклоненный"];
 
     const filteredRegistrations = registrations.filter(registration => {
-        const matchesStatus = filterStatus === "all" || registration.status === filterStatus;
+        const matchesStatus = filteredStatus === "all" || registration.status === filteredStatus;
         const matchesUserName = registration.userName.toLowerCase().includes(searchUserName.toLowerCase());
         const matchesCourseTitle = registration.courseTitle.toLowerCase().includes(searchCourseTitle.toLowerCase());
         return matchesStatus && matchesUserName && matchesCourseTitle;
@@ -331,7 +331,7 @@ const AdminCoursesManagement = () => {
                     />
                     <div className="filter-section">
                         <label>Фильтр по статусу:</label>
-                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                        <select value={filteredStatus} onChange={e => setFilterStatus(e.target.value)}>
                             <option value="all">Все</option>
                             <option value="Ожидание">Ожидание</option>
                             <option value="Одобренный">Одобренный</option>
@@ -382,7 +382,12 @@ const AdminCoursesManagement = () => {
                 </thead>
                 <tbody>
                     {filteredRegistrations.map(registration => {
-                        const availableGroups = groups.filter(group => group.courseId === registration.courseId);
+                        const availableGroups = groups.filter(group =>
+                            group.courseId === registration.courseId &&
+                            !registrations.some(reg =>
+                                reg.groupId === group._id && reg.status === "Завершил"
+                            )
+                        );
 
                         return (
                             <tr key={registration._id}>
@@ -568,7 +573,7 @@ const AdminCoursesManagement = () => {
             )}
             {selectedPdfRegistrationId && (
                 <div className="modal">
-                    <div className="modal-content">
+                    <div className="modal-document modal-content-for-document">
                         <h3>Проверка договора</h3>
                         <iframe
                             src={pdfUrl}

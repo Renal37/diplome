@@ -37,7 +37,7 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/courses", handlers.GetCourses).Methods("GET")
 	r.HandleFunc("/courses/{id}", handlers.GetCourseById).Methods("GET")
 	r.HandleFunc("/courses/register", handlers.RegisterForCourse).Methods("POST", "OPTIONS")
-	r.HandleFunc("/admin/delete-registration/{id}", handlers.DeleteRegistration).Methods("POST")
+	r.HandleFunc("/admin/delete-registration/{id}", handlers.DeleteRegistration).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/user/view-contract/{id}", handlers.ViewContract).Methods("GET")
 	r.HandleFunc("/user/withdraw-registration/{id}", handlers.WithdrawRegistration).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/user/pay-course/{id}", handlers.PayCourse).Methods("POST", "OPTIONS")

@@ -407,19 +407,19 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 
 	// Проверка обязательных полей пользователя
 	requiredFields := map[string]string{
-		"lastname":          "Фамилия не заполнена",
-		"firstname":         "Имя не заполнено",
-		"middlename":        "Отчество не заполнено",
-		"birthdate":         "Дата рождения не указана",
-		"birthplace":        "Место рождения не указано",
-		"educationid":       "Образование не указано",
-		"email":             "Email не указан",
-		"homeaddress":       "Домашний адрес не указан",
-		"jobtitle":          "Должность не указана",
-		"passportdata":      "Паспортные данные не указаны",
-		"phone":             "Телефон не указан",
-		"snils":             "СНИЛС не указан",
-		"workplace":         "Место работы не указано",
+		"lastname":    "Фамилия не заполнена",
+		"firstname":   "Имя не заполнено",
+		"middlename":  "Отчество не заполнено",
+		"birthdate":   "Дата рождения не указана",
+		"birthplace":  "Место рождения не указано",
+		"educationid": "Образование не указано",
+		"email":       "Email не указан",
+		"homeaddress": "Домашний адрес не указан",
+		// "jobtitle":          "Должность не указана",
+		"passportdata": "Паспортные данные не указаны",
+		"phone":        "Телефон не указан",
+		"snils":        "СНИЛС не указан",
+		// "workplace":         "Место работы не указано",
 		"passportissuedby":  "Кем выдан паспорт не указано",
 		"passportissuedate": "Дата выдачи паспорта не указана",
 		"agreetoprocessing": "Согласие на обработку данных не получено",
@@ -683,20 +683,20 @@ func RegisterForCourse(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
-
 func DeleteRegistration(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
+		log.Printf("Invalid registration ID: %v", err)
 		writeJSONError(w, "Неверный формат идентификатора", http.StatusBadRequest)
 		return
 	}
 
-	// Получаем информацию о регистрации
 	registrationCollection := db.GetCollection(db.CourseRegistrationsCollection)
 	var registration bson.M
 	err = registrationCollection.FindOne(context.Background(), bson.M{"_id": registrationID}).Decode(&registration)
 	if err != nil {
+		log.Printf("Error finding registration: %v", err)
 		if err == mongo.ErrNoDocuments {
 			writeJSONError(w, "Заявка не найдена", http.StatusNotFound)
 			return
@@ -705,11 +705,17 @@ func DeleteRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	courseID := registration["courseId"].(primitive.ObjectID)
+	courseID, ok := registration["courseId"].(primitive.ObjectID)
+	if !ok {
+		log.Printf("Invalid courseID format in registration: %v", registration["courseId"])
+		writeJSONError(w, "Неверный формат courseId", http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Registration found, courseID: %v", courseID)
 
-	// Начинаем транзакцию
 	session, err := db.GetMongoClient().StartSession()
 	if err != nil {
+		log.Printf("Error starting session: %v", err)
 		writeJSONError(w, "Ошибка при создании сессии", http.StatusInternalServerError)
 		return
 	}
@@ -717,25 +723,35 @@ func DeleteRegistration(w http.ResponseWriter, r *http.Request) {
 
 	err = session.StartTransaction()
 	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
 		writeJSONError(w, "Ошибка при старте транзакции", http.StatusInternalServerError)
 		return
 	}
 
-	// Удаляем заявку
 	_, err = registrationCollection.DeleteOne(context.Background(), bson.M{"_id": registrationID})
 	if err != nil {
+		log.Printf("Error deleting registration: %v", err)
 		session.AbortTransaction(context.Background())
 		writeJSONError(w, "Ошибка при удалении заявки", http.StatusInternalServerError)
 		return
 	}
 
-	// Уменьшаем studentsCount
 	courseCollection := db.GetCollection(db.CoursesCollection)
+	var course bson.M
+	err = courseCollection.FindOne(context.Background(), bson.M{"_id": courseID}).Decode(&course)
+	if err != nil {
+		log.Printf("Error finding course: %v", err)
+		session.AbortTransaction(context.Background())
+		writeJSONError(w, "Курс не найден", http.StatusNotFound)
+		return
+	}
+
 	_, err = courseCollection.UpdateOne(context.Background(),
 		bson.M{"_id": courseID},
 		bson.M{"$inc": bson.M{"studentsCount": -1}},
 	)
 	if err != nil {
+		log.Printf("Error updating course: %v", err)
 		session.AbortTransaction(context.Background())
 		writeJSONError(w, "Ошибка при обновлении количества студентов", http.StatusInternalServerError)
 		return
@@ -743,6 +759,7 @@ func DeleteRegistration(w http.ResponseWriter, r *http.Request) {
 
 	err = session.CommitTransaction(context.Background())
 	if err != nil {
+		log.Printf("Error committing transaction: %v", err)
 		session.AbortTransaction(context.Background())
 		writeJSONError(w, "Ошибка при фиксации транзакции", http.StatusInternalServerError)
 		return
@@ -751,7 +768,6 @@ func DeleteRegistration(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
-
 func WithdrawRegistration(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	registrationID, err := primitive.ObjectIDFromHex(vars["id"])
@@ -906,7 +922,7 @@ func GetCourseRegistrations(w http.ResponseWriter, r *http.Request) {
 				"registrationStart": 1,
 				"registrationEnd":   1,
 				"registerDate":      1,
-				
+
 				"orderType": bson.M{
 					"$ifNull": bson.A{
 						bson.M{"$arrayElemAt": bson.A{"$order.orderType", 0}},

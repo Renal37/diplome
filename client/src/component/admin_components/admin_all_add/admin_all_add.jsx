@@ -137,7 +137,7 @@ const AdminAllAdd = () => {
                     onChange={(e) => setNewEducation(e.target.value)}
                     placeholder="Новый уровень образования"
                 />
-                <button class='approve-btn' onClick={handleAddEducation}>Добавить</button>
+                <button className='approve-btn' onClick={handleAddEducation}>Добавить</button>
             </div>
 
             <div className="educations-list">

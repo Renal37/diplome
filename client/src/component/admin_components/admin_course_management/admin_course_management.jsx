@@ -867,7 +867,7 @@ const AdminCourseManagement = () => {
                           ) : (
                             <>
                               <button
-                                className='edit-btn'
+                                className='approve-btn'
                                 onClick={() => startEditingType(type)}
                               >
                                 Редактировать

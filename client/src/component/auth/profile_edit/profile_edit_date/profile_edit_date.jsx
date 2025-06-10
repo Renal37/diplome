@@ -241,6 +241,7 @@ const ProfileEditDate = () => {
                         <div className="form-group">
                             <label>Фамилия:</label>
                             <input
+                                placeholder='Ваша фамилия'
                                 type="text"
                                 name="lastname"
                                 value={userData.lastname}
@@ -251,6 +252,7 @@ const ProfileEditDate = () => {
                         <div className="form-group">
                             <label>Имя:</label>
                             <input
+                                placeholder='Ваше имя'
                                 type="text"
                                 name="firstname"
                                 value={userData.firstname}
@@ -261,6 +263,7 @@ const ProfileEditDate = () => {
                         <div className="form-group">
                             <label>Отчество:</label>
                             <input
+                                placeholder='Ваше отчество'
                                 type="text"
                                 name="middlename"
                                 value={userData.middlename}
@@ -270,6 +273,7 @@ const ProfileEditDate = () => {
                         <div className="form-group">
                             <label>Дата рождения:</label>
                             <input
+                                placeholder='Дата рождения'
                                 type="date"
                                 name="birthdate"
                                 value={userData.birthdate}
@@ -281,6 +285,7 @@ const ProfileEditDate = () => {
                         <div className="form-group">
                             <label>Место рождения:</label>
                             <input
+                                placeholder='Место рождения'
                                 type="text"
                                 name="birthplace"
                                 value={userData.birthplace}
@@ -329,6 +334,7 @@ const ProfileEditDate = () => {
                         <div className="form-group">
                             <label>Номер телефона:</label>
                             <input
+                                required
                                 type="text"
                                 name="phone"
                                 value={userData.phone}

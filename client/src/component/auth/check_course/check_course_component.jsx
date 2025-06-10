@@ -419,7 +419,7 @@ const CheckCourse = () => {
                                     )}
                                     {course.status === "Ожидание" && (
                                         <button
-                                            className="withdraw-button"
+                                            className="reject-btn"
                                             onClick={() => handleWithdrawRegistration(course._id)}
                                         >
                                             Отозвать заявку
@@ -461,8 +461,8 @@ const CheckCourse = () => {
                                     )}
                                     {course.status === "Принят" && (
                                         <button
-                                            className="pay-button"
                                             onClick={() => handleOpenPaymentModal(course)}
+                                            className="download-contract-button"
                                         >
                                             Оплатить
                                         </button>
