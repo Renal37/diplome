@@ -401,76 +401,82 @@ const CheckCourse = () => {
                     <ul className="course-list">
                         {courses.map((course, index) => (
                             <li key={index} className="course-item">
-                                <span className="course-title">Название: {course.courseTitle}</span>
-                                <span className="course-status">Статус: {course.status}</span>
-                                {course.groupId && (
-                                    <span className="course-group">
-                                        Группа: {course.groupName}
-                                    </span>
-                                )}
-                                {course.rejectReason && (
-                                    <span className="reject-reason">
-                                        Причина отказа: {course.rejectReason}
-                                    </span>
-                                )}
-                                {course.status === "Ожидание" && (
-                                    <button
-                                        className="withdraw-button"
-                                        onClick={() => handleWithdrawRegistration(course._id)}
-                                    >
-                                        Отозвать заявку
-                                    </button>
-                                )}
-                                {course.status === "Одобренный" && (
-                                    <>
-                                        {!course.contractUploaded && (
-                                            <div className="download-buttons">
-                                                <button
-                                                    className="download-contract-button"
-                                                    onClick={() => handleDownloadContract(course._id)}
-                                                >
-                                                    Скачать договор
-                                                </button>
-                                                <label htmlFor={`upload-${course._id}`} className="upload-label">
-                                                    Загрузить файл
-                                                </label>
-                                                <input
-                                                    id={`upload-${course._id}`}
-                                                    type="file"
-                                                    accept=".pdf"
-                                                    style={{ display: "none" }}
-                                                    onChange={(e) => {
-                                                        const file = e.target.files[0];
-                                                        if (file) {
-                                                            handleUploadContract(course._id, file);
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-                                        )}
-                                        <span className="file-status">
-                                            {course.contractUploaded
-                                                ? "Файл успешно загружен."
-                                                : "Файла на проверку нет."}
+                                <div className="course-items_1">
+                                    <span className="course-title">Название: {course.courseTitle}</span>
+                                    <span className="course-status">Статус: {course.status}</span>
+                                    {course.groupId && (
+                                        <span className="course-group">
+                                            Группа: {course.groupName}
                                         </span>
-                                    </>
-                                )}
-                                {course.status === "Принят" && (
-                                    <button
-                                        className="pay-button"
-                                        onClick={() => handleOpenPaymentModal(course)}
-                                    >
-                                        Оплатить
-                                    </button>
-                                )}
-                                {(course.status === "Завершил" || course.status === "Отчисленный") && (
-                                    <button
-                                        className="download-document-button"
-                                        onClick={() => handleDownloadDocument(course._id, course.status)}
-                                    >
-                                        {course.status === "Завершил" ? "Скачать диплом" : "Скачать сертификат"}
-                                    </button>
-                                )}
+                                    )}
+                                </div>
+                                <div className="course-items">
+
+                                    {course.rejectReason && (
+                                        <span className="reject-reason">
+                                            Причина отказа: {course.rejectReason}
+                                        </span>
+                                    )}
+                                    {course.status === "Ожидание" && (
+                                        <button
+                                            className="withdraw-button"
+                                            onClick={() => handleWithdrawRegistration(course._id)}
+                                        >
+                                            Отозвать заявку
+                                        </button>
+                                    )}
+                                    {course.status === "Одобренный" && (
+                                        <>
+                                            {!course.contractUploaded && (
+                                                <div className="download-buttons">
+                                                    <button
+                                                        className="download-contract-button"
+                                                        onClick={() => handleDownloadContract(course._id)}
+                                                    >
+                                                        Скачать договор
+                                                    </button>
+                                                    <label htmlFor={`upload-${course._id}`} className="upload-label">
+                                                        Загрузить файл
+                                                    </label>
+                                                    <input
+                                                        id={`upload-${course._id}`}
+                                                        type="file"
+                                                        accept=".pdf"
+                                                        style={{ display: "none" }}
+                                                        onChange={(e) => {
+                                                            const file = e.target.files[0];
+                                                            if (file) {
+                                                                handleUploadContract(course._id, file);
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                            <span className="file-status">
+                                                {course.contractUploaded
+                                                    ? "Файл успешно загружен."
+                                                    : "Файла на проверку нет."}
+                                            </span>
+                                        </>
+                                    )}
+                                    {course.status === "Принят" && (
+                                        <button
+                                            className="pay-button"
+                                            onClick={() => handleOpenPaymentModal(course)}
+                                        >
+                                            Оплатить
+                                        </button>
+                                    )}
+                                    {(course.status === "Завершил" || course.status === "Отчисленный") && (
+                                        <button
+                                            className="download-document-button"
+                                            onClick={() => handleDownloadDocument(course._id, course.status)}
+                                        >
+                                            {course.status === "Завершил" ? "Скачать диплом" : "Скачать сертификат"}
+                                        </button>
+                                    )}
+                                </div>
+
                             </li>
                         ))}
                     </ul>

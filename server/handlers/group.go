@@ -36,6 +36,7 @@ func GetGroups(w http.ResponseWriter, r *http.Request) {
 			"_id":       1,
 			"groupName": 1,
 			"courseId":  1,
+			
 			"status": bson.M{
 				"$cond": bson.M{
 					"if": bson.M{

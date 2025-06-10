@@ -41,7 +41,7 @@ const CourseRegistration = () => {
             })
             .then(data => {
                 if (data.error) {
-                    navigate('/auth/login');
+                    navigate('/auth');
                 } else {
                     setUser(data);
                     console.log('User data:', data);
@@ -50,14 +50,14 @@ const CourseRegistration = () => {
             .catch(error => {
                 console.error('Error fetching user data:', error);
                 alert('Необходимо авторизоваться');
-                navigate('/auth/login');
+                navigate('/auth');
             });
     }, [courseId, navigate]);
 
     const handleRegister = async () => {
         if (!user || !user._id) {
             alert('Пользователь не авторизован');
-            navigate('/auth/login');
+            navigate('/auth');
             return;
         }
 

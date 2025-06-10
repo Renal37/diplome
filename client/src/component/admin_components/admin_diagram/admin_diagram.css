@@ -1,13 +1,11 @@
 /* Контейнер админ-панели */
 .admin-diagram-container {
-  max-width: 1280px;
   margin: 0 auto;
   padding: 24px;
   min-height: 100vh;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
 }
-.admin_components{
-  padding: 0px;
-}
+
 /* Заголовок админ-панели */
 .admin-diagram-title {
   font-size: 28px;
@@ -18,6 +16,224 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  animation: fadeIn 0.5s ease-in;
+}
+.cards{
+  margin-top: 50px;
+}
+.cards h2{
+  text-align: center;
+}
+
+/* Контейнер фильтров даты */
+.date-filter-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.date-filter-container.filtering {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transform: scale(1.02);
+}
+
+/* Группа ввода даты */
+.date-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Метка для поля даты */
+.date-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Поле ввода даты */
+.date-input {
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #1e293b;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  pointer-events: auto;
+}
+
+.date-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+  outline: none;
+}
+
+/* Группа кнопок */
+.date-button-group {
+  display: flex;
+  gap: 12px;
+}
+
+/* Кнопка фильтра */
+.filter-button {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background: #3b82f6;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.filter-button:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.filter-button:active {
+  transform: translateY(0);
+}
+
+.filter-button:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+/* Спиннер для кнопки */
+.filter-button-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Кнопка сброса */
+.reset-button {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  background: #e5e7eb;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.reset-button:hover {
+  background: #d1d5db;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.reset-button:active {
+  transform: translateY(0);
+}
+
+.reset-button:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+/* Группа кнопок переключения режима */
+.view-mode-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+/* Кнопка переключения */
+.toggle-button {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background: #10b981;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.toggle-button:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.toggle-button:active {
+  transform: translateY(0);
+}
+
+.toggle-button.active {
+  background: #047857;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Контейнер для диаграммы */
+.chart-container {
+  margin-top: 12px;
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Информационное сообщение */
+.info-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.info-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  background: #f9fafb;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+/* Сообщение об отсутствии данных */
+.no-data-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  gap: 12px;
+  animation: fadeIn 0.5s ease-in;
+}
+
+.no-data-icon {
+  font-size: 32px;
+  color: #475569;
+}
+
+.no-data-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #475569;
 }
 
 /* Сетка для карточек */
@@ -25,6 +241,7 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 24px;
+  animation: fadeIn 0.5s ease-in;
 }
 
 @media (min-width: 768px) {
@@ -47,6 +264,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border-left: 4px solid #3b82f6;
+  animation: slideIn 0.5s ease-in;
 }
 
 .diagram-card:hover {
@@ -117,6 +335,15 @@
   border-radius: 4px;
 }
 
+/* Текст при отсутствии данных в карточке */
+.no-data-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  text-align: center;
+  padding: 12px;
+}
+
 /* Стили для загрузки */
 .loading-container {
   display: flex;
@@ -142,11 +369,6 @@
   color: #475569;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 /* Стили для ошибки */
 .error-container {
   display: flex;
@@ -167,21 +389,71 @@
   color: #ef4444;
 }
 
+/* Анимации */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* Адаптивность */
 @media (max-width: 640px) {
   .admin-diagram-title {
     font-size: 22px;
   }
+
   .diagram-title {
     font-size: 18px;
   }
+
   .summary-item {
     font-size: 13px;
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
+
   .summary-value {
     padding: 2px 6px;
+  }
+
+  .date-filter-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .date-button-group {
+    justify-content: center;
+  }
+
+  .view-mode-buttons {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
