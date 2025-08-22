@@ -122,7 +122,7 @@ const AdminComponent = () => {
                 to="/admin/prompt"
                 className={`nav-link ${isActive('/admin/prompt') ? 'active' : ''}`}
               >
-                Промпт 
+                АИ ассистента
               </Link>
             </li>
                  <li>

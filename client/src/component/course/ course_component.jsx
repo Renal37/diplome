@@ -112,7 +112,7 @@ const CourseRegistration = () => {
             { field: 'passportissuedby', message: 'Кем выдан паспорт не указано' },
             { field: 'passportissuedate', message: 'Дата выдачи паспорта не указана' },
             { field: 'agreetoprocessing', message: 'Согласие на обработку данных не получено' },
-            { field: 'contractUploaded', message: 'Соглашение не загружено' },
+            { field: 'contractUploaded', message: 'Соглашение не загружено. Оно находится в странице редактирование данных.' },
         ];
 
         for (const { field, message } of requiredFields) {
