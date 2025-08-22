@@ -1,6 +1,6 @@
 .admin-groups-management-page {
     margin-top: 100px;
-    max-width: 1200px;
+    max-width: 1680px;
     margin: 0 auto;
     padding: 20px;
  
@@ -62,11 +62,16 @@
 }
 
 .modal-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    width: 400px;
+    width: 750px;
     max-width: 90%;
 }
 
@@ -102,4 +107,9 @@
 .success-message {
     color: green;
     margin-bottom: 10px;
+}
+.bt{
+    display: flex;
+align-items: center;
+justify-content: space-between;
 }

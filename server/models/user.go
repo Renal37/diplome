@@ -13,7 +13,7 @@ type User struct {
 	BirthDate         string             `json:"birthDate"`
 	Phone             string             `json:"phone,omitempty"`
 	BirthPlace        string             `json:"birthPlace,omitempty"`
-	Education         string             `json:"education,omitempty"`
+	EducationID       primitive.ObjectID `json:"educationid,omitempty" bson:"educationid,omitempty"`
 	HomeAddress       string             `json:"homeAddress,omitempty"`
 	WorkPlace         string             `json:"workPlace,omitempty"`
 	JobTitle          string             `json:"jobTitle,omitempty"`
@@ -21,4 +21,6 @@ type User struct {
 	SNILS             string             `json:"snils,omitempty"`
 	AgreeToProcessing bool               `json:"agreeToProcessing,omitempty"`
 	ContractUploaded  bool               `json:"contractuploaded,omitempty"`
+	PassportIssuedBy  string             `bson:"passportissuedby" json:"passportissuedby"`
+	PassportIssueDate string             `bson:"passportissuedate" json:"passportissuedate"`
 }

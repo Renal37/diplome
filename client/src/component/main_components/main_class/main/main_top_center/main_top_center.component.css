@@ -1,132 +1,205 @@
+/* Основные стили */
 .main_top_for_slider {
     width: 100%;
-    max-width: 1200px;
     margin: 0 auto;
     position: relative;
-    text-align: center;
-    padding: 0;
     height: 700px;
-    overflow: hidden; /* Скрыть всё, что выходит за пределы контейнера */
+    overflow: hidden;
 }
 
 .main_top_center_slider {
-    margin: 0 auto;
     position: relative;
     height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-/* Статичное изображение как фон */
+/* Стили фонового изображения */
 .main_top_img {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 1; /* Поместить изображение на задний план */
+    z-index: 1;
 }
 
 .main_top_img img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Растянуть изображение на весь контейнер */
+    object-fit: cover;
     border-radius: 10px;
 }
-
-/* Слайдер */
-.main_top_slider {
+.slider-content h3{
+    color: white;
+}
+/* Контейнер слайдера */
+.slider_container_wrapper {
     position: relative;
-    z-index: 2; /* Поместить слайдер поверх изображения */
-    max-width: 800px; /* Ограничить ширину слайдера */
+    z-index: 2;
+    width: 100%;
+    padding-top: 150px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.main_top_slider {
+    width: 100%;
+    max-width: 800px;
     margin: 0 auto;
-    padding-top: 100px; /* Отступ сверху для слайдера */
+    padding: 0 20px;
+    box-sizing: border-box;
 }
 
-/* Контейнер для слайдов */
+/* Исправления для slick-slider */
 .slick-list {
-    overflow: hidden; /* Скрыть всё, что выходит за пределы слайдера */
+    overflow: visible !important;
+    padding: 10px 0 !important;
 }
 
-/* Отдельный слайд */
+.slick-track {
+    display: flex !important;
+    align-items: center;
+}
+
+.slick-slide {
+    padding: 0 15px;
+    box-sizing: border-box;
+}
+
+.slide_wrapper {
+    height: 100%;
+}
+
+/* Стили слайдов */
 .slider-item {
-    display: flex !important; /* Важно для переопределения стилей slick */
+    display: flex !important;
     align-items: center;
     justify-content: center;
     text-align: center;
     padding: 30px;
-    background-color: rgba(120, 102, 255, 0.8); /* Полупрозрачный фон */
+    background-color: rgba(119, 102, 255, 0.9);
     border-radius: 15px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(5px); /* Размытие фона */
-    height: 300px; /* Фиксированная высота слайдов */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    height: 300px;
+    color: white;
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+/* Специальный слайд */
+.special-slide {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    color: #7766FF !important;
+    border: 2px solid #7766FF;
 }
 
 .slider-content {
-    max-width: 90%; /* Ограничить ширину контента */
-}
-
-.slider-content h3,
-.slider-content p {
-    margin: 0;
-    padding: 0;
+    width: 100%;
+    padding: 0 20px;
+    box-sizing: border-box;
 }
 
 .slider-content h3 {
-    font-size: 36px;
-    margin-bottom: 15px;
-    color: white;
-    font-weight: bold;
+    font-size: 32px;
+    margin-bottom: 20px;
+    font-weight: 600;
 }
 
-.slider-content p {
-    font-size: 20px;
-    color: white;
+.slider-item p {
+    font-size: 18px;
     line-height: 1.6;
+    margin-bottom: 10px;
 }
 
-/* Настройка точек навигации */
-.slick-dots {
-    bottom: 20px;
-    list-style: none;
-    display: flex;
-    justify-content: center;
+/* Стили для специального слайда */
+.special-slide h3 {
+    color: #7766FF;
+}
+
+.special-slide ul {
+    text-align: left;
+    padding-left: 20px;
     margin: 0;
-    padding: 0;
 }
 
-.slick-dots li button {
-    font-size: 0;
-    line-height: 0;
-    display: block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background-color: #ccc;
-    margin: 0 8px;
-    padding: 0;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+.special-slide li {
+    color: #ff6666;
+    margin-bottom: 10px;
+    font-size: 18px;
+    line-height: 1.5;
 }
 
-.slick-dots li.slick-active button {
-    background-color: #7866ff; /* Цвет активной точки */
+/* Эффекты */
+.slider-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
 }
 
-.under_img {
-    text-align: center;
-    z-index: 2; /* Поместить текст поверх изображения */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 20px;
-    font-size: 24px;
-    margin-top: 40px;
-    padding: 20px;
-    background-color: rgba(255, 255, 255, 0.9); /* Полупрозрачный фон для текста */
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    color: #c84343;
-    max-width: 800px;
-    margin-left: auto;
-    margin-right: auto;
+/* Анимации */
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.slick-active .slider-item {
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .main_top_for_slider {
+        height: 600px;
+    }
+    
+    .slider_container_wrapper {
+        padding-top: 100px;
+    }
+    
+    .slider-item {
+        height: 280px;
+        padding: 20px;
+    }
+    
+    .slider-content h3 {
+        font-size: 28px;
+    }
+    
+    .slider-item p, .special-slide li {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main_top_for_slider {
+        height: 500px;
+    }
+    
+    .slider_container_wrapper {
+        padding-top: 80px;
+    }
+    
+    .slider-item {
+        height: auto;
+        min-height: 250px;
+        padding: 15px;
+    }
+    
+    .slider-content h3 {
+        font-size: 24px;
+        margin-bottom: 15px;
+    }
+    
+    .special-slide ul {
+        padding-left: 15px;
+    }
+}
+
+.j h3{
+    font-size: 32px;
 }

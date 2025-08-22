@@ -1,0 +1,440 @@
+/* Обновленные стили AI Assistant с синей цветовой гаммой */
+.ai-assistant {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    width: 380px;
+    max-height: 65vh;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Заголовок */
+.ai-header {
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.ai-header:hover {
+    background: linear-gradient(135deg, #1a73e8 0%, #1565c0 100%);
+}
+
+.ai-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ai-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    padding: 5px;
+    transition: transform 0.3s ease;
+}
+
+.ai-assistant.open .ai-icon {
+    transform: rotate(90deg);
+}
+
+.ai-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.ai-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.ai-minimize-btn,
+.ai-close-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    pointer-events: auto;
+}
+
+.ai-minimize-btn:hover,
+.ai-close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+/* Контент */
+.ai-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    background: #f8fafc;
+    min-height: 0;
+}
+
+/* Сообщения */
+.ai-messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    scrollbar-width: thin;
+    scrollbar-color: #1a73e8 transparent;
+    min-height: 0;
+}
+
+.ai-messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ai-messages::-webkit-scrollbar-thumb {
+    background-color: #1a73e8;
+    border-radius: 4px;
+}
+
+.ai-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ai-welcome {
+    color: #4a5568;
+    font-size: 15px;
+    line-height: 1.5;
+    text-align: center;
+    padding: 15px 10px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.ai-examples {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.ai-example-btn {
+    background: rgba(26, 115, 232, 0.1);
+    border: none;
+    border-radius: 12px;
+    padding: 10px 15px;
+    font-size: 14px;
+    color: #1a73e8;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(26, 115, 232, 0.2);
+}
+
+.ai-example-btn:hover {
+    background: rgba(26, 115, 232, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Стили сообщений */
+.ai-message {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 16px;
+    position: relative;
+    opacity: 0;
+    animation: fadeIn 0.3s ease forwards;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    word-break: break-word;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ai-message.user {
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 5px;
+    margin-left: 15%;
+}
+
+.ai-message.ai {
+    background: white;
+    color: #2d3748;
+    align-self: flex-start;
+    border-bottom-left-radius: 5px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-right: 15%;
+}
+
+.ai-message-content {
+    line-height: 1.5;
+    font-size: 15px;
+}
+
+.ai-message-content p {
+    margin: 0 0 6px 0;
+}
+
+.ai-message-time {
+    font-size: 11px;
+    opacity: 0.7;
+    text-align: right;
+    margin-top: 6px;
+    font-weight: 400;
+}
+
+.ai-message.user .ai-message-time {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Индикатор набора */
+.ai-typing-indicator {
+    display: flex;
+    padding: 12px 18px;
+    gap: 6px;
+    background: white;
+    border-radius: 16px;
+    align-self: flex-start;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.ai-typing-indicator span {
+    height: 8px;
+    width: 8px;
+    background: #1a73e8;
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.4s infinite ease-in-out;
+}
+
+.ai-typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.ai-typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+    }
+
+    30% {
+        transform: translateY(-4px);
+    }
+}
+
+/* Форма ввода */
+.ai-input-form {
+    padding: 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    background: white;
+}
+
+.ai-input-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.ai-input-form input {
+    flex: 1;
+    padding: 12px 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    outline: none;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+}
+
+.ai-input-form input:focus {
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+    background: white;
+}
+
+.ai-send-btn {
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 10px rgba(26, 115, 232, 0.2);
+}
+
+.ai-send-btn:disabled {
+    background: #cbd5e0;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none;
+}
+
+.ai-send-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+}
+
+.ai-send-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Дополнительные элементы */
+.ai-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.ai-reset-btn {
+    background: none;
+    border: none;
+    color: #718096;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.ai-reset-btn:hover:not(:disabled) {
+    color: #1a73e8;
+    background: rgba(26, 115, 232, 0.05);
+}
+
+.ai-reset-btn:disabled {
+    color: #cbd5e0;
+    cursor: not-allowed;
+}
+
+.ai-hint {
+    color: #a0aec0;
+    font-size: 11px;
+    text-align: right;
+}
+
+/* Анимации */
+@keyframes floatIn {
+    from {
+        transform: translateY(10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 480px) {
+    .ai-assistant {
+        width: 100%;
+        max-width: 100%;
+        bottom: 0;
+        right: 0;
+        border-radius: 0;
+        max-height: 80vh;
+        border-bottom-left-radius: 16px;
+        border-bottom-right-radius: 16px;
+    }
+
+    .ai-header {
+        padding: 14px 16px;
+    }
+
+    .ai-messages {
+        padding: 15px;
+        max-height: calc(80vh - 150px);
+    }
+
+    .ai-input-form {
+        padding: 14px;
+    }
+}
+
+/* Минимизированное состояние */
+.ai-assistant.minimized {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
+.ai-assistant.minimized .ai-header {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    background: linear-gradient(135deg, #1a73e8 0%, #1565c0 100%);
+}
+
+.ai-assistant.minimized .ai-title,
+.ai-assistant.minimized .ai-controls {
+    display: none;
+}
+
+.ai-assistant.minimized .ai-icon {
+    transform: none;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.2);
+}

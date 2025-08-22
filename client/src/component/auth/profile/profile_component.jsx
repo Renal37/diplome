@@ -33,6 +33,9 @@ const Profile = () => {
 
     fetchProfile();
   }, []);
+  useEffect(() => {
+    console.log("Profile data:", profile);
+  }, [profile]);
 
   if (loading) {
     return <p>Загрузка...</p>;
@@ -49,11 +52,11 @@ const Profile = () => {
         <div className="profile-avatar">
           <h1>Ваши данные</h1>
           <div className="profile-info">
-            <p>Ваше ФИО: {profile.lastName && profile.firstName && profile.middleName ? `${profile.lastName} ${profile.firstName} ${profile.middleName}` : "Данные отсутствуют"}</p>
+            <p>Ваше ФИО: {profile.lastname && profile.firstname && profile.middlename ? `${profile.lastname} ${profile.firstname} ${profile.middlename}` : "Данные отсутствуют"}</p>
             <p>Email: {profile.email || "Данные отсутствуют"}</p>
-            <p>Дата рождения: {profile.birthDate || "Данные отсутствуют"}</p>
-            <p>Образование: {profile.education || "Данные отсутствуют"}</p>
-            
+            <p>Дата рождения: {profile.birthdate || "Данные отсутствуют"}</p>
+            <p>Образование: {profile.education ? profile.education.name : "Данные отсутствуют"}</p>
+
             <Link className="prifle_nav_button prifle_nav_a" to="/auth/edit_profile">Заполнить профиль</Link>
           </div>
         </div>

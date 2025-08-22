@@ -171,3 +171,40 @@ textarea {
     border: 1px solid #ccc;
     border-radius: 4px;
 }
+.mass-actions{
+    justify-content: end;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* admin_check_manage.css */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+/* admin_check_manage.css */
+.reason-text {
+    max-width: 200px;
+    word-wrap: break-word;
+    padding: 5px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+select{
+    padding: 10px 20px;
+}

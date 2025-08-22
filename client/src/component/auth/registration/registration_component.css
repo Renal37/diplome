@@ -101,3 +101,22 @@
     align-items: center;    
     justify-content: space-between;
 }
+.buttons .link{
+    border-radius: 4px;
+    border: 1px solid black;
+    text-decoration: none;
+    padding: 10px;
+    color: black;
+    font-size: 18px;
+    transition: 0.2s all ease;
+}
+.buttons .link:hover{
+    border-radius: 4px;
+    border: 1px solid black;
+    background: #000;
+    text-decoration: none;
+    padding: 10px;
+    color: white;
+    font-size: 18px;
+    transition: 0.2s all ease;
+}

@@ -1,3 +1,8 @@
+.course-list .download-document-button{
+    margin-top: 10px;
+    background: #28a745;
+    color: white;
+}
 .check-course-container {
     max-width: 800px;
     margin: 0 auto;
@@ -57,12 +62,17 @@
     border-radius: 5px;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
 }
 
 .course-title {
     font-weight: bold;
     margin-bottom: 5px;
     color: #333;
+}
+.course-items_1{
+    display: flex;
+    flex-direction: column;
 }
 
 .course-status {
@@ -129,4 +139,54 @@
 .download-buttons{
     display: flex;
     flex-direction: column;
+}
+/* Стили для модального окна */
+.payment-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.payment-modal-content {
+    width: 500px;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.qr-code-placeholder {
+    margin: 20px 0;
+}
+.qr-code-placeholder h2{
+    font-size: 24px;
+}
+.qr-code-placeholder img{
+    width: 300px;
+    
+}
+
+.payment-modal-buttons button {
+    margin: 10px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.payment-modal-buttons button:first-child {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.payment-modal-buttons button:last-child {
+    background-color: #f44336;
+    color: white;
 }

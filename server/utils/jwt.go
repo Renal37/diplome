@@ -1,8 +1,10 @@
 package utils
 
 import (
-	"time"
+	"encoding/json"
 	"github.com/dgrijalva/jwt-go"
+	"net/http"
+	"time"
 )
 
 var JwtKey = []byte("your_secret_key")
@@ -28,4 +30,10 @@ func GenerateToken(userID string) (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
 }

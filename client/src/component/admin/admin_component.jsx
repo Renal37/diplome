@@ -1,11 +1,14 @@
 import { Route, Routes, Link, useLocation, Navigate } from 'react-router-dom';
 import './admin_component.css';
 import AdminCheckProfile from '../admin_components/admin_check_profile/admin_check_profile';
-import AdminAcceptPage from '../admin_components/admin_accept_page/admin_accept_page';
 import AdminCourseManagement from '../admin_components/admin_course_management/admin_course_management';
 import AdminCoursesManagement from '../admin_components/admin_check_manage/admin_check_manage';
 import AdminGroupManagement from '../admin_components/admin_group_management/admin_group_management';
 import { useEffect, useState } from 'react';
+import AdminAllAdd from '../admin_components/admin_all_add/admin_all_add';
+import AdminOrders from '../admin_components/admin_order/admin_order';
+import AdminPrompt from '../admin_components/admin_prompt/admin_prompt';
+import AdminDiagram from '../admin_components/admin_diagram/admin_diagram';
 
 const AdminComponent = () => {
   const [profile, setProfile] = useState(null);
@@ -98,6 +101,38 @@ const AdminComponent = () => {
                 Управление группами
               </Link>
             </li>
+            <li>
+              <Link
+                to="/admin/all"
+                className={`nav-link ${isActive('/admin/all') ? 'active' : ''}`}
+              >
+                Добавление уровня образования
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/admin/order"
+                className={`nav-link ${isActive('/admin/order') ? 'active' : ''}`}
+              >
+                Добавление приказов  
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/admin/prompt"
+                className={`nav-link ${isActive('/admin/prompt') ? 'active' : ''}`}
+              >
+                АИ ассистента
+              </Link>
+            </li>
+                 <li>
+              <Link
+                to="/admin/analytic"
+                className={`nav-link ${isActive('/admin/analytic') ? 'active' : ''}`}
+              >
+                Аналитики 
+              </Link>
+            </li>
           </ul>
         </nav>
       </div>
@@ -106,8 +141,11 @@ const AdminComponent = () => {
           <Route index element={<AdminCourseManagement />} />
           <Route path="profile" element={<AdminCheckProfile />} />
           <Route path="courses" element={<AdminCoursesManagement />} />
-          <Route path="accept" element={<AdminAcceptPage />} />
+          <Route path="all" element={<AdminAllAdd />} />
+          <Route path="order" element={<AdminOrders />} />
           <Route path="groups" element={<AdminGroupManagement />} />
+          <Route path="prompt" element={<AdminPrompt />} />
+           <Route path="analytic" element={<AdminDiagram />} />
         </Routes>
       </div>
     </div>
